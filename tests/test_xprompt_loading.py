@@ -101,6 +101,16 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     )
 
 
+def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
+    xp = _research_xprompts()["research_swarm"]
+    _cdx, _cld, final, _image = split_segments_protecting_fences(xp.content)
+
+    assert (
+        "SASE derives your plan's links from the artifacts you read this turn; use\n"
+        "`sase artifact read` for context you actually used."
+    ) in final
+
+
 def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     cdx, cld, final, image = _swarm_segments({"wait": "research.0f.final"})
 

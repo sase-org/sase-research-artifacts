@@ -44,6 +44,9 @@ You are the lead researcher: two independent researchers have reported on the re
 below, and you will add your own research and merge all three perspectives into one
 consolidated report.
 
+SASE derives your plan's links from the artifacts you read this turn; use
+`sase artifact read` for context you actually used.
+
 Research request:
 
 {{ prompt }}
