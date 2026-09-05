@@ -85,6 +85,8 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%id(cld, clan=research.{@1})" in cld
 
     assert "%id(final, clan=research.{@1})" in final
+    assert "%m:@xlarge" in final
+    assert "research" "_lead" not in final
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
 
@@ -127,6 +129,8 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
 
     assert "%wait:research.0f.final" not in final
     assert "%wait:research.0f.final" not in image
+    assert "%m:@xlarge" in final
+    assert "research" "_lead" not in final
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
     assert "%wait:research.{@1}.final" in image

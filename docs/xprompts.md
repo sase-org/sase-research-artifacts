@@ -47,7 +47,7 @@ omission uses SASE's implicit queue priority.
    `research` tribe; when supplied, also waits on the `wait` argument's agent(s).
 2. **`<clan>.cld`** -- the second-opinion researcher (`@research_b`), run independently
    in parallel; when supplied, also waits on the `wait` argument's agent(s).
-3. **`<clan>.final`** -- the lead researcher (`@research_lead`), waiting on both prior
+3. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on both prior
    segments' chat transcripts, who reads both reports, does further research, and writes
    a consolidated report merging all three perspectives. Individual researcher reports
    move to `<name>__a.md` / `<name>__b.md`; the consolidated report is
@@ -55,5 +55,6 @@ omission uses SASE's implicit queue priority.
 4. **`<clan>.image`** -- waits on and forks from the lead's segment, then runs
    `#research/image` against the consolidated report using `@image`.
 
-Depends on the `research_a` / `research_b` / `research_lead` / `image` model aliases
-and the `researchers` bucket from this plugin's default config.
+Depends on the `research_a` / `research_b` / `image` model aliases and the
+`researchers` bucket from this plugin's default config, plus SASE's built-in `@xlarge`
+alias for the lead segment.

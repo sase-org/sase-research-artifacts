@@ -25,8 +25,7 @@ def test_default_config_loads_expected_model_aliases_and_bucket() -> None:
     assert custom["research_a"]["bucket"] == "researchers"
     assert custom["research_b"]["model"] == "claude/opus"
     assert custom["research_b"]["bucket"] == "researchers"
-    assert custom["research_lead"]["model"] == "@xlarge"
-    assert custom["research_lead"]["bucket"] == "researchers"
+    assert "research" "_lead" not in custom
     assert custom["image"]["model"] == "codex/gpt-5.6-sol@xhigh | grok/grok-4.6@xhigh"
     assert custom["image"]["bucket"] == "researchers"
     assert custom["image"]["description"]

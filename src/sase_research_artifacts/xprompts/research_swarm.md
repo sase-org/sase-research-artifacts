@@ -36,7 +36,7 @@ summary=[[[bold]RESEARCH PROMPT:[/bold] {{ prompt }}]]) %id:research.{@1}.cdx
 
 ---
 
-%id(final, clan=research.{@1}) %m:@research_lead
+%id(final, clan=research.{@1}) %m:@xlarge
 %wait:research.{@1}.cdx %wait:research.{@1}.cld {% if priority is not none %}
 %wait(priority={{ priority }}) {% endif %}
 

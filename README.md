@@ -105,10 +105,11 @@ diagnostic rather than running someone else's command on your machine.
 
 ## Defaults
 
-`default_config.yml` ships the `research_a` / `research_b` / `research_lead` / `image`
-model aliases, the `researchers` bucket, and the `research` tribe display config, so
-`#research_swarm` works out of the box on a fresh install. Project or user config still
-overrides these by normal layer precedence.
+`default_config.yml` ships the `research_a` / `research_b` / `image` model aliases, the
+`researchers` bucket, and the `research` tribe display config. The
+`#research_swarm` lead segment launches through SASE's built-in `@xlarge` alias, so the
+swarm works out of the box on a fresh install. Project or user config still overrides
+these by normal layer precedence.
 
 ## Development
 
