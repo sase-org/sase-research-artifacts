@@ -52,9 +52,11 @@ def test_research_prompt_declares_typed_input() -> None:
 
     research = xprompts["research"]
     assert [(arg.name, arg.type.value) for arg in research.inputs] == [
-        ("report_target", "path")
+        ("report_target", "path"),
+        ("suffix", "word"),
     ]
     assert research.inputs[0].default is None
+    assert research.inputs[1].default is None
 
 
 def test_research_swarm_declares_typed_input() -> None:
@@ -120,12 +122,12 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     assert "%id:research.{@1}.cdx" in cdx
     assert "%model:@research_a" in cdx
     assert "%wait:research.0f.final" in cdx
-    assert "some topic #research(report_target=research.{@1}.cdx.md)" in cdx
+    assert "some topic #research(suffix=a)" in cdx
 
     assert "%id(cld, clan=research.{@1})" in cld
     assert "%m:@research_b" in cld
     assert "%wait:research.0f.final" in cld
-    assert "some topic #research(report_target=research.{@1}.cld.md)" in cld
+    assert "some topic #research(suffix=b)" in cld
 
     assert "%wait:research.0f.final" not in final
     assert "%wait:research.0f.final" not in image
@@ -152,8 +154,8 @@ def test_research_swarm_omitted_wait_leaves_researchers_ungated() -> None:
     assert all("priority=" not in segment for segment in (cdx, cld, final, image))
 
 
-def test_research_swarm_dispatches_distinct_deterministic_report_targets() -> None:
-    """Two identical dispatches under one clock get distinct report targets."""
+def test_research_swarm_researchers_carry_distinct_suffixes() -> None:
+    """Two identical dispatches keep distinct researcher suffixes."""
     with patch("sase.core.time.generate_timestamp", return_value="260820_161407"):
         first_cdx, first_cld, _first_final, _first_image, second_cdx, second_cld, *_ = (
             [
@@ -174,21 +176,36 @@ def test_research_swarm_dispatches_distinct_deterministic_report_targets() -> No
     assert f"%id:research.{second_marker}.cdx" in second_cdx
     assert f"%id(cld, clan=research.{second_marker})" in second_cld
 
-    targets = {
-        f"research.{first_marker}.cdx.md",
-        f"research.{first_marker}.cld.md",
-        f"research.{second_marker}.cdx.md",
-        f"research.{second_marker}.cld.md",
-    }
-    for target in targets:
-        assert f"report_target={target}" in "\n".join(
-            (first_cdx, first_cld, second_cdx, second_cld)
-        )
+    cdx_segments = (first_cdx, second_cdx)
+    cld_segments = (first_cld, second_cld)
+    researcher_segments = cdx_segments + cld_segments
+    assert all("#research(suffix=a)" in segment for segment in cdx_segments)
+    assert all("#research(suffix=b)" in segment for segment in cld_segments)
+    assert all("report_target=" not in segment for segment in researcher_segments)
 
-    assert len(targets) == 4
     assert f"%wait:research.{first_marker}.cdx" in _first_final
     assert f"%wait:research.{first_marker}.cld" in _first_final
     assert f"%wait:research.{first_marker}.final" in _first_image
+
+
+def test_research_prompt_suffix_branch_renders_without_artifacts() -> None:
+    xp = _research_xprompts()["research"]
+
+    suffix_expansion = expand_single_xprompt(xp, [], {"suffix": "a"})
+    assert "__a" in suffix_expansion
+    assert "<stem>__a.md" in suffix_expansion
+    assert "{%" not in suffix_expansion
+    assert "{{ suffix }}" not in suffix_expansion
+
+    explicit_target_expansion = expand_single_xprompt(
+        xp, [], {"report_target": "x.md", "suffix": "a"}
+    )
+    assert "x.md" in explicit_target_expansion
+    assert "<stem>__a.md" not in explicit_target_expansion
+
+    default_expansion = expand_single_xprompt(xp, [], {})
+    assert "new markdown file under" in default_expansion
+    assert "<stem>__" not in default_expansion
 
 
 def test_research_swarm_omitted_priority_leaves_implicit_queue() -> None:

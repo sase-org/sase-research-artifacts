@@ -5,6 +5,15 @@
 Writes the current research to a new markdown file under
 `$(sase repo path research --ensure)/$(date +%Y%m)/`.
 
+### Input
+
+| Name            | Type | Description                                                                 |
+| --------------- | ---- | --------------------------------------------------------------------------- |
+| `report_target` | path | Optional month-relative markdown path to write exactly                      |
+| `suffix`        | word | Optional filename suffix requiring `<stem>__<suffix>.md` when used by itself |
+
+When both are supplied, `report_target` wins and names the report file exactly.
+
 ## `#research/image` -- Generate an Infographic
 
 Generates an infographic illustrating a research markdown file's main points, writing
@@ -44,14 +53,16 @@ A four-segment xprompt swarm. Optional `wait` gates only `cdx`/`cld`. Optional
 omission uses SASE's implicit queue priority.
 
 1. **`<clan>.cdx`** -- the primary researcher (`@research_a`), tagged with the
-   `research` tribe; when supplied, also waits on the `wait` argument's agent(s).
+   `research` tribe, writing a self-named descriptive report via `#research(suffix=a)`;
+   when supplied, also waits on the `wait` argument's agent(s).
 2. **`<clan>.cld`** -- the second-opinion researcher (`@research_b`), run independently
-   in parallel; when supplied, also waits on the `wait` argument's agent(s).
+   in parallel, writing a self-named descriptive report via `#research(suffix=b)`; when
+   supplied, also waits on the `wait` argument's agent(s).
 3. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on both prior
    segments' chat transcripts, who reads both reports, does further research, and writes
    a consolidated report merging all three perspectives. Individual researcher reports
-   move to `<name>__a.md` / `<name>__b.md`; the consolidated report is
-   `<name>/<name>.md`.
+   move to `<name>__a.md` / `<name>__b.md` under `<name>/`, preserving each report's
+   existing suffix; the consolidated report is `<name>/<name>.md`.
 4. **`<clan>.image`** -- waits on and forks from the lead's segment, then runs
    `#research/image` against the consolidated report using `@image`.
 
