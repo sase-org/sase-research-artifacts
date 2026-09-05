@@ -66,6 +66,12 @@ omission uses SASE's implicit queue priority.
 4. **`<clan>.image`** -- waits on and forks from the lead's segment, then runs
    `#research/image` against the consolidated report using `@image`.
 
+Each of `cdx` and `cld` is told the other researcher's agent ID and the `__a`/`__b`
+suffix its report filename will end with, and is explicitly instructed not to seek out
+or read that peer's report, or its findings indirectly via the peer's chat transcript,
+for the duration of the current swarm. Combining the two reports remains the lead's
+responsibility.
+
 Depends on the `research_a` / `research_b` / `image` model aliases and the
 `researchers` bucket from this plugin's default config, plus SASE's built-in `@xlarge`
 alias for the lead segment.
