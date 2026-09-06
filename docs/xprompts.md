@@ -14,6 +14,11 @@ Writes the current research to a new markdown file under
 
 When both are supplied, `report_target` wins and names the report file exactly.
 
+After a successful write, `#research` registers the report as a durable snapshot with
+`sase artifact create -p "<absolute-report-path>" -l "research:<repo-relative-report-path>"`
+(no `--move`). This is the producer contract `#research_swarm`'s lead consumes through
+the runtime `wait.artifacts` namespace instead of reading transcripts.
+
 ## `#research/image` -- Generate an Infographic
 
 Generates an infographic illustrating a research markdown file's main points, writing
@@ -59,8 +64,8 @@ omission uses SASE's implicit queue priority.
    in parallel, writing a self-named descriptive report via `#research(suffix=b)`; when
    supplied, also waits on the `wait` argument's agent(s).
 3. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on both prior
-   segments' chat transcripts, who reads both reports, does further research, and writes
-   a consolidated report merging all three perspectives. Individual researcher reports
+   segments, who reads both registered reports, does further research, and writes a
+   consolidated report merging all three perspectives. Individual researcher reports
    move to `<name>__a.md` / `<name>__b.md` under `<name>/`, preserving each report's
    existing suffix; the consolidated report is `<name>/<name>.md`.
 4. **`<clan>.image`** -- waits on and forks from the lead's segment, then runs
@@ -71,6 +76,17 @@ suffix its report filename will end with, and is explicitly instructed not to se
 or read that peer's report, or its findings indirectly via the peer's chat transcript,
 for the duration of the current swarm. Combining the two reports remains the lead's
 responsibility.
+
+The lead's prompt no longer reads its predecessors' chat transcripts to discover their
+report paths. Instead it renders a raw-protected loop over sase's runtime `wait`
+namespace, `wait.artifacts`, which is populated lazily (with one batched query) only
+when the lead's prompt actually renders and only lists non-chat artifacts registered by
+`cdx`/`cld`. The loop filters to markdown entries whose label carries the canonical
+`research:<repo-relative-path>` report reference from `#research`'s registration step,
+and prints each entry's `wait_name`, `label`, `source_path`, `path`, and durable `ref`.
+The lead matches the `.cdx`/`.cld` `wait_name` to the `__a`/`__b` suffix already on the
+label, never by list order, then reads each report through its canonical research
+reference (or the `ref` fallback) with `sase artifact read`.
 
 Depends on the `research_a` / `research_b` / `image` model aliases and the
 `researchers` bucket from this plugin's default config, plus SASE's built-in `@xlarge`
