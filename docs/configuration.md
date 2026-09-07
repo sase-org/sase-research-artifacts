@@ -78,7 +78,7 @@ into Bob's derived PDF basename and marker id.
 
 Installing this plugin also contributes, through the `sase_config` entry point:
 
-- Model aliases `research_a` (primary researcher), `research_b` (second-opinion
+- Model aliases `sol_or_grok` (primary researcher), `opus_or_grok` (second-opinion
   researcher), and `image` (infographic agent), all in the `researchers` bucket. The
   research-swarm lead launches through SASE's built-in `@xlarge` alias.
 - The `research` tribe's display config (icon, color, description).

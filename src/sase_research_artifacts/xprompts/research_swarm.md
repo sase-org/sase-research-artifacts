@@ -23,7 +23,7 @@ input:
 
 %clan(research.{@1}, tribe=research,
 summary=[[[bold]RESEARCH PROMPT:[/bold] {{ prompt }}]]) %id:research.{@1}.cdx
-%model:@research_a {% if wait %}
+%model:@sol_or_grok {% if wait %}
 %wait:{{ wait }} {% endif %}{% if priority is not none %}
 %wait(priority={{ priority }}) {% endif %}
 You are researcher A in a two-researcher swarm. The other researcher,
@@ -44,7 +44,7 @@ findings after you have both finished.
 
 ---
 
-%id(cld, clan=research.{@1}) %m:@research_b {% if wait %}
+%id(cld, clan=research.{@1}) %m:@opus_or_grok {% if wait %}
 %wait:{{ wait }} {% endif %}{% if priority is not none %}
 %wait(priority={{ priority }}) {% endif %}
 You are researcher B in a two-researcher swarm. The other researcher,

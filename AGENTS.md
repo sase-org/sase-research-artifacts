@@ -27,7 +27,7 @@ just check      # lint + test
 - `src/sase_research_artifacts/xprompts/` — the `#research`, `#research/image`,
   `#research/more`, `#research/prompt`, and `#research_swarm` xprompts, discovered
   through the `sase_xprompts` entry point.
-- `src/sase_research_artifacts/default_config.yml` — the `research_a`/`research_b`/
+- `src/sase_research_artifacts/default_config.yml` — the `sol_or_grok`/`opus_or_grok`/
   `image` model aliases, the `researchers` bucket, and the `research` tribe display
   config, discovered through the `sase_config` entry point. The research-swarm lead
   launches through SASE's built-in `@xlarge` alias.

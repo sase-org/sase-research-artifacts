@@ -105,7 +105,7 @@ diagnostic rather than running someone else's command on your machine.
 
 ## Defaults
 
-`default_config.yml` ships the `research_a` / `research_b` / `image` model aliases, the
+`default_config.yml` ships the `sol_or_grok` / `opus_or_grok` / `image` model aliases, the
 `researchers` bucket, and the `research` tribe display config. The
 `#research_swarm` lead segment launches through SASE's built-in `@xlarge` alias, so the
 swarm works out of the box on a fresh install. Project or user config still overrides

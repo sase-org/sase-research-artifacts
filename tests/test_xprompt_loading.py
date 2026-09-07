@@ -146,12 +146,12 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
 
     assert "%clan(research.{@1}" in cdx
     assert "%id:research.{@1}.cdx" in cdx
-    assert "%model:@research_a" in cdx
+    assert "%model:@sol_or_grok" in cdx
     assert "%wait:research.0f.final" in cdx
     assert "some topic #research(suffix=a)" in cdx
 
     assert "%id(cld, clan=research.{@1})" in cld
-    assert "%m:@research_b" in cld
+    assert "%m:@opus_or_grok" in cld
     assert "%wait:research.0f.final" in cld
     assert "some topic #research(suffix=b)" in cld
 

@@ -57,10 +57,10 @@ A four-segment xprompt swarm. Optional `wait` gates only `cdx`/`cld`. Optional
 `priority` applies to all four agents when supplied (lower values start first);
 omission uses SASE's implicit queue priority.
 
-1. **`<clan>.cdx`** -- the primary researcher (`@research_a`), tagged with the
+1. **`<clan>.cdx`** -- the primary researcher (`@sol_or_grok`), tagged with the
    `research` tribe, writing a self-named descriptive report via `#research(suffix=a)`;
    when supplied, also waits on the `wait` argument's agent(s).
-2. **`<clan>.cld`** -- the second-opinion researcher (`@research_b`), run independently
+2. **`<clan>.cld`** -- the second-opinion researcher (`@opus_or_grok`), run independently
    in parallel, writing a self-named descriptive report via `#research(suffix=b)`; when
    supplied, also waits on the `wait` argument's agent(s).
 3. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on both prior
@@ -88,6 +88,6 @@ The lead matches the `.cdx`/`.cld` `wait_name` to the `__a`/`__b` suffix already
 label, never by list order, then reads each report through its canonical research
 reference (or the `ref` fallback) with `sase artifact read`.
 
-Depends on the `research_a` / `research_b` / `image` model aliases and the
+Depends on the `sol_or_grok` / `opus_or_grok` / `image` model aliases and the
 `researchers` bucket from this plugin's default config, plus SASE's built-in `@xlarge`
 alias for the lead segment.
