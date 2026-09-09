@@ -99,9 +99,11 @@ diagnostic rather than running someone else's command on your machine.
 - `#research_swarm` -- launch two independent researchers plus a lead who consolidates
   their reports and generates an infographic; a four-segment xprompt swarm. Optional
   `wait` names agent(s) both researchers should wait on before starting; quote the
-  value when listing several (`wait="a,b"`). Optional `priority` is an integer with no
-  default override: a supplied value applies to all four agents (lower values start
-  first); omission uses SASE's implicit queue priority.
+  value when listing several (`wait="a,b"`). `runners` is an integer defaulting to `16`
+  that sets runner-queue admission for all four agents and may be overridden per swarm
+  invocation. Optional `priority` is an integer with no default override: a supplied
+  value applies to all four agents (lower values start first); omission uses SASE's
+  implicit queue priority.
 
 ## Defaults
 

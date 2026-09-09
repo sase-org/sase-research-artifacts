@@ -38,7 +38,7 @@ def _swarm_segments(named_args: dict[str, str]) -> list[str]:
 # The lead's runtime `wait.artifacts` loop is deliberately raw-protected so it
 # survives swarm-level Jinja expansion unrendered; only actual agent-runtime
 # rendering evaluates it. Strip it before asserting no stray `{%` remains from
-# the swarm-level `{% if wait %}` / `{% if priority %}` directives.
+# the swarm-level `{% if wait %}` / `%queue(...)` directives.
 _WAIT_ARTIFACTS_LOOP = (
     '{% for a in wait.artifacts if a.kind == "markdown" and a.label '
     'and a.label.startswith("research:") %}\n'
@@ -46,18 +46,36 @@ _WAIT_ARTIFACTS_LOOP = (
     "path={{ a.path }} ref={{ a.ref }}\n"
     "{% endfor %}"
 )
+_RUNNERS_QUEUE_TEMPLATE = (
+    "%queue(runners={{ runners }}{% if priority is not none %}, "
+    "priority={{ priority }}{% endif %})"
+)
 
 
 def _without_wait_artifacts_loop(segment: str) -> str:
     return segment.replace(_WAIT_ARTIFACTS_LOOP, "")
 
 
-def _assert_each_segment_has_one_priority(segments: list[str], value: int) -> None:
-    marker = f"%queue(priority={value})"
+def _assert_each_segment_has_one_queue(
+    segments: list[str],
+    *,
+    runners: int,
+    priority: int | None = None,
+) -> None:
+    marker = f"%queue(runners={runners}"
+    if priority is not None:
+        marker += f", priority={priority}"
+    marker += ")"
+
     for segment in segments:
+        assert segment.count("%queue(") == 1
         assert segment.count(marker) == 1
         assert "{%" not in _without_wait_artifacts_loop(segment)
         assert "{{ priority }}" not in segment
+        assert "{{ runners }}" not in segment
+
+    if priority is None:
+        assert all("priority=" not in segment for segment in segments)
 
 
 def test_all_five_research_xprompts_load() -> None:
@@ -91,10 +109,12 @@ def test_research_swarm_declares_typed_input() -> None:
         ("prompt", "text"),
         ("wait", "word"),
         ("priority", "int"),
+        ("runners", "int"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
     assert xp.inputs[2].default is None
+    assert xp.inputs[3].default == 16
 
 
 def test_research_swarm_has_four_top_level_segments() -> None:
@@ -125,10 +145,8 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%model:@image" in image
     assert "%model:codex/gpt-5.6-sol" not in image
     assert all("priority is not none" in segment for segment in (cdx, cld, final, image))
-    assert all(
-        "%queue(priority={{ priority }})" in segment
-        for segment in (cdx, cld, final, image)
-    )
+    assert all(segment.count("%queue(") == 1 for segment in (cdx, cld, final, image))
+    assert all(_RUNNERS_QUEUE_TEMPLATE in segment for segment in (cdx, cld, final, image))
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
@@ -163,7 +181,7 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     assert "%wait:research.{@1}.cld" in final
     assert "%wait:research.{@1}.final" in image
     assert "%model:@image" in image
-    assert all("priority=" not in segment for segment in (cdx, cld, final, image))
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=16)
 
 
 def test_research_swarm_omitted_wait_leaves_researchers_ungated() -> None:
@@ -180,7 +198,7 @@ def test_research_swarm_omitted_wait_leaves_researchers_ungated() -> None:
         for segment in (cdx, cld, final, image)
     )
     assert all("{{ wait }}" not in segment for segment in (cdx, cld, final, image))
-    assert all("priority=" not in segment for segment in (cdx, cld, final, image))
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=16)
 
 
 def test_research_swarm_researchers_carry_distinct_suffixes() -> None:
@@ -237,15 +255,20 @@ def test_research_prompt_suffix_branch_renders_without_artifacts() -> None:
     assert "<stem>__" not in default_expansion
 
 
-def test_research_swarm_omitted_priority_leaves_implicit_queue() -> None:
+def test_research_swarm_omitted_priority_uses_default_runners_queue() -> None:
     cdx, cld, final, image = _swarm_segments({})
 
-    assert all("priority=" not in segment for segment in (cdx, cld, final, image))
-    assert all(
-        "{%" not in _without_wait_artifacts_loop(segment)
-        for segment in (cdx, cld, final, image)
-    )
-    assert all("{{ priority }}" not in segment for segment in (cdx, cld, final, image))
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=16)
+    assert "%wait:research.{@1}.cdx" in final
+    assert "%wait:research.{@1}.cld" in final
+    assert "%wait:research.{@1}.final" in image
+    assert "#fork:research.{@1}.final" in image
+
+
+def test_research_swarm_supplied_runners_renders_on_every_agent() -> None:
+    cdx, cld, final, image = _swarm_segments({"runners": "8"})
+
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=8)
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
     assert "%wait:research.{@1}.final" in image
@@ -254,7 +277,7 @@ def test_research_swarm_omitted_priority_leaves_implicit_queue() -> None:
 
 def test_research_swarm_supplied_priority_renders_on_every_agent() -> None:
     cdx, cld, final, image = _swarm_segments({"priority": "5"})
-    _assert_each_segment_has_one_priority([cdx, cld, final, image], 5)
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=16, priority=5)
     assert "%wait:" not in cdx
     assert "%wait:" not in cld
     assert "%wait:research.{@1}.cdx" in final
@@ -265,14 +288,14 @@ def test_research_swarm_supplied_priority_renders_on_every_agent() -> None:
 
 def test_research_swarm_priority_zero_is_not_omission() -> None:
     cdx, cld, final, image = _swarm_segments({"priority": "0"})
-    _assert_each_segment_has_one_priority([cdx, cld, final, image], 0)
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=16, priority=0)
 
 
 def test_research_swarm_priority_composes_with_wait() -> None:
     cdx, cld, final, image = _swarm_segments(
         {"wait": "research.0f.final", "priority": "5"}
     )
-    _assert_each_segment_has_one_priority([cdx, cld, final, image], 5)
+    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=16, priority=5)
 
     assert "%wait:research.0f.final" in cdx
     assert "%wait:research.0f.final" in cld

@@ -19,13 +19,17 @@ input:
     description:
       Optional runner-queue priority applied to every swarm member. Lower numbers start
       first. If null, the swarm uses SASE's implicit queue priority.
+  - name: runners
+    type: int
+    default: 16
+    description:
+      Runner-queue admission capacity applied to every swarm member.
 ---
 
 %clan(research.{@1}, tribe=research,
 summary=[[[bold]RESEARCH PROMPT:[/bold] {{ prompt }}]]) %id:research.{@1}.cdx
 %model:@sol_or_grok {% if wait %}
-%wait:{{ wait }} {% endif %}{% if priority is not none %}
-%queue(priority={{ priority }}) {% endif %}
+%wait:{{ wait }} {% endif %}%queue(runners={{ runners }}{% if priority is not none %}, priority={{ priority }}{% endif %})
 You are researcher A in a two-researcher swarm. The other researcher,
 `research.{@1}.cld`, is independently investigating the same request and will write its
 own self-named report ending in `__b.md`. Your report will end in `__a.md`.
@@ -45,8 +49,7 @@ findings after you have both finished.
 ---
 
 %id(cld, clan=research.{@1}) %m:@opus_or_grok {% if wait %}
-%wait:{{ wait }} {% endif %}{% if priority is not none %}
-%queue(priority={{ priority }}) {% endif %}
+%wait:{{ wait }} {% endif %}%queue(runners={{ runners }}{% if priority is not none %}, priority={{ priority }}{% endif %})
 You are researcher B in a two-researcher swarm. The other researcher,
 `research.{@1}.cdx`, is independently investigating the same request and will write its
 own self-named report ending in `__a.md`. Your report will end in `__b.md`.
@@ -66,8 +69,7 @@ findings after you have both finished.
 ---
 
 %id(final, clan=research.{@1}) %m:@xlarge
-%wait:research.{@1}.cdx %wait:research.{@1}.cld {% if priority is not none %}
-%queue(priority={{ priority }}) {% endif %}
+%wait:research.{@1}.cdx %wait:research.{@1}.cld %queue(runners={{ runners }}{% if priority is not none %}, priority={{ priority }}{% endif %})
 
 You are the lead researcher: two independent researchers have reported on the request
 below, and you will add your own research and merge all three perspectives into one
@@ -128,5 +130,4 @@ Final layout:
 ---
 
 %id(image, clan=research.{@1}) %model:@image
-%wait:research.{@1}.final {% if priority is not none %}
-%queue(priority={{ priority }}) {% endif %}#fork:research.{@1}.final #research/image
+%wait:research.{@1}.final %queue(runners={{ runners }}{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/image
