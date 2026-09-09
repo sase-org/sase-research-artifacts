@@ -53,7 +53,7 @@ def _without_wait_artifacts_loop(segment: str) -> str:
 
 
 def _assert_each_segment_has_one_priority(segments: list[str], value: int) -> None:
-    marker = f"%wait(priority={value})"
+    marker = f"%queue(priority={value})"
     for segment in segments:
         assert segment.count(marker) == 1
         assert "{%" not in _without_wait_artifacts_loop(segment)
@@ -126,7 +126,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%model:codex/gpt-5.6-sol" not in image
     assert all("priority is not none" in segment for segment in (cdx, cld, final, image))
     assert all(
-        "%wait(priority={{ priority }})" in segment
+        "%queue(priority={{ priority }})" in segment
         for segment in (cdx, cld, final, image)
     )
 
