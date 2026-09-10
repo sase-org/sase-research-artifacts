@@ -44,7 +44,8 @@ def test_pyproject_floor_matches_expected_first_supporting_release() -> None:
     pyproject = _read("pyproject.toml")
 
     assert "dependencies = [" in pyproject
-    assert '"sase>=0.17.0"' in pyproject
+    assert '"sase>=0.17.1"' in pyproject
+    assert '"sase-core-rs>=0.32.61,<0.33.0"' in pyproject
 
 
 def test_release_smoke_builds_coordinated_sase_sources_and_uses_overrides() -> None:

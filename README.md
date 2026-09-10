@@ -11,9 +11,9 @@ usable from agent workflows.
 
 ## Installation
 
-Requires Python 3.12+ and `sase>=0.17.0` (the first release with the
-`sase_artifact_refs` / `sase_file_hooks` provider registry); see
-[docs/configuration.md](docs/configuration.md#requirements).
+Requires Python 3.12+, `sase>=0.17.1`, and `sase-core-rs>=0.32.61,<0.33.0`;
+development and CI use coordinated source checkouts for the in-flight weighted queue
+bindings. See [docs/configuration.md](docs/configuration.md#requirements).
 
 ```bash
 pip install sase-research-artifacts
@@ -99,11 +99,11 @@ diagnostic rather than running someone else's command on your machine.
 - `#research_swarm` -- launch two independent researchers plus a lead who consolidates
   their reports and generates an infographic; a four-segment xprompt swarm. Optional
   `wait` names agent(s) both researchers should wait on before starting; quote the
-  value when listing several (`wait="a,b"`). `runners` is an integer defaulting to `16`
-  that sets runner-queue admission for all four agents and may be overridden per swarm
-  invocation. Optional `priority` is an integer with no default override: a supplied
-  value applies to all four agents (lower values start first); omission uses SASE's
-  implicit queue priority.
+  value when listing several (`wait="a,b"`). Each segment requests `0.25` runner
+  capacity units by default. `runners` is an optional integer count condition with no
+  default; when supplied, it applies to all four agents. Optional `priority` is an
+  integer with no default override: a supplied value applies to all four agents (lower
+  values start first); omission uses SASE's implicit queue priority.
 
 ## Defaults
 
@@ -124,10 +124,9 @@ just test-wheel # Build a real wheel, install it fresh, verify entry points/reso
 just check      # lint + test
 ```
 
-This plugin depends on `sase>=0.17.0` -- the first sase release with the
-`sase_artifact_refs` / `sase_file_hooks` provider registry -- which has not reached PyPI
-yet. `just install` and CI both build against coordinated sibling `sase` and `sase-core`
-source checkouts in the meantime; see `Justfile` and `.github/workflows/ci.yml`.
+`just install` and CI both build against coordinated sibling `sase` and `sase-core`
+source checkouts so prompt-template changes can exercise the matching host runtime
+before publication; see `Justfile` and `.github/workflows/ci.yml`.
 
 ## Documentation
 

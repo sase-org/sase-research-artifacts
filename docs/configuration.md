@@ -3,10 +3,13 @@
 ## Requirements
 
 - Python 3.12+
-- `sase>=0.17.0` (the first release with the `sase_artifact_refs` / `sase_file_hooks`
-  provider registry). That floor has not reached PyPI yet; local and CI installs
-  route `sase` to a coordinated source checkout instead of asking the index for it
-  (see [README Development](../README.md#development)).
+- `sase>=0.17.1`
+- `sase-core-rs>=0.32.61,<0.33.0`; local development and CI install the coordinated
+  source checkout until the final weighted `%queue` release floor is published.
+
+Local development and CI route `sase` and `sase-core` to coordinated source checkouts
+so this plugin can be tested with matching in-flight host changes (see
+[README Development](../README.md#development)).
 
 ## Enabling the `research` ref provider
 

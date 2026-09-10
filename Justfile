@@ -56,13 +56,10 @@ _install-local-sase-core: _validate-local-sase-core _ensure-venv
     @[ -x {{ quote(venv_maturin) }} ] || uv pip install --python {{ quote(venv_python) }} maturin
     cd {{ quote(local_sase_core_py_source) }} && VIRTUAL_ENV={{ quote(venv_path) }} PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 {{ quote(venv_maturin) }} develop --release
 
-# sase-research-artifacts declares a floor (sase>=0.17.0) that has not reached PyPI yet
-# (see pyproject.toml), so a plain `-e ".[dev]"` resolve always fails. Route
-# the `sase` requirement to the coordinated local checkout with a uv
-# --overrides file instead of asking the index for a version that isn't
-# published; sase-core-rs itself still resolves from PyPI here (an older,
-# installable version) and is then overwritten by _install-local-sase-core's
-# maturin build of the coordinated sase-core checkout.
+# Route the `sase` requirement to the coordinated local checkout with a uv
+# --overrides file so plugin tests exercise the matching host source tree.
+# sase-core-rs still resolves from PyPI first and is then overwritten by
+# _install-local-sase-core's maturin build of the coordinated sase-core checkout.
 _write-sase-overrides: _validate-local-sase
     @printf -- '-e %s\n' {{ quote(local_sase_source) }} > {{ quote(sase_overrides_file) }}
 

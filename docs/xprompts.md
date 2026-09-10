@@ -49,16 +49,17 @@ recommendation, then hands off to `#research` to write it up.
 | `prompt`   | text | Research topic or question for the swarm to investigate            |
 | `wait`     | word | Optional agent(s) to wait for before the swarm starts              |
 | `priority` | int  | Optional integer queue priority for all four agents; no default    |
-| `runners`  | int  | Runner-queue admission for all four agents; defaults to `16`       |
+| `runners`  | int  | Optional runner-count queue condition for all four agents          |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
 
 A four-segment xprompt swarm. Optional `wait` gates only `cdx`/`cld`. Optional
 `priority` applies to all four agents when supplied (lower values start first);
-omission uses SASE's implicit queue priority. `runners` defaults to `16` and applies to
-all four agents; override it per swarm invocation when the runner queue should admit a
-different number of swarm members.
+omission uses SASE's implicit queue priority. Every segment authors `%q(w=0.25)`, so
+the swarm consumes one normal unit of runner capacity when all four members are live.
+`runners` has no default; when supplied, it adds an independent count condition such as
+`runners=0` to every segment without changing the `0.25` weight.
 
 1. **`<clan>.cdx`** -- the primary researcher (`@sol_or_grok`), tagged with the
    `research` tribe, writing a self-named descriptive report via `#research(suffix=a)`;

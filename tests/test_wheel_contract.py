@@ -119,7 +119,9 @@ def test_wheel_installs_into_fresh_venv_with_discoverable_entry_points(
     built_distributions: Path, tmp_path: Path
 ) -> None:
     sase_source = _resolved_source_dir("SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_SOURCE")
-    sase_core_source = _resolved_source_dir("SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_CORE_SOURCE")
+    sase_core_source = _resolved_source_dir(
+        "SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_CORE_SOURCE"
+    )
 
     wheel = _single_artifact(built_distributions, "*.whl")
 
@@ -222,6 +224,9 @@ assert research_names == {
     "research/prompt",
     "research_swarm",
 }, research_names
+research_swarm = xprompts["research_swarm"]
+assert research_swarm.content.count("%q(w=0.25") == 4
+assert "default: 16" not in research_swarm.content
 
 configs = load_plugin_configs(importlib.resources.files)
 assert any("llm_provider" in c and "ace" in c for c in configs)
