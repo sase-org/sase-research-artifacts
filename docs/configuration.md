@@ -3,13 +3,14 @@
 ## Requirements
 
 - Python 3.12+
-- `sase>=0.17.1`
-- `sase-core-rs>=0.32.61,<0.33.0`; local development and CI install the coordinated
-  source checkout until the final weighted `%queue` release floor is published.
+- `sase>=0.17.2`
+- `sase-core-rs>=0.33.0,<0.34.0`
 
 Local development and CI route `sase` and `sase-core` to coordinated source checkouts
 so this plugin can be tested with matching in-flight host changes (see
-[README Development](../README.md#development)).
+[README Development](../README.md#development)). The publish workflow separately
+installs the built plugin wheel with exact published minimum SASE and core wheels and
+without editable checkouts or dependency overrides.
 
 ## Enabling the `research` ref provider
 

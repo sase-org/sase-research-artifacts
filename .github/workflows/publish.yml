@@ -147,8 +147,85 @@ jobs:
           assert "research-highlights" in registry.file_hook_providers_by_id
           PY
 
+  install-smoke-published-minimum:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v4
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install built wheel with published minimum dependencies
+        run: |
+          uv venv --python 3.12 /tmp/smoke-minimum-venv
+          uv pip install --python /tmp/smoke-minimum-venv/bin/python "sase==0.17.2" "sase-core-rs==0.33.0" dist/*.whl
+      - name: Smoke weighted research swarm on published floors
+        run: |
+          /tmp/smoke-minimum-venv/bin/python - <<'PY'
+          import importlib.metadata
+
+          import sase_core_rs
+          import sase_research_artifacts
+          from sase.agent.multi_prompt import split_segments_protecting_fences
+          from sase.xprompt.directives import extract_prompt_directives
+          from sase.xprompt.loader_sources import load_xprompts_from_plugins
+          from sase.xprompt.processor import expand_single_xprompt
+
+          assert importlib.metadata.version("sase") == "0.17.2"
+          assert importlib.metadata.version("sase-core-rs") == "0.33.0"
+          assert hasattr(sase_core_rs, "runner_capacity_snapshot")
+          assert hasattr(sase_core_rs, "runner_capacity_policy_schema_version")
+          assert sase_research_artifacts.RESEARCH_REF_PROVIDER
+
+          xprompts = load_xprompts_from_plugins()
+          research_swarm = xprompts["research_swarm"]
+          assert research_swarm.content.count("%q(w=0.25") == 4
+          assert "default: 16" not in research_swarm.content
+
+          def assert_segments(named_args, *, runners=None, priority=None):
+              body = expand_single_xprompt(
+                  research_swarm,
+                  ["wheel minimum smoke"],
+                  named_args,
+                  preserve_segment_separators=True,
+              )
+              segments = split_segments_protecting_fences(body)
+              assert len(segments) == 4, segments
+              for segment in segments:
+                  assert segment.count("%q(") == 1
+                  _, directives = extract_prompt_directives(segment)
+                  assert directives.queue_weight == 0.25
+                  assert directives.queue_weight_explicit is True
+                  assert directives.wait_runners == runners
+                  assert directives.wait_priority == priority
+
+          assert_segments({})
+          assert_segments({"runners": "0"}, runners=0)
+          assert_segments({"priority": "0"}, priority=0)
+          assert_segments({"wait": "upstream", "runners": "0", "priority": "5"}, runners=0, priority=5)
+          print("PUBLISHED_MINIMUM_WHEEL_CONTRACT_OK")
+          PY
+      - name: Refuse older published SASE
+        run: |
+          set +e
+          uv venv --python 3.12 /tmp/smoke-incompatible-venv
+          output="$(uv pip install --python /tmp/smoke-incompatible-venv/bin/python "sase==0.17.1" dist/*.whl 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if [ "$status" -eq 0 ]; then
+            echo "expected old SASE floor install to fail" >&2
+            exit 1
+          fi
+          grep -Eq "sase>=0\\.17\\.2|No solution|unsatisfiable|No matching distribution" <<< "$output"
+
   publish:
-    needs: [release, build, install-smoke]
+    needs: [release, build, install-smoke, install-smoke-published-minimum]
     if: ${{ needs.release.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.publish_existing == true) }}
     runs-on: ubuntu-latest
     environment: pypi

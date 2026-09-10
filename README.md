@@ -11,9 +11,8 @@ usable from agent workflows.
 
 ## Installation
 
-Requires Python 3.12+, `sase>=0.17.1`, and `sase-core-rs>=0.32.61,<0.33.0`;
-development and CI use coordinated source checkouts for the in-flight weighted queue
-bindings. See [docs/configuration.md](docs/configuration.md#requirements).
+Requires Python 3.12+, `sase>=0.17.2`, and `sase-core-rs>=0.33.0,<0.34.0`. See
+[docs/configuration.md](docs/configuration.md#requirements).
 
 ```bash
 pip install sase-research-artifacts
@@ -125,8 +124,9 @@ just check      # lint + test
 ```
 
 `just install` and CI both build against coordinated sibling `sase` and `sase-core`
-source checkouts so prompt-template changes can exercise the matching host runtime
-before publication; see `Justfile` and `.github/workflows/ci.yml`.
+source checkouts so prompt-template changes can exercise the matching host runtime. The
+publish workflow also runs a clean wheel-only smoke against exact published SASE and
+core floors before uploading this plugin.
 
 ## Documentation
 

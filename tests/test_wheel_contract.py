@@ -20,6 +20,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 DISTRIBUTION_NAME = "sase-research-artifacts"
 PACKAGE_NAME = "sase_research_artifacts"
+MINIMUM_SASE_VERSION = "0.17.2"
+MINIMUM_SASE_CORE_RS_VERSION = "0.33.0"
 
 pytestmark = pytest.mark.wheel
 
@@ -67,6 +69,17 @@ def test_distribution_artifacts_use_renamed_identity(
 
     assert metadata_path.startswith(f"{PACKAGE_NAME}-")
     assert metadata["Name"] == DISTRIBUTION_NAME
+    requires_dist = metadata.get_all("Requires-Dist") or []
+    assert any(
+        requirement.startswith(f"sase>={MINIMUM_SASE_VERSION}")
+        for requirement in requires_dist
+    )
+    assert any(
+        requirement.startswith("sase-core-rs")
+        and f">={MINIMUM_SASE_CORE_RS_VERSION}" in requirement
+        and "<0.34.0" in requirement
+        for requirement in requires_dist
+    )
     # Guard against accidentally carrying a compatibility package under the old name.
     assert all("sase_research/" not in name for name in names)
 
@@ -178,12 +191,16 @@ def test_wheel_installs_into_fresh_venv_with_discoverable_entry_points(
 
     smoke_script = """
 import sase.config  # avoid a circular import on a fresh interpreter
-from importlib.metadata import PackageNotFoundError, distribution, entry_points
+from importlib.metadata import PackageNotFoundError, distribution, entry_points, version
 
 from sase.artifact_providers import assemble_artifact_provider_registry
-from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.config.loading import load_plugin_configs
+from sase.agent.multi_prompt import split_segments_protecting_fences
+from sase.xprompt.directives import extract_prompt_directives
+from sase.xprompt.loader_sources import load_xprompts_from_plugins
+from sase.xprompt.processor import expand_single_xprompt
 import importlib.resources
+import sase_core_rs
 import sase_research_artifacts
 
 assert distribution("sase-research-artifacts").metadata["Name"] == "sase-research-artifacts"
@@ -194,6 +211,9 @@ except PackageNotFoundError:
     pass
 else:
     raise AssertionError("old sase-research distribution is installed")
+assert version("sase-core-rs").startswith("0.33.")
+assert hasattr(sase_core_rs, "runner_capacity_snapshot")
+assert hasattr(sase_core_rs, "runner_capacity_policy_schema_version")
 assert sase_research_artifacts.RESEARCH_REF_PROVIDER
 
 expected = {
@@ -227,6 +247,28 @@ assert research_names == {
 research_swarm = xprompts["research_swarm"]
 assert research_swarm.content.count("%q(w=0.25") == 4
 assert "default: 16" not in research_swarm.content
+
+def assert_segments(named_args, *, runners=None, priority=None):
+    body = expand_single_xprompt(
+        research_swarm,
+        ["wheel contract smoke"],
+        named_args,
+        preserve_segment_separators=True,
+    )
+    segments = split_segments_protecting_fences(body)
+    assert len(segments) == 4, segments
+    for segment in segments:
+        assert segment.count("%q(") == 1
+        _, directives = extract_prompt_directives(segment)
+        assert directives.queue_weight == 0.25
+        assert directives.queue_weight_explicit is True
+        assert directives.wait_runners == runners
+        assert directives.wait_priority == priority
+
+assert_segments({})
+assert_segments({"runners": "0"}, runners=0)
+assert_segments({"priority": "0"}, priority=0)
+assert_segments({"wait": "upstream", "runners": "0", "priority": "5"}, runners=0, priority=5)
 
 configs = load_plugin_configs(importlib.resources.files)
 assert any("llm_provider" in c and "ace" in c for c in configs)

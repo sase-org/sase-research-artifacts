@@ -11,13 +11,12 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    # The sase_artifact_refs/sase_file_hooks provider registry this plugin
-    # targets is available in 0.17.x. The research swarm prompt now authors
-    # queue weights, so keep the declared SASE/core floor aligned here; local
-    # tests override both to coordinated source checkouts until the final
-    # weighted-capacity release floor is published.
-    "sase>=0.17.1",
-    "sase-core-rs>=0.32.61,<0.33.0",
+    # SASE 0.17.2 is the release-please-generated host release that carries
+    # unconditional weighted queue support. The direct core floor keeps
+    # resolver failures explicit if this plugin is tested or published before
+    # that SASE release has reconciled its own core window.
+    "sase>=0.17.2",
+    "sase-core-rs>=0.33.0,<0.34.0",
 ]
 
 [project.urls]
