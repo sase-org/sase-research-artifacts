@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.3.0](https://github.com/sase-org/sase-research-artifacts/compare/v0.2.0...v0.3.0) (2026-09-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* the `research_a` custom model alias is renamed to `sol_or_grok` and `research_b` is renamed to `opus_or_grok` in this plugin's default_config.yml. Any project or user config referencing the old alias names must be updated to the new names.
+
+### Features
+
+* add opt-in priority input to #research_swarm ([d054715](https://github.com/sase-org/sase-research-artifacts/commit/d054715ded7e2882483155d75b69a260c1154890))
+* add optional priority input to #research_swarm ([01a45ed](https://github.com/sase-org/sase-research-artifacts/commit/01a45ed846701df2589b12fe0c2d298891b43018))
+* add research suffix input ([68bb0dd](https://github.com/sase-org/sase-research-artifacts/commit/68bb0dd3326adfeaf42637c330b757c6bdece13e))
+* **config:** route research swarm image launches through [@image](https://github.com/image) ([93e1f55](https://github.com/sase-org/sase-research-artifacts/commit/93e1f55963b195d80431cb9b10ac935bd3fb81bd))
+* remove optional priority input from #research_swarm ([caf12b8](https://github.com/sase-org/sase-research-artifacts/commit/caf12b83968a1cd647c5fcee0b42676d6b263431))
+* rename research_a/research_b model aliases to sol_or_grok/opus_or_grok ([e11cdda](https://github.com/sase-org/sase-research-artifacts/commit/e11cddaabbe9c3aeb5e5266750f4998f40a0da0c))
+* **research:** use xlarge for swarm lead ([6ed8763](https://github.com/sase-org/sase-research-artifacts/commit/6ed87637a300ea4befb9f994661ac5dda0ba79ef))
+* **research:** weight research swarm segments ([526604b](https://github.com/sase-org/sase-research-artifacts/commit/526604b6ea706ccf4668d6aed6aaf7d3a3003eb2))
+* **xprompt:** add research swarm runners option ([59a54e0](https://github.com/sase-org/sase-research-artifacts/commit/59a54e0eba0433c94e10c5b688d49363aa27b11b))
+* **xprompt:** mention artifact-read derivation in research swarm ([15a4b09](https://github.com/sase-org/sase-research-artifacts/commit/15a4b095489f241459a5700d446cc0b5f996a4fe))
+* **xprompts:** hand research reports to the lead via wait.artifacts ([babfb46](https://github.com/sase-org/sase-research-artifacts/commit/babfb46eebf7fe47047ef89034a6456cd8474d8b))
+* **xprompts:** instruct research swarm peers to stay independent ([abdaf1f](https://github.com/sase-org/sase-research-artifacts/commit/abdaf1f871ba09c22546a5d68c6509453dabc83b))
+
+
+### Bug Fixes
+
+* **config:** default research lead to xlarge ([ede2123](https://github.com/sase-org/sase-research-artifacts/commit/ede2123402221754a605ab4b66c2faccb0e29e8f))
+* exclude generated research companions from inventory ([46fe923](https://github.com/sase-org/sase-research-artifacts/commit/46fe9235d1043c9efdfbbffc6cff4c9f4278f5eb))
+* make research report targets deterministic ([83f4c01](https://github.com/sase-org/sase-research-artifacts/commit/83f4c0154d6f5e50d527582c2377eb36bdcb2ff5))
+* **provider:** restrict research highlights producers ([a045047](https://github.com/sase-org/sase-research-artifacts/commit/a045047c76cdd2b762171f8b62a34490839aace8))
+* **research:** use queue capacity directive ([5aaa244](https://github.com/sase-org/sase-research-artifacts/commit/5aaa244451eab367eb95d6ce65f03b38e8352407))
+* **xprompts:** emit queue priority directive ([cebc7c4](https://github.com/sase-org/sase-research-artifacts/commit/cebc7c4c6a1403f9df7e0bdf40681f1d898b935d))
+
 ## [0.2.0](https://github.com/sase-org/sase-research-artifacts/compare/v0.1.0...v0.2.0) (2026-08-18)
 
 
