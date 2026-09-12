@@ -48,7 +48,7 @@ _WAIT_ARTIFACTS_LOOP = (
     "{% endfor %}"
 )
 _WEIGHTED_QUEUE_TEMPLATE = (
-    "%q(w=0.25{% if runners is not none %}, runners={{ runners }}{% endif %}"
+    "%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}"
     "{% if priority is not none %}, "
     "priority={{ priority }}{% endif %})"
 )
@@ -66,7 +66,7 @@ def _assert_each_segment_has_one_queue(
 ) -> None:
     marker = "%q(w=0.25"
     if runners is not None:
-        marker += f", runners={runners}"
+        marker += f", capacity={runners}"
     if priority is not None:
         marker += f", priority={priority}"
     marker += ")"
@@ -86,7 +86,7 @@ def _assert_each_segment_has_one_queue(
     if priority is None:
         assert all("priority=" not in segment for segment in segments)
     if runners is None:
-        assert all("runners=" not in segment for segment in segments)
+        assert all("capacity=" not in segment for segment in segments)
 
 
 def test_all_five_research_xprompts_load() -> None:
