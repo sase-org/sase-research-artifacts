@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
 from sase.agent.multi_prompt import split_segments_protecting_fences
 from sase.agent.xprompt_swarm import expand_xprompt_swarms_with_metadata
 from sase.core.artifact_context_query_facade import (
@@ -15,12 +16,16 @@ from sase.core.artifact_context_query_facade import (
     query_artifact_context,
 )
 from sase.core.artifact_file_explicit import store_explicit_artifact_file
-from sase.xprompt.directives import extract_prompt_directives
+from sase.xprompt.directives import DirectiveError, extract_prompt_directives
 from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.xprompt.models import UNSET
 from sase.xprompt.processor import expand_single_xprompt
 from sase.xprompt.runtime_context import bind_runtime_template_vars
 from sase.xprompt.workflow_executor_utils import render_template
+
+# Authored capacity=0 is preserved in the swarm expansion (not treated as
+# omission) and rejected by current SASE at parse time.
+_ZERO_CAPACITY_ERROR = "at least 1"
 
 
 def _research_xprompts() -> dict:
@@ -77,9 +82,15 @@ def _assert_each_segment_has_one_queue(
         assert "{%" not in _without_wait_artifacts_loop(segment)
         assert "{{ priority }}" not in segment
         assert "{{ runners }}" not in segment
+        assert "runners=" not in segment
+        if runners == 0:
+            with pytest.raises(DirectiveError, match=_ZERO_CAPACITY_ERROR):
+                extract_prompt_directives(segment)
+            continue
         _, directives = extract_prompt_directives(segment)
         assert directives.queue_weight == 0.25
         assert directives.queue_weight_explicit is True
+        assert directives.queue_capacity == runners
         assert directives.wait_runners == runners
         assert directives.wait_priority == priority
 
@@ -87,6 +98,8 @@ def _assert_each_segment_has_one_queue(
         assert all("priority=" not in segment for segment in segments)
     if runners is None:
         assert all("capacity=" not in segment for segment in segments)
+    else:
+        assert all(f"capacity={runners}" in segment for segment in segments)
 
 
 def test_all_five_research_xprompts_load() -> None:
@@ -279,6 +292,7 @@ def test_research_swarm_omitted_priority_uses_weight_only_queue() -> None:
 
 
 def test_research_swarm_supplied_zero_runners_renders_on_every_agent() -> None:
+    """Explicit 0 is not omission; current SASE rejects authored capacity=0."""
     cdx, cld, final, image = _swarm_segments({"runners": "0"})
 
     _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=0)

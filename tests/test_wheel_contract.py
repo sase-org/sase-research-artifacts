@@ -1,8 +1,10 @@
 """Build a real sdist/wheel and prove packaged resources survive it.
 
-Marked ``wheel`` (excluded from the default ``-m "not wheel"`` lane; run via
-``just test-wheel``) since it builds a wheel and a fresh sase-core-rs from
-source, which takes minutes rather than seconds.
+This is the source-coordination lane: it installs the built plugin wheel with
+a local SASE checkout override and a maturin-built sase-core-rs. It is not
+published-minimum acceptance. Marked ``wheel`` (excluded from the default
+``-m "not wheel"`` lane; run via ``just test-wheel``) since it builds a wheel
+and a fresh sase-core-rs from source, which takes minutes rather than seconds.
 """
 
 from __future__ import annotations
@@ -21,7 +23,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DISTRIBUTION_NAME = "sase-research-artifacts"
 PACKAGE_NAME = "sase_research_artifacts"
 MINIMUM_SASE_VERSION = "0.17.2"
-MINIMUM_SASE_CORE_RS_VERSION = "0.33.0"
+MINIMUM_SASE_CORE_RS_VERSION = "0.34.23"
+MAXIMUM_SASE_CORE_RS_VERSION = "0.35.0"
 
 pytestmark = pytest.mark.wheel
 
@@ -77,7 +80,7 @@ def test_distribution_artifacts_use_renamed_identity(
     assert any(
         requirement.startswith("sase-core-rs")
         and f">={MINIMUM_SASE_CORE_RS_VERSION}" in requirement
-        and "<0.34.0" in requirement
+        and f"<{MAXIMUM_SASE_CORE_RS_VERSION}" in requirement
         for requirement in requires_dist
     )
     # Guard against accidentally carrying a compatibility package under the old name.
@@ -196,7 +199,7 @@ from importlib.metadata import PackageNotFoundError, distribution, entry_points,
 from sase.artifact_providers import assemble_artifact_provider_registry
 from sase.config.loading import load_plugin_configs
 from sase.agent.multi_prompt import split_segments_protecting_fences
-from sase.xprompt.directives import extract_prompt_directives
+from sase.xprompt.directives import DirectiveError, extract_prompt_directives
 from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.xprompt.processor import expand_single_xprompt
 import importlib.resources
@@ -211,9 +214,10 @@ except PackageNotFoundError:
     pass
 else:
     raise AssertionError("old sase-research distribution is installed")
-assert version("sase-core-rs").startswith("0.33.")
+assert version("sase-core-rs").startswith("0.34.")
 assert hasattr(sase_core_rs, "runner_capacity_snapshot")
 assert hasattr(sase_core_rs, "runner_capacity_policy_schema_version")
+assert sase_core_rs.runner_capacity_policy_schema_version() >= 4
 assert sase_research_artifacts.RESEARCH_REF_PROVIDER
 
 expected = {
@@ -259,14 +263,29 @@ def assert_segments(named_args, *, runners=None, priority=None):
     assert len(segments) == 4, segments
     for segment in segments:
         assert segment.count("%q(") == 1
+        assert "runners=" not in segment
+        if runners is None:
+            assert "capacity=" not in segment
+        else:
+            assert f"capacity={runners}" in segment
+        if runners == 0:
+            try:
+                extract_prompt_directives(segment)
+            except DirectiveError as exc:
+                assert "at least 1" in str(exc)
+            else:
+                raise AssertionError("expected authored capacity=0 to be rejected")
+            continue
         _, directives = extract_prompt_directives(segment)
         assert directives.queue_weight == 0.25
         assert directives.queue_weight_explicit is True
+        assert directives.queue_capacity == runners
         assert directives.wait_runners == runners
         assert directives.wait_priority == priority
 
 assert_segments({})
 assert_segments({"runners": "0"}, runners=0)
+assert_segments({"runners": "1"}, runners=1)
 assert_segments({"priority": "0"}, priority=0)
 assert_segments({"wait": "upstream", "runners": "0", "priority": "5"}, runners=0, priority=5)
 

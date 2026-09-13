@@ -4,7 +4,7 @@
 
 - Python 3.12+
 - `sase>=0.17.2`
-- `sase-core-rs>=0.33.0,<0.34.0`
+- `sase-core-rs>=0.34.23,<0.35.0`
 
 Local development and CI route `sase` and `sase-core` to coordinated source checkouts
 so this plugin can be tested with matching in-flight host changes (see

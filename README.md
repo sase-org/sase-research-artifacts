@@ -11,7 +11,7 @@ usable from agent workflows.
 
 ## Installation
 
-Requires Python 3.12+, `sase>=0.17.2`, and `sase-core-rs>=0.33.0,<0.34.0`. See
+Requires Python 3.12+, `sase>=0.17.2`, and `sase-core-rs>=0.34.23,<0.35.0`. See
 [docs/configuration.md](docs/configuration.md#requirements).
 
 ```bash
@@ -99,10 +99,11 @@ diagnostic rather than running someone else's command on your machine.
   their reports and generates an infographic; a four-segment xprompt swarm. Optional
   `wait` names agent(s) both researchers should wait on before starting; quote the
   value when listing several (`wait="a,b"`). Each segment requests `0.25` runner
-  capacity units by default. `runners` is an optional integer count condition with no
-  default; when supplied, it applies to all four agents. Optional `priority` is an
-  integer with no default override: a supplied value applies to all four agents (lower
-  values start first); omission uses SASE's implicit queue priority.
+  capacity units by default. `runners` is an optional positive-integer capacity budget
+  with no default; when supplied, it applies as `capacity=N` to all four agents. SASE
+  rejects authored `capacity=0`. Optional `priority` is an integer with no default
+  override: a supplied value applies to all four agents (lower values start first);
+  omission uses SASE's implicit queue priority.
 
 ## Defaults
 

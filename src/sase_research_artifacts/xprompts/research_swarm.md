@@ -23,7 +23,8 @@ input:
     type: int
     default: null
     description:
-      Optional capacity-threshold queue condition applied to every swarm member.
+      Optional positive-integer `%queue` capacity budget applied to every swarm member.
+      If null, the swarm uses SASE's global runner-capacity budget.
 ---
 
 %clan(research.{@1}, tribe=research,
