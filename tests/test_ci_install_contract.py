@@ -103,10 +103,10 @@ def test_release_smoke_requires_clean_published_minimum_wheels() -> None:
     assert "maturin" not in published_smoke
     assert "load_xprompts_from_plugins" in published_smoke
     assert "expand_single_xprompt" in published_smoke
-    assert "extract_prompt_directives" in published_smoke
+    assert "plan_typed_launch_units" in published_smoke
+    assert 'selected_project="sase"' in published_smoke
     assert "directives.queue_capacity" in published_smoke
     assert "capacity=" in published_smoke
-    assert "DirectiveError" in published_smoke
     assert "at least 1" in published_smoke
     assert '{"runners": "0"}' in published_smoke
     assert '{"runners": "1"}' in published_smoke
@@ -124,7 +124,8 @@ def test_wheel_contract_is_source_coordination_not_published_minimum() -> None:
     assert "SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_SOURCE" in wheel_test
     assert "maturin" in wheel_test
     assert 'startswith("0.34.")' in wheel_test
-    assert "DirectiveError" in wheel_test
+    assert "plan_typed_launch_units" in wheel_test
+    assert 'selected_project="sase"' in wheel_test
     assert "at least 1" in wheel_test
     assert PUBLISHED_MINIMUM_SASE not in wheel_test
     assert PUBLISHED_MINIMUM_CORE not in wheel_test

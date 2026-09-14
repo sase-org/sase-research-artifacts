@@ -11,12 +11,13 @@ from unittest.mock import patch
 import pytest
 from sase.agent.multi_prompt import split_segments_protecting_fences
 from sase.agent.xprompt_swarm import expand_xprompt_swarms_with_metadata
+from sase.core.agent_launch_facade import plan_typed_launch_units
+from sase.core.agent_launch_wire_records import AgentUnitWire
 from sase.core.artifact_context_query_facade import (
     ArtifactContextProducerGroup,
     query_artifact_context,
 )
 from sase.core.artifact_file_explicit import store_explicit_artifact_file
-from sase.xprompt.directives import DirectiveError, extract_prompt_directives
 from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.xprompt.models import UNSET
 from sase.xprompt.processor import expand_single_xprompt
@@ -33,12 +34,15 @@ def _research_xprompts() -> dict:
     return {name: xp for name, xp in xprompts.items() if name.startswith("research")}
 
 
-def _swarm_segments(named_args: dict[str, str]) -> list[str]:
+def _swarm_body(named_args: dict[str, str]) -> str:
     xp = _research_xprompts()["research_swarm"]
-    body = expand_single_xprompt(
+    return expand_single_xprompt(
         xp, ["some topic"], named_args, preserve_segment_separators=True
     )
-    return split_segments_protecting_fences(body)
+
+
+def _swarm_segments(named_args: dict[str, str]) -> list[str]:
+    return split_segments_protecting_fences(_swarm_body(named_args))
 
 
 # The lead's runtime `wait.artifacts` loop is deliberately raw-protected so it
@@ -63,6 +67,15 @@ def _without_wait_artifacts_loop(segment: str) -> str:
     return segment.replace(_WAIT_ARTIFACTS_LOOP, "")
 
 
+def _plan_agent_payloads(segments: list[str]) -> list[AgentUnitWire]:
+    plan = plan_typed_launch_units("\n---\n".join(segments), selected_project="sase")
+    assert plan.diagnostics == []
+    payloads = [unit.payload for unit in plan.units]
+    assert len(payloads) == len(segments)
+    assert all(isinstance(payload, AgentUnitWire) for payload in payloads)
+    return payloads
+
+
 def _assert_each_segment_has_one_queue(
     segments: list[str],
     *,
@@ -83,11 +96,13 @@ def _assert_each_segment_has_one_queue(
         assert "{{ priority }}" not in segment
         assert "{{ runners }}" not in segment
         assert "runners=" not in segment
-        if runners == 0:
-            with pytest.raises(DirectiveError, match=_ZERO_CAPACITY_ERROR):
-                extract_prompt_directives(segment)
-            continue
-        _, directives = extract_prompt_directives(segment)
+
+    if runners == 0:
+        with pytest.raises(Exception, match=_ZERO_CAPACITY_ERROR):
+            plan_typed_launch_units("\n---\n".join(segments), selected_project="sase")
+        return
+
+    for directives in _plan_agent_payloads(segments):
         assert directives.queue_weight == 0.25
         assert directives.queue_weight_explicit is True
         assert directives.queue_capacity == runners

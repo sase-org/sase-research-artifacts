@@ -199,7 +199,7 @@ from importlib.metadata import PackageNotFoundError, distribution, entry_points,
 from sase.artifact_providers import assemble_artifact_provider_registry
 from sase.config.loading import load_plugin_configs
 from sase.agent.multi_prompt import split_segments_protecting_fences
-from sase.xprompt.directives import DirectiveError, extract_prompt_directives
+from sase.core.agent_launch_facade import plan_typed_launch_units
 from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.xprompt.processor import expand_single_xprompt
 import importlib.resources
@@ -252,6 +252,14 @@ research_swarm = xprompts["research_swarm"]
 assert research_swarm.content.count("%q(w=0.25") == 4
 assert "default: 16" not in research_swarm.content
 
+def agent_payloads_for_segments(segments):
+    plan = plan_typed_launch_units("\\n---\\n".join(segments), selected_project="sase")
+    assert plan.diagnostics == []
+    payloads = [unit.payload for unit in plan.units]
+    assert len(payloads) == len(segments)
+    assert all(type(payload).__name__ == "AgentUnitWire" for payload in payloads)
+    return payloads
+
 def assert_segments(named_args, *, runners=None, priority=None):
     body = expand_single_xprompt(
         research_swarm,
@@ -268,15 +276,17 @@ def assert_segments(named_args, *, runners=None, priority=None):
             assert "capacity=" not in segment
         else:
             assert f"capacity={runners}" in segment
-        if runners == 0:
-            try:
-                extract_prompt_directives(segment)
-            except DirectiveError as exc:
-                assert "at least 1" in str(exc)
-            else:
-                raise AssertionError("expected authored capacity=0 to be rejected")
-            continue
-        _, directives = extract_prompt_directives(segment)
+
+    if runners == 0:
+        try:
+            plan_typed_launch_units("\\n---\\n".join(segments), selected_project="sase")
+        except Exception as exc:
+            assert "at least 1" in str(exc)
+        else:
+            raise AssertionError("expected authored capacity=0 to be rejected")
+        return
+
+    for directives in agent_payloads_for_segments(segments):
         assert directives.queue_weight == 0.25
         assert directives.queue_weight_explicit is True
         assert directives.queue_capacity == runners
