@@ -149,11 +149,17 @@ def test_research_swarm_declares_typed_input() -> None:
         ("wait", "word"),
         ("priority", "int"),
         ("runners", "int"),
+        ("primary_model", "word"),
+        ("second_opinion_model", "word"),
+        ("lead_model", "word"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
     assert xp.inputs[2].default is None
     assert xp.inputs[3].default is None
+    assert xp.inputs[4].default == "@sol_or_grok"
+    assert xp.inputs[5].default == "@opus_or_grok"
+    assert xp.inputs[6].default == "@xlarge"
 
 
 def test_research_swarm_has_four_top_level_segments() -> None:
@@ -168,11 +174,13 @@ def test_research_swarm_dependency_graph_preserved() -> None:
 
     assert "%clan(research.{@1}" in cdx
     assert "%id:research.{@1}.cdx" in cdx
+    assert "%m:{{ primary_model }}" in cdx
 
     assert "%id(cld, clan=research.{@1})" in cld
+    assert "%m:{{ second_opinion_model }}" in cld
 
     assert "%id(final, clan=research.{@1})" in final
-    assert "%m:@xlarge" in final
+    assert "%m:{{ lead_model }}" in final
     assert "research_lead" not in final
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
@@ -207,7 +215,7 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
 
     assert "%clan(research.{@1}" in cdx
     assert "%id:research.{@1}.cdx" in cdx
-    assert "%model:@sol_or_grok" in cdx
+    assert "%m:@sol_or_grok" in cdx
     assert "%wait:research.0f.final" in cdx
     assert "some topic #research(suffix=a)" in cdx
 
@@ -224,6 +232,41 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     assert "%wait:research.{@1}.cld" in final
     assert "%wait:research.{@1}.final" in image
     assert "%model:@image" in image
+    _assert_each_segment_has_one_queue([cdx, cld, final, image])
+
+
+def test_research_swarm_omitted_models_use_existing_role_defaults() -> None:
+    cdx, cld, final, image = _swarm_segments({})
+
+    assert "%m:@sol_or_grok" in cdx
+    assert "%m:@opus_or_grok" in cld
+    assert "%m:@xlarge" in final
+    assert "%model:@image" in image
+    assert "@sol_or_grok" not in cld + final + image
+    assert "@opus_or_grok" not in cdx + final + image
+    assert "@xlarge" not in cdx + cld + image
+
+
+def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
+    cdx, cld, final, image = _swarm_segments(
+        {
+            "primary_model": "@primary_custom",
+            "second_opinion_model": "@second_custom",
+            "lead_model": "@lead_custom",
+        }
+    )
+
+    assert "%m:@primary_custom" in cdx
+    assert "%m:@second_custom" in cld
+    assert "%m:@lead_custom" in final
+    assert "%model:@image" in image
+
+    assert "@primary_custom" not in cld + final + image
+    assert "@second_custom" not in cdx + final + image
+    assert "@lead_custom" not in cdx + cld + image
+    assert "@sol_or_grok" not in cdx + cld + final + image
+    assert "@opus_or_grok" not in cdx + cld + final + image
+    assert "@xlarge" not in cdx + cld + image
     _assert_each_segment_has_one_queue([cdx, cld, final, image])
 
 

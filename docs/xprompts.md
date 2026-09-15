@@ -44,12 +44,15 @@ recommendation, then hands off to `#research` to write it up.
 
 ### Input
 
-| Name       | Type | Description                                                        |
-| ---------- | ---- | ------------------------------------------------------------------ |
-| `prompt`   | text | Research topic or question for the swarm to investigate            |
-| `wait`     | word | Optional agent(s) to wait for before the swarm starts              |
-| `priority` | int  | Optional integer queue priority for all four agents; no default    |
-| `runners`  | int  | Optional positive-integer capacity budget for all four agents      |
+| Name                   | Type | Description                                                    |
+| ---------------------- | ---- | -------------------------------------------------------------- |
+| `prompt`               | text | Research topic or question for the swarm to investigate        |
+| `wait`                 | word | Optional agent(s) to wait for before the swarm starts          |
+| `priority`             | int  | Optional integer queue priority for all four agents; no default |
+| `runners`              | int  | Optional positive-integer capacity budget for all four agents  |
+| `primary_model`        | word | Model for `<clan>.cdx`; default `@sol_or_grok`                 |
+| `second_opinion_model` | word | Model for `<clan>.cld`; default `@opus_or_grok`                |
+| `lead_model`           | word | Model for `<clan>.final`; default `@xlarge`                    |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
@@ -62,6 +65,9 @@ the swarm consumes one normal unit of runner capacity when all four members are 
 changing the `0.25` weight. `N` must be a positive integer (`capacity=1` is the smallest
 valid budget; four quarter-weight members fit in it). Explicit `runners=0` still renders
 as `capacity=0` on every segment, and SASE rejects that authored value at launch.
+The three model inputs can be supplied independently, for example
+`#research_swarm(primary_model=@codex, second_opinion_model=@opus, lead_model=@xlarge): ...`.
+Omitting them preserves the defaults below. The image segment always uses `@image`.
 
 1. **`<clan>.cdx`** -- the primary researcher (`@sol_or_grok`), tagged with the
    `research` tribe, writing a self-named descriptive report via `#research(suffix=a)`;
@@ -94,6 +100,6 @@ The lead matches the `.cdx`/`.cld` `wait_name` to the `__a`/`__b` suffix already
 label, never by list order, then reads each report through its canonical research
 reference (or the `ref` fallback) with `sase artifact read`.
 
-Depends on the `sol_or_grok` / `opus_or_grok` / `image` model aliases and the
-`researchers` bucket from this plugin's default config, plus SASE's built-in `@xlarge`
-alias for the lead segment.
+By default this depends on the `sol_or_grok` / `opus_or_grok` / `image` model aliases
+and the `researchers` bucket from this plugin's default config, plus SASE's built-in
+`@xlarge` alias for the lead segment.

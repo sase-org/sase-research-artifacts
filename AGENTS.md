@@ -28,9 +28,9 @@ just check      # lint + test
   `#research/more`, `#research/prompt`, and `#research_swarm` xprompts, discovered
   through the `sase_xprompts` entry point.
 - `src/sase_research_artifacts/default_config.yml` — the `sol_or_grok`/`opus_or_grok`/
-  `image` model aliases, the `researchers` bucket, and the `research` tribe display
-  config, discovered through the `sase_config` entry point. The research-swarm lead
-  launches through SASE's built-in `@xlarge` alias.
+  `image` default model aliases, the `researchers` bucket, and the `research` tribe
+  display config, discovered through the `sase_config` entry point. The research-swarm
+  lead defaults to SASE's built-in `@xlarge` alias.
 - Depends on `sase>=0.17.2` and `sase-core-rs>=0.34.23,<0.35.0`; the `sase` floor is
   the first release line expected to carry unconditional weighted queue support, and
   the core window matches current SASE.

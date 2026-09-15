@@ -103,15 +103,20 @@ diagnostic rather than running someone else's command on your machine.
   with no default; when supplied, it applies as `capacity=N` to all four agents. SASE
   rejects authored `capacity=0`. Optional `priority` is an integer with no default
   override: a supplied value applies to all four agents (lower values start first);
-  omission uses SASE's implicit queue priority.
+  omission uses SASE's implicit queue priority. Optional `primary_model`,
+  `second_opinion_model`, and `lead_model` choose the `.cdx`, `.cld`, and `.final`
+  researcher models, defaulting to `@sol_or_grok`, `@opus_or_grok`, and `@xlarge`.
+  Example: `#research_swarm(primary_model=@codex, second_opinion_model=@opus,
+  lead_model=@xlarge): compare approaches`.
 
 ## Defaults
 
-`default_config.yml` ships the `sol_or_grok` / `opus_or_grok` / `image` model aliases, the
-`researchers` bucket, and the `research` tribe display config. The
-`#research_swarm` lead segment launches through SASE's built-in `@xlarge` alias, so the
-swarm works out of the box on a fresh install. Project or user config still overrides
-these by normal layer precedence.
+`default_config.yml` ships the `sol_or_grok` / `opus_or_grok` / `image` model aliases,
+the `researchers` bucket, and the `research` tribe display config. By default,
+`#research_swarm` uses those aliases for the primary, second-opinion, and image agents
+and SASE's built-in `@xlarge` alias for the lead segment, so the swarm works out of the
+box on a fresh install. Project or user config still overrides aliases by normal layer
+precedence, and callers can override the three researcher role models per invocation.
 
 ## Development
 
