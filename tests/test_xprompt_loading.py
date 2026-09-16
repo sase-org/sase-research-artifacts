@@ -41,8 +41,18 @@ def _swarm_body(named_args: dict[str, str]) -> str:
     )
 
 
-def _swarm_segments(named_args: dict[str, str]) -> list[str]:
-    return split_segments_protecting_fences(_swarm_body(named_args))
+def _swarm_segments(
+    named_args: dict[str, str], *, image: bool = False
+) -> list[str]:
+    args = dict(named_args)
+    if image:
+        args["should_generate_image"] = "true"
+    return split_segments_protecting_fences(_swarm_body(args))
+
+
+def _authored_swarm_segments() -> list[str]:
+    xp = _research_xprompts()["research_swarm"]
+    return [segment.strip() for segment in xp.content.split("\n---\n") if segment.strip()]
 
 
 # The lead's runtime `wait.artifacts` loop is deliberately raw-protected so it
@@ -152,6 +162,7 @@ def test_research_swarm_declares_typed_input() -> None:
         ("primary_model", "word"),
         ("second_opinion_model", "word"),
         ("lead_model", "word"),
+        ("should_generate_image", "bool"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
@@ -160,17 +171,34 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[4].default == "@sol_or_grok"
     assert xp.inputs[5].default == "@opus_or_grok"
     assert xp.inputs[6].default == "@xlarge"
+    assert xp.inputs[7].default is False
 
 
 def test_research_swarm_has_four_top_level_segments() -> None:
-    xp = _research_xprompts()["research_swarm"]
-    segments = split_segments_protecting_fences(xp.content)
+    segments = _authored_swarm_segments()
     assert len(segments) == 4
 
 
+def test_research_swarm_defaults_to_three_expanded_agents() -> None:
+    segments = _swarm_segments({})
+    assert len(segments) == 3
+    assert all("%id(image" not in segment for segment in segments)
+
+
+def test_research_swarm_can_opt_into_image_agent() -> None:
+    segments = _swarm_segments({}, image=True)
+    assert len(segments) == 4
+    image = segments[-1]
+    assert "%id(image, clan=research.{@1})" in image
+    assert "%wait:research.{@1}.final" in image
+    assert "#fork:research.{@1}.final" in image
+    assert "#research/image" in image
+    assert "%model:@image" in image
+    assert "%if(" not in image
+
+
 def test_research_swarm_dependency_graph_preserved() -> None:
-    xp = _research_xprompts()["research_swarm"]
-    cdx, cld, final, image = split_segments_protecting_fences(xp.content)
+    cdx, cld, final, image = _authored_swarm_segments()
 
     assert "%clan(research.{@1}" in cdx
     assert "%id:research.{@1}.cdx" in cdx
@@ -186,6 +214,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%wait:research.{@1}.cld" in final
 
     assert "%id(image, clan=research.{@1})" in image
+    assert "%if(should_run={{ should_generate_image }})" in image
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
     assert "#research/image" in image
@@ -201,8 +230,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
-    xp = _research_xprompts()["research_swarm"]
-    _cdx, _cld, final, _image = split_segments_protecting_fences(xp.content)
+    _cdx, _cld, final, _image = _authored_swarm_segments()
 
     assert (
         "SASE derives your plan's links from the artifacts you read this turn; use\n"
@@ -211,7 +239,7 @@ def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
 
 
 def test_research_swarm_wait_argument_gates_researchers_only() -> None:
-    cdx, cld, final, image = _swarm_segments({"wait": "research.0f.final"})
+    cdx, cld, final = _swarm_segments({"wait": "research.0f.final"})
 
     assert "%clan(research.{@1}" in cdx
     assert "%id:research.{@1}.cdx" in cdx
@@ -225,30 +253,33 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     assert "some topic #research(suffix=b)" in cld
 
     assert "%wait:research.0f.final" not in final
-    assert "%wait:research.0f.final" not in image
     assert "%m:@xlarge" in final
     assert "research_lead" not in final
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
+    _assert_each_segment_has_one_queue([cdx, cld, final])
+
+    *_researchers, image = _swarm_segments(
+        {"wait": "research.0f.final"}, image=True
+    )
+    assert "%wait:research.0f.final" not in image
     assert "%wait:research.{@1}.final" in image
     assert "%model:@image" in image
-    _assert_each_segment_has_one_queue([cdx, cld, final, image])
 
 
 def test_research_swarm_omitted_models_use_existing_role_defaults() -> None:
-    cdx, cld, final, image = _swarm_segments({})
+    cdx, cld, final = _swarm_segments({})
 
     assert "%m:@sol_or_grok" in cdx
     assert "%m:@opus_or_grok" in cld
     assert "%m:@xlarge" in final
-    assert "%model:@image" in image
-    assert "@sol_or_grok" not in cld + final + image
-    assert "@opus_or_grok" not in cdx + final + image
-    assert "@xlarge" not in cdx + cld + image
+    assert "@sol_or_grok" not in cld + final
+    assert "@opus_or_grok" not in cdx + final
+    assert "@xlarge" not in cdx + cld
 
 
 def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
-    cdx, cld, final, image = _swarm_segments(
+    cdx, cld, final = _swarm_segments(
         {
             "primary_model": "@primary_custom",
             "second_opinion_model": "@second_custom",
@@ -259,38 +290,35 @@ def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
     assert "%m:@primary_custom" in cdx
     assert "%m:@second_custom" in cld
     assert "%m:@lead_custom" in final
-    assert "%model:@image" in image
 
-    assert "@primary_custom" not in cld + final + image
-    assert "@second_custom" not in cdx + final + image
-    assert "@lead_custom" not in cdx + cld + image
-    assert "@sol_or_grok" not in cdx + cld + final + image
-    assert "@opus_or_grok" not in cdx + cld + final + image
-    assert "@xlarge" not in cdx + cld + image
-    _assert_each_segment_has_one_queue([cdx, cld, final, image])
+    assert "@primary_custom" not in cld + final
+    assert "@second_custom" not in cdx + final
+    assert "@lead_custom" not in cdx + cld
+    assert "@sol_or_grok" not in cdx + cld + final
+    assert "@opus_or_grok" not in cdx + cld + final
+    assert "@xlarge" not in cdx + cld
+    _assert_each_segment_has_one_queue([cdx, cld, final])
 
 
 def test_research_swarm_omitted_wait_leaves_researchers_ungated() -> None:
-    cdx, cld, final, image = _swarm_segments({})
+    cdx, cld, final = _swarm_segments({})
 
     assert "%wait:" not in cdx
     assert "%wait:" not in cld
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
-    assert "%wait:research.{@1}.final" in image
-    assert "%model:@image" in image
     assert all(
         "{%" not in _without_wait_artifacts_loop(segment)
-        for segment in (cdx, cld, final, image)
+        for segment in (cdx, cld, final)
     )
-    assert all("{{ wait }}" not in segment for segment in (cdx, cld, final, image))
-    _assert_each_segment_has_one_queue([cdx, cld, final, image])
+    assert all("{{ wait }}" not in segment for segment in (cdx, cld, final))
+    _assert_each_segment_has_one_queue([cdx, cld, final])
 
 
 def test_research_swarm_researchers_carry_distinct_suffixes() -> None:
     """Two identical dispatches keep distinct researcher suffixes."""
     with patch("sase.core.time.generate_timestamp", return_value="260820_161407"):
-        first_cdx, first_cld, _first_final, _first_image, second_cdx, second_cld, *_ = [
+        first_cdx, first_cld, _first_final, second_cdx, second_cld, *_ = [
             record.prompt
             for record in expand_xprompt_swarms_with_metadata(
                 [
@@ -316,7 +344,6 @@ def test_research_swarm_researchers_carry_distinct_suffixes() -> None:
 
     assert f"%wait:research.{first_marker}.cdx" in _first_final
     assert f"%wait:research.{first_marker}.cld" in _first_final
-    assert f"%wait:research.{first_marker}.final" in _first_image
 
 
 def test_research_prompt_suffix_branch_renders_without_artifacts() -> None:
@@ -340,58 +367,66 @@ def test_research_prompt_suffix_branch_renders_without_artifacts() -> None:
 
 
 def test_research_swarm_omitted_priority_uses_weight_only_queue() -> None:
-    cdx, cld, final, image = _swarm_segments({})
+    cdx, cld, final = _swarm_segments({})
 
-    _assert_each_segment_has_one_queue([cdx, cld, final, image])
+    _assert_each_segment_has_one_queue([cdx, cld, final])
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
+
+    *_researchers, image = _swarm_segments({}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
 
 
 def test_research_swarm_supplied_zero_runners_renders_on_every_agent() -> None:
     """Explicit 0 is not omission; current SASE rejects authored capacity=0."""
-    cdx, cld, final, image = _swarm_segments({"runners": "0"})
+    cdx, cld, final = _swarm_segments({"runners": "0"})
 
-    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=0)
+    _assert_each_segment_has_one_queue([cdx, cld, final], runners=0)
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
+
+    *_researchers, image = _swarm_segments({"runners": "0"}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
 
 
 def test_research_swarm_supplied_runners_renders_on_every_agent() -> None:
-    cdx, cld, final, image = _swarm_segments({"runners": "8"})
+    cdx, cld, final = _swarm_segments({"runners": "8"})
 
-    _assert_each_segment_has_one_queue([cdx, cld, final, image], runners=8)
+    _assert_each_segment_has_one_queue([cdx, cld, final], runners=8)
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
+
+    *_researchers, image = _swarm_segments({"runners": "8"}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
 
 
 def test_research_swarm_supplied_priority_renders_on_every_agent() -> None:
-    cdx, cld, final, image = _swarm_segments({"priority": "5"})
-    _assert_each_segment_has_one_queue([cdx, cld, final, image], priority=5)
+    cdx, cld, final = _swarm_segments({"priority": "5"})
+    _assert_each_segment_has_one_queue([cdx, cld, final], priority=5)
     assert "%wait:" not in cdx
     assert "%wait:" not in cld
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
+
+    *_researchers, image = _swarm_segments({"priority": "5"}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
 
 
 def test_research_swarm_priority_zero_is_not_omission() -> None:
-    cdx, cld, final, image = _swarm_segments({"priority": "0"})
-    _assert_each_segment_has_one_queue([cdx, cld, final, image], priority=0)
+    cdx, cld, final = _swarm_segments({"priority": "0"})
+    _assert_each_segment_has_one_queue([cdx, cld, final], priority=0)
 
 
 def test_research_swarm_priority_composes_with_wait() -> None:
-    cdx, cld, final, image = _swarm_segments(
+    cdx, cld, final = _swarm_segments(
         {"wait": "research.0f.final", "priority": "5", "runners": "0"}
     )
     _assert_each_segment_has_one_queue(
-        [cdx, cld, final, image],
+        [cdx, cld, final],
         runners=0,
         priority=5,
     )
@@ -399,6 +434,11 @@ def test_research_swarm_priority_composes_with_wait() -> None:
     assert "%wait:research.0f.final" in cdx
     assert "%wait:research.0f.final" in cld
     assert "%wait:research.0f.final" not in final
+
+    *_researchers, image = _swarm_segments(
+        {"wait": "research.0f.final", "priority": "5", "runners": "0"},
+        image=True,
+    )
     assert "%wait:research.0f.final" not in image
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
@@ -420,8 +460,7 @@ def test_research_registers_report_in_every_branch() -> None:
 
 
 def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
-    xp = _research_xprompts()["research_swarm"]
-    _cdx, _cld, final, _image = split_segments_protecting_fences(xp.content)
+    _cdx, _cld, final, _image = _authored_swarm_segments()
 
     assert "wait_chats" not in final
     assert (
@@ -491,7 +530,7 @@ def test_research_swarm_lead_renders_registered_reports_via_wait_artifacts(
         index_path=index_path,
     )
 
-    _cdx, _cld, final, _image = _swarm_segments({})
+    _cdx, _cld, final = _swarm_segments({})
 
     with bind_runtime_template_vars(
         {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}

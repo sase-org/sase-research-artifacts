@@ -48,26 +48,31 @@ recommendation, then hands off to `#research` to write it up.
 | ---------------------- | ---- | -------------------------------------------------------------- |
 | `prompt`               | text | Research topic or question for the swarm to investigate        |
 | `wait`                 | word | Optional agent(s) to wait for before the swarm starts          |
-| `priority`             | int  | Optional integer queue priority for all four agents; no default |
-| `runners`              | int  | Optional positive-integer capacity budget for all four agents  |
+| `priority`             | int  | Optional integer queue priority for every launched agent; no default |
+| `runners`              | int  | Optional positive-integer capacity budget for every launched agent  |
 | `primary_model`        | word | Model for `<clan>.cdx`; default `@sol_or_grok`                 |
 | `second_opinion_model` | word | Model for `<clan>.cld`; default `@opus_or_grok`                |
 | `lead_model`           | word | Model for `<clan>.final`; default `@xlarge`                    |
+| `should_generate_image` | bool | Opt into `<clan>.image`; default `false`                       |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
 
-A four-segment xprompt swarm. Optional `wait` gates only `cdx`/`cld`. Optional
-`priority` applies to all four agents when supplied (lower values start first);
-omission uses SASE's implicit queue priority. Every segment authors `%q(w=0.25)`, so
-the swarm consumes one normal unit of runner capacity when all four members are live.
+A three-agent xprompt swarm by default, or four agents when `should_generate_image=true`
+opts into the image segment. Optional `wait` gates only `cdx`/`cld`. Optional
+`priority` applies to every launched agent when supplied (lower values start first);
+omission uses SASE's implicit queue priority. Every launched segment authors
+`%q(w=0.25)`, so the default swarm consumes `0.75` runner capacity units; the image
+opt-in consumes one normal unit when all four members are live.
 `runners` has no default; when supplied, it adds `capacity=N` to every segment without
 changing the `0.25` weight. `N` must be a positive integer (`capacity=1` is the smallest
 valid budget; four quarter-weight members fit in it). Explicit `runners=0` still renders
-as `capacity=0` on every segment, and SASE rejects that authored value at launch.
+as `capacity=0` on every launched segment, and SASE rejects that authored value at launch.
 The three model inputs can be supplied independently, for example
 `#research_swarm(primary_model=@codex, second_opinion_model=@opus, lead_model=@xlarge): ...`.
-Omitting them preserves the defaults below. The image segment always uses `@image`.
+Omitting them preserves the defaults below. The opt-in image segment always uses
+`@image`, for example
+`#research_swarm(prompt="A research topic", should_generate_image=true)`.
 
 1. **`<clan>.cdx`** -- the primary researcher (`@sol_or_grok`), tagged with the
    `research` tribe, writing a self-named descriptive report via `#research(suffix=a)`;
@@ -80,8 +85,9 @@ Omitting them preserves the defaults below. The image segment always uses `@imag
    consolidated report merging all three perspectives. Individual researcher reports
    move to `<name>__a.md` / `<name>__b.md` under `<name>/`, preserving each report's
    existing suffix; the consolidated report is `<name>/<name>.md`.
-4. **`<clan>.image`** -- waits on and forks from the lead's segment, then runs
-   `#research/image` against the consolidated report using `@image`.
+4. **`<clan>.image`** -- optional; when `should_generate_image=true`, waits on and forks
+   from the lead's segment, then runs `#research/image` against the consolidated report
+   using `@image`.
 
 Each of `cdx` and `cld` is told the other researcher's agent ID and the `__a`/`__b`
 suffix its report filename will end with, and is explicitly instructed not to seek out

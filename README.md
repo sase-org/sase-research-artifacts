@@ -96,27 +96,31 @@ diagnostic rather than running someone else's command on your machine.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.
 - `#research_swarm` -- launch two independent researchers plus a lead who consolidates
-  their reports and generates an infographic; a four-segment xprompt swarm. Optional
+  their reports; a three-agent xprompt swarm by default, or four agents when
+  `should_generate_image=true` opts into the infographic segment. Optional
   `wait` names agent(s) both researchers should wait on before starting; quote the
-  value when listing several (`wait="a,b"`). Each segment requests `0.25` runner
+  value when listing several (`wait="a,b"`). Each launched segment requests `0.25` runner
   capacity units by default. `runners` is an optional positive-integer capacity budget
-  with no default; when supplied, it applies as `capacity=N` to all four agents. SASE
+  with no default; when supplied, it applies as `capacity=N` to every launched agent. SASE
   rejects authored `capacity=0`. Optional `priority` is an integer with no default
-  override: a supplied value applies to all four agents (lower values start first);
+  override: a supplied value applies to every launched agent (lower values start first);
   omission uses SASE's implicit queue priority. Optional `primary_model`,
   `second_opinion_model`, and `lead_model` choose the `.cdx`, `.cld`, and `.final`
   researcher models, defaulting to `@sol_or_grok`, `@opus_or_grok`, and `@xlarge`.
   Example: `#research_swarm(primary_model=@codex, second_opinion_model=@opus,
   lead_model=@xlarge): compare approaches`.
+  Image example:
+  `#research_swarm(prompt="A research topic", should_generate_image=true)`.
 
 ## Defaults
 
 `default_config.yml` ships the `sol_or_grok` / `opus_or_grok` / `image` model aliases,
 the `researchers` bucket, and the `research` tribe display config. By default,
-`#research_swarm` uses those aliases for the primary, second-opinion, and image agents
-and SASE's built-in `@xlarge` alias for the lead segment, so the swarm works out of the
-box on a fresh install. Project or user config still overrides aliases by normal layer
-precedence, and callers can override the three researcher role models per invocation.
+`#research_swarm` uses those aliases for the primary, second-opinion, and opt-in image
+agents and SASE's built-in `@xlarge` alias for the lead segment, so the swarm works out
+of the box on a fresh install. Project or user config still overrides aliases by normal
+layer precedence, and callers can override the three researcher role models per
+invocation.
 
 ## Development
 

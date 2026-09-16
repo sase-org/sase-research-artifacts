@@ -260,15 +260,18 @@ def agent_payloads_for_segments(segments):
     assert all(type(payload).__name__ == "AgentUnitWire" for payload in payloads)
     return payloads
 
-def assert_segments(named_args, *, runners=None, priority=None):
+def assert_segments(named_args, *, runners=None, priority=None, image=False):
+    args = dict(named_args)
+    if image:
+        args["should_generate_image"] = "true"
     body = expand_single_xprompt(
         research_swarm,
         ["wheel contract smoke"],
-        named_args,
+        args,
         preserve_segment_separators=True,
     )
     segments = split_segments_protecting_fences(body)
-    assert len(segments) == 4, segments
+    assert len(segments) == (4 if image else 3), segments
     for segment in segments:
         assert segment.count("%q(") == 1
         assert "runners=" not in segment
@@ -294,6 +297,7 @@ def assert_segments(named_args, *, runners=None, priority=None):
         assert directives.wait_priority == priority
 
 assert_segments({})
+assert_segments({}, image=True)
 assert_segments({"runners": "0"}, runners=0)
 assert_segments({"runners": "1"}, runners=1)
 assert_segments({"priority": "0"}, priority=0)
