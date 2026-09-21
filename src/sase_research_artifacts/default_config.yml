@@ -1,21 +1,13 @@
 llm_provider:
   model_aliases:
     custom:
-      sol_or_grok:
-        model: codex/gpt-5.6-sol || grok/grok-4.6
-        description: "Primary independent research-swarm researcher."
-        bucket: researchers
-      opus_or_grok:
-        model: claude/opus || grok/grok-4.6
-        description: "Assisting (second-opinion) research-swarm agents."
-        bucket: researchers
       image:
         model: "codex/gpt-5.6-sol@xhigh | grok/grok-4.6@xhigh"
         description: "Research-swarm infographic and image-generation agent."
         bucket: researchers
     buckets:
       researchers:
-        description: "Research-swarm model roles: primary researcher, second-opinion researcher, infographic/image agent."
+        description: "Research-swarm roles: per-provider independent researchers (codex, claude, grok, muse), the consolidating lead, and the infographic/image agent."
 ace:
   tribes:
     research:

@@ -21,10 +21,8 @@ def test_default_config_loads_expected_model_aliases_and_bucket() -> None:
     config = _research_default_config()
     custom = config["llm_provider"]["model_aliases"]["custom"]
 
-    assert custom["sol_or_grok"]["model"] == "codex/gpt-5.6-sol || grok/grok-4.6"
-    assert custom["sol_or_grok"]["bucket"] == "researchers"
-    assert custom["opus_or_grok"]["model"] == "claude/opus || grok/grok-4.6"
-    assert custom["opus_or_grok"]["bucket"] == "researchers"
+    assert "sol_or_grok" not in custom
+    assert "opus_or_grok" not in custom
     assert "research_lead" not in custom
     assert "research_a" not in custom
     assert "research_b" not in custom

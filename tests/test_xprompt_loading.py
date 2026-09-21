@@ -18,6 +18,7 @@ from sase.core.artifact_context_query_facade import (
     query_artifact_context,
 )
 from sase.core.artifact_file_explicit import store_explicit_artifact_file
+from sase.llm_provider.provider_disable import disable_provider
 from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.xprompt.models import UNSET
 from sase.xprompt.processor import expand_single_xprompt
@@ -27,6 +28,16 @@ from sase.xprompt.workflow_executor_utils import render_template
 # Authored capacity=0 is preserved in the swarm expansion (not treated as
 # omission) and rejected by current SASE at parse time.
 _ZERO_CAPACITY_ERROR = "at least 1"
+
+
+@pytest.fixture(autouse=True)
+def _isolated_sase_home(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Keep swarm rendering independent of machine-wide provider disables."""
+    home = tmp_path / "sase-home"
+    home.mkdir(exist_ok=True)
+    monkeypatch.setenv("SASE_HOME", str(home))
 
 
 def _research_xprompts() -> dict:
@@ -159,8 +170,14 @@ def test_research_swarm_declares_typed_input() -> None:
         ("wait", "word"),
         ("priority", "int"),
         ("runners", "int"),
-        ("primary_model", "word"),
-        ("second_opinion_model", "word"),
+        ("codex", "bool"),
+        ("claude", "bool"),
+        ("grok", "bool"),
+        ("muse", "bool"),
+        ("codex_model", "word"),
+        ("claude_model", "word"),
+        ("grok_model", "word"),
+        ("muse_model", "word"),
         ("lead_model", "word"),
         ("should_generate_image", "bool"),
     ]
@@ -168,21 +185,35 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[1].default is None
     assert xp.inputs[2].default is None
     assert xp.inputs[3].default is None
-    assert xp.inputs[4].default == "@sol_or_grok"
-    assert xp.inputs[5].default == "@opus_or_grok"
-    assert xp.inputs[6].default == "@xlarge"
+    assert xp.inputs[4].default is True
+    assert xp.inputs[5].default is True
+    assert xp.inputs[6].default is False
     assert xp.inputs[7].default is False
+    assert xp.inputs[8].default == "codex/gpt-5.6-sol@xhigh"
+    assert xp.inputs[9].default == "claude/opus@xhigh"
+    assert xp.inputs[10].default == "grok/grok-4.6@xhigh"
+    assert xp.inputs[11].default == "muse/muse-spark-1.3-contributor@xhigh"
+    assert xp.inputs[12].default == "@xlarge"
+    assert xp.inputs[13].default is False
 
 
-def test_research_swarm_has_four_top_level_segments() -> None:
+def test_research_swarm_has_six_top_level_segments() -> None:
     segments = _authored_swarm_segments()
-    assert len(segments) == 4
+    assert len(segments) == 6
 
 
 def test_research_swarm_defaults_to_three_expanded_agents() -> None:
     segments = _swarm_segments({})
     assert len(segments) == 3
     assert all("%id(image" not in segment for segment in segments)
+    assert all("%id(grk," not in segment for segment in segments)
+    assert all("%id(mus," not in segment for segment in segments)
+    cdx, cld, final = segments
+    assert "%id(cdx, clan=research.{@1})" in cdx
+    assert "%id(cld, clan=research.{@1})" in cld
+    assert "%clan(research.{@1}" in final
+    assert "some topic #research(suffix=cdx)" in cdx
+    assert "some topic #research(suffix=cld)" in cld
 
 
 def test_research_swarm_can_opt_into_image_agent() -> None:
@@ -198,20 +229,31 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
 
 
 def test_research_swarm_dependency_graph_preserved() -> None:
-    cdx, cld, final, image = _authored_swarm_segments()
+    cdx, cld, grk, mus, final, image = _authored_swarm_segments()
 
-    assert "%clan(research.{@1}" in cdx
-    assert "%id:research.{@1}.cdx" in cdx
-    assert "%m:{{ primary_model }}" in cdx
+    assert '%if(should_run={{ codex and ("codex" | provider_enabled) }})' in cdx
+    assert "%id(cdx, clan=research.{@1})" in cdx
+    assert "%m:{{ codex_model }}" in cdx
+    assert "%clan(" not in cdx
 
+    assert '%if(should_run={{ claude and ("claude" | provider_enabled) }})' in cld
     assert "%id(cld, clan=research.{@1})" in cld
-    assert "%m:{{ second_opinion_model }}" in cld
+    assert "%m:{{ claude_model }}" in cld
+    assert "%clan(" not in cld
 
-    assert "%id(final, clan=research.{@1})" in final
+    assert '%if(should_run={{ grok and ("grok" | provider_enabled) }})' in grk
+    assert "%id(grk, clan=research.{@1})" in grk
+    assert "%m:{{ grok_model }}" in grk
+
+    assert '%if(should_run={{ muse and ("muse" | provider_enabled) }})' in mus
+    assert "%id(mus, clan=research.{@1})" in mus
+    assert "%m:{{ muse_model }}" in mus
+
+    assert "%clan(research.{@1}" in final
+    assert "%id:research.{@1}.final" in final
     assert "%m:{{ lead_model }}" in final
     assert "research_lead" not in final
-    assert "%wait:research.{@1}.cdx" in final
-    assert "%wait:research.{@1}.cld" in final
+    assert "{% for r in researchers %}%wait:research.{@1}.{{ r.short }}" in final
 
     assert "%id(image, clan=research.{@1})" in image
     assert "%if(should_run={{ should_generate_image }})" in image
@@ -221,16 +263,20 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%model:@image" in image
     assert "%model:codex/gpt-5.6-sol" not in image
     assert all(
-        "priority is not none" in segment for segment in (cdx, cld, final, image)
+        "priority is not none" in segment
+        for segment in (cdx, cld, grk, mus, final, image)
     )
-    assert all(segment.count("%q(") == 1 for segment in (cdx, cld, final, image))
     assert all(
-        _WEIGHTED_QUEUE_TEMPLATE in segment for segment in (cdx, cld, final, image)
+        segment.count("%q(") == 1 for segment in (cdx, cld, grk, mus, final, image)
+    )
+    assert all(
+        _WEIGHTED_QUEUE_TEMPLATE in segment
+        for segment in (cdx, cld, grk, mus, final, image)
     )
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
-    _cdx, _cld, final, _image = _authored_swarm_segments()
+    *_researchers, final, _image = _authored_swarm_segments()
 
     assert (
         "SASE derives your plan's links from the artifacts you read this turn; use\n"
@@ -241,16 +287,16 @@ def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
 def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     cdx, cld, final = _swarm_segments({"wait": "research.0f.final"})
 
-    assert "%clan(research.{@1}" in cdx
-    assert "%id:research.{@1}.cdx" in cdx
-    assert "%m:@sol_or_grok" in cdx
+    assert "%clan(research.{@1}" in final
+    assert "%id:research.{@1}.final" in final
+    assert "%m:codex/gpt-5.6-sol@xhigh" in cdx
     assert "%wait:research.0f.final" in cdx
-    assert "some topic #research(suffix=a)" in cdx
+    assert "some topic #research(suffix=cdx)" in cdx
 
     assert "%id(cld, clan=research.{@1})" in cld
-    assert "%m:@opus_or_grok" in cld
+    assert "%m:claude/opus@xhigh" in cld
     assert "%wait:research.0f.final" in cld
-    assert "some topic #research(suffix=b)" in cld
+    assert "some topic #research(suffix=cld)" in cld
 
     assert "%wait:research.0f.final" not in final
     assert "%m:@xlarge" in final
@@ -267,37 +313,44 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     assert "%model:@image" in image
 
 
-def test_research_swarm_omitted_models_use_existing_role_defaults() -> None:
+def test_research_swarm_omitted_models_use_per_provider_defaults() -> None:
     cdx, cld, final = _swarm_segments({})
 
-    assert "%m:@sol_or_grok" in cdx
-    assert "%m:@opus_or_grok" in cld
+    assert "%m:codex/gpt-5.6-sol@xhigh" in cdx
+    assert "%m:claude/opus@xhigh" in cld
     assert "%m:@xlarge" in final
-    assert "@sol_or_grok" not in cld + final
-    assert "@opus_or_grok" not in cdx + final
+    assert "codex/gpt-5.6-sol@xhigh" not in cld + final
+    assert "claude/opus@xhigh" not in cdx + final
     assert "@xlarge" not in cdx + cld
+    assert "@sol_or_grok" not in cdx + cld + final
+    assert "@opus_or_grok" not in cdx + cld + final
 
 
 def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
-    cdx, cld, final = _swarm_segments(
+    cdx, cld, grk, mus, final = _swarm_segments(
         {
-            "primary_model": "@primary_custom",
-            "second_opinion_model": "@second_custom",
+            "codex_model": "@codex_custom",
+            "claude_model": "@claude_custom",
+            "grok_model": "@grok_custom",
+            "muse_model": "@muse_custom",
             "lead_model": "@lead_custom",
+            "grok": "true",
+            "muse": "true",
         }
     )
 
-    assert "%m:@primary_custom" in cdx
-    assert "%m:@second_custom" in cld
+    assert "%m:@codex_custom" in cdx
+    assert "%m:@claude_custom" in cld
+    assert "%m:@grok_custom" in grk
+    assert "%m:@muse_custom" in mus
     assert "%m:@lead_custom" in final
 
-    assert "@primary_custom" not in cld + final
-    assert "@second_custom" not in cdx + final
-    assert "@lead_custom" not in cdx + cld
-    assert "@sol_or_grok" not in cdx + cld + final
-    assert "@opus_or_grok" not in cdx + cld + final
-    assert "@xlarge" not in cdx + cld
-    _assert_each_segment_has_one_queue([cdx, cld, final])
+    assert "@codex_custom" not in cld + grk + mus + final
+    assert "@claude_custom" not in cdx + grk + mus + final
+    assert "@grok_custom" not in cdx + cld + mus + final
+    assert "@muse_custom" not in cdx + cld + grk + final
+    assert "@lead_custom" not in cdx + cld + grk + mus
+    _assert_each_segment_has_one_queue([cdx, cld, grk, mus, final])
 
 
 def test_research_swarm_omitted_wait_leaves_researchers_ungated() -> None:
@@ -330,20 +383,113 @@ def test_research_swarm_researchers_carry_distinct_suffixes() -> None:
 
     first_marker = "{@research.swarm.260820.161407.0.1!}"
     second_marker = "{@research.swarm.260820.161407.1.1!}"
-    assert f"%id:research.{first_marker}.cdx" in first_cdx
+    assert f"%id(cdx, clan=research.{first_marker})" in first_cdx
     assert f"%id(cld, clan=research.{first_marker})" in first_cld
-    assert f"%id:research.{second_marker}.cdx" in second_cdx
+    assert f"%id(cdx, clan=research.{second_marker})" in second_cdx
     assert f"%id(cld, clan=research.{second_marker})" in second_cld
 
     cdx_segments = (first_cdx, second_cdx)
     cld_segments = (first_cld, second_cld)
     researcher_segments = cdx_segments + cld_segments
-    assert all("#research(suffix=a)" in segment for segment in cdx_segments)
-    assert all("#research(suffix=b)" in segment for segment in cld_segments)
+    assert all("#research(suffix=cdx)" in segment for segment in cdx_segments)
+    assert all("#research(suffix=cld)" in segment for segment in cld_segments)
     assert all("report_target=" not in segment for segment in researcher_segments)
 
     assert f"%wait:research.{first_marker}.cdx" in _first_final
     assert f"%wait:research.{first_marker}.cld" in _first_final
+
+
+def test_research_swarm_grok_and_muse_opt_in_add_segments() -> None:
+    grok_segments = _swarm_segments({"grok": "true"})
+    assert len(grok_segments) == 4
+    cdx, cld, grk, final = grok_segments
+    assert "%id(grk, clan=research.{@1})" in grk
+    assert "%m:grok/grok-4.6@xhigh" in grk
+    assert "some topic #research(suffix=grk)" in grk
+    assert "%wait:research.{@1}.grk" in final
+    _assert_each_segment_has_one_queue(grok_segments)
+
+    muse_segments = _swarm_segments({"muse": "true"})
+    assert len(muse_segments) == 4
+    assert any("%id(mus, clan=research.{@1})" in s for s in muse_segments)
+    mus = next(s for s in muse_segments if "%id(mus," in s)
+    assert "%m:muse/muse-spark-1.3-contributor@xhigh" in mus
+    assert "some topic #research(suffix=mus)" in mus
+    final = muse_segments[-1]
+    assert "%wait:research.{@1}.mus" in final
+
+    both = _swarm_segments({"grok": "true", "muse": "true"})
+    assert len(both) == 5
+    _assert_each_segment_has_one_queue(both)
+
+
+def test_research_swarm_codex_false_drops_cdx() -> None:
+    cld, final = _swarm_segments({"codex": "false"})
+    assert "%id(cdx," not in cld + final
+    assert "%id(cld, clan=research.{@1})" in cld
+    assert "%wait:research.{@1}.cdx" not in final
+    assert "%wait:research.{@1}.cld" in final
+    assert "1-researcher swarm" in cld
+    assert "only independent researcher" in cld
+    _assert_each_segment_has_one_queue([cld, final])
+
+
+def test_research_swarm_disabled_provider_drops_segment() -> None:
+    disable_provider("codex", 900.0, source="test")
+    (cld, final) = _swarm_segments({"codex": "true"})
+    assert "%id(cdx," not in cld + final
+    assert "%id(cld, clan=research.{@1})" in cld
+    assert "%wait:research.{@1}.cdx" not in final
+    assert "%wait:research.{@1}.cld" in final
+    for directives in _plan_agent_payloads([cld, final]):
+        assert directives.queue_weight == 0.25
+
+
+def test_research_swarm_all_researchers_off_yields_lead_only() -> None:
+    (final,) = _swarm_segments(
+        {"codex": "false", "claude": "false", "grok": "false", "muse": "false"}
+    )
+    assert "%clan(research.{@1}" in final
+    assert "%id:research.{@1}.final" in final
+    assert "%wait:research.{@1}.cdx" not in final
+    assert "%wait:research.{@1}.cld" not in final
+    assert "%wait:research.{@1}.grk" not in final
+    assert "%wait:research.{@1}.mus" not in final
+    assert "solo researcher" in final
+    _assert_each_segment_has_one_queue([final])
+
+
+def test_research_swarm_reports_use_provider_suffixes() -> None:
+    segments = _swarm_segments({"grok": "true", "muse": "true"})
+    by_id = {segment: segment for segment in segments}
+    assert any("#research(suffix=cdx)" in s for s in by_id)
+    assert any("#research(suffix=cld)" in s for s in by_id)
+    assert any("#research(suffix=grk)" in s for s in by_id)
+    assert any("#research(suffix=mus)" in s for s in by_id)
+    assert all("#research(suffix=a)" not in s for s in segments)
+    assert all("#research(suffix=b)" not in s for s in segments)
+    final = segments[-1]
+    assert "cdx" in final and "cld" in final
+    assert "__cdx.md" in final and "__cld.md" in final
+
+
+def test_research_swarm_clan_resolves_from_lead_declaration() -> None:
+    """The clan declaration lives on the lead, the only unconditional agent."""
+    segments = _swarm_segments({})
+    payloads = _plan_agent_payloads(segments)
+    assert len(payloads) == 3
+    clans = {payload.clan for payload in payloads}
+    assert len(clans) == 1
+    clan = next(iter(clans))
+    assert clan is not None and clan.startswith("research.")
+    declarers = [payload for payload in payloads if payload.clan_declared]
+    assert len(declarers) == 1
+    (lead,) = declarers
+    assert lead.identity == f"{clan}.final"
+    assert lead.clan_tribe == "research"
+    assert lead.clan_summary is not None
+    assert "RESEARCH PROMPT:" in lead.clan_summary
+    assert "some topic" in lead.clan_summary
 
 
 def test_research_prompt_suffix_branch_renders_without_artifacts() -> None:
@@ -460,7 +606,7 @@ def test_research_registers_report_in_every_branch() -> None:
 
 
 def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
-    _cdx, _cld, final, _image = _authored_swarm_segments()
+    *_researchers, final, _image = _authored_swarm_segments()
 
     assert "wait_chats" not in final
     assert (

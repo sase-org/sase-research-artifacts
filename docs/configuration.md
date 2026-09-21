@@ -82,13 +82,12 @@ into Bob's derived PDF basename and marker id.
 
 Installing this plugin also contributes, through the `sase_config` entry point:
 
-- Default model aliases `sol_or_grok` (primary researcher), `opus_or_grok`
-  (second-opinion researcher), and `image` (infographic agent), all in the
-  `researchers` bucket. The research-swarm lead defaults to SASE's built-in `@xlarge`
-  alias.
+- Default model alias `image` (infographic agent) in the `researchers` bucket. The
+  research-swarm researchers default to concrete per-provider models and the lead
+  defaults to SASE's built-in `@xlarge` alias.
 - The `research` tribe's display config (icon, color, description).
 
 These are ordinary default-config values and are overridden by project or user config
 through normal layer precedence. `#research_swarm` also accepts per-invocation
-`primary_model`, `second_opinion_model`, and `lead_model` overrides for the three
-researcher roles.
+`codex_model`, `claude_model`, `grok_model`, `muse_model`, and `lead_model` overrides
+for each researcher role.

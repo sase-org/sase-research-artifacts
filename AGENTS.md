@@ -27,10 +27,13 @@ just check      # lint + test
 - `src/sase_research_artifacts/xprompts/` — the `#research`, `#research/image`,
   `#research/more`, `#research/prompt`, and `#research_swarm` xprompts, discovered
   through the `sase_xprompts` entry point.
-- `src/sase_research_artifacts/default_config.yml` — the `sol_or_grok`/`opus_or_grok`/
-  `image` default model aliases, the `researchers` bucket, and the `research` tribe
-  display config, discovered through the `sase_config` entry point. The research-swarm
-  lead defaults to SASE's built-in `@xlarge` alias.
+- `src/sase_research_artifacts/default_config.yml` — the `image` default model alias,
+  the `researchers` bucket, and the `research` tribe display config, discovered
+  through the `sase_config` entry point. The research-swarm researchers default to
+  concrete per-provider models and the lead defaults to SASE's built-in `@xlarge`
+  alias. Provider gating needs a host sase that ships the `provider_enabled` /
+  `provider_disabled` prompt filters; revisit the `sase` floor in `pyproject.toml`
+  when a release actually carries them.
 - Depends on `sase>=0.17.2` and `sase-core-rs>=0.34.23,<0.35.0`; the `sase` floor is
   the first release line expected to carry unconditional weighted queue support, and
   the core window matches current SASE.

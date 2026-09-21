@@ -60,7 +60,7 @@ with list-valued fields replacing rather than concatenating.
 ### The `research` ref provider
 
 Schema version 1, kind `research`. Inventory starts with `20*/**/*.md` (every dated
-report, including `__a`/`__b` swarm drafts) and excludes generated infographic
+report, including `__cdx`/`__cld`/`__grk`/`__mus` swarm drafts) and excludes generated infographic
 companion Markdown such as `*_infographic.md` and disambiguated binary pages such as
 `*.png.md`. Declared frontmatter properties: `create_time` and `updated_time`
 (datetime), `status` (enum: `draft`, `review`, `final`, `archived`), `tags` (string
@@ -74,7 +74,8 @@ cited reports.
 Renders new committed research reports into Highlights PDFs for the Obsidian reading
 queue. Restricted to the `research` sidecar, producers `commit`, `sdd`, and
 `finalizer`, `ADD` operations only, and excludes agents matching `research.*.cld` /
-`research.*.cdx` (the swarm's own participants) plus `__a`/`__b` draft files -- a
+`research.*.cdx` (the swarm's own participants) plus `__cdx`/`__cld`/`__grk`/`__mus`
+draft files -- a
 Highlights PDF is only wanted for the consolidated report, not each researcher's draft.
 Artifact-copy events are deliberately excluded because detached artifact execution uses
 durable content-addressed paths whose basenames may include digest suffixes; Bob derives
@@ -95,32 +96,39 @@ diagnostic rather than running someone else's command on your machine.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.
-- `#research_swarm` -- launch two independent researchers plus a lead who consolidates
-  their reports; a three-agent xprompt swarm by default, or four agents when
-  `should_generate_image=true` opts into the infographic segment. Optional
-  `wait` names agent(s) both researchers should wait on before starting; quote the
-  value when listing several (`wait="a,b"`). Each launched segment requests `0.25` runner
-  capacity units by default. `runners` is an optional positive-integer capacity budget
-  with no default; when supplied, it applies as `capacity=N` to every launched agent. SASE
-  rejects authored `capacity=0`. Optional `priority` is an integer with no default
-  override: a supplied value applies to every launched agent (lower values start first);
-  omission uses SASE's implicit queue priority. Optional `primary_model`,
-  `second_opinion_model`, and `lead_model` choose the `.cdx`, `.cld`, and `.final`
-  researcher models, defaulting to `@sol_or_grok`, `@opus_or_grok`, and `@xlarge`.
-  Example: `#research_swarm(primary_model=@codex, second_opinion_model=@opus,
+- `#research_swarm` -- launch up to four per-provider independent researchers plus an
+  always-run lead who consolidates their reports; codex + claude researchers plus the
+  lead by default (three agents), grok and muse opt-in via `grok=true` / `muse=true`,
+  or four agents with the default set when `should_generate_image=true` opts into the
+  infographic segment. A provider that is temporarily disabled drops its researcher
+  even when requested. Optional `wait` names agent(s) researchers should wait on
+  before starting; quote the value when listing several (`wait="a,b"`). Each launched
+  segment requests `0.25` runner capacity units by default. `runners` is an optional
+  positive-integer capacity budget with no default; when supplied, it applies as
+  `capacity=N` to every launched agent. SASE rejects authored `capacity=0`. Optional
+  `priority` is an integer with no default override: a supplied value applies to every
+  launched agent (lower values start first); omission uses SASE's implicit queue
+  priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`, and
+  `lead_model` choose the `.cdx`, `.cld`, `.grk`, `.mus`, and `.final` agent models,
+  defaulting to `codex/gpt-5.6-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
+  `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory), and
+  `@xlarge`.
+  Example: `#research_swarm(codex_model=@codex, claude_model=@opus,
   lead_model=@xlarge): compare approaches`.
   Image example:
   `#research_swarm(prompt="A research topic", should_generate_image=true)`.
+  Provider gating needs a host sase that ships the `provider_enabled` /
+  `provider_disabled` prompt filters.
 
 ## Defaults
 
-`default_config.yml` ships the `sol_or_grok` / `opus_or_grok` / `image` model aliases,
-the `researchers` bucket, and the `research` tribe display config. By default,
-`#research_swarm` uses those aliases for the primary, second-opinion, and opt-in image
-agents and SASE's built-in `@xlarge` alias for the lead segment, so the swarm works out
-of the box on a fresh install. Project or user config still overrides aliases by normal
-layer precedence, and callers can override the three researcher role models per
-invocation.
+`default_config.yml` ships the `image` model alias, the `researchers` bucket, and the
+`research` tribe display config. By default, `#research_swarm` uses concrete
+per-provider models for the codex, claude, grok, and muse researchers, this plugin's
+`image` alias for the opt-in image agent, and SASE's built-in `@xlarge` alias for the
+lead segment, so the swarm works out of the box on a fresh install. Project or user
+config still overrides aliases by normal layer precedence, and callers can override
+each researcher role model per invocation.
 
 ## Development
 
