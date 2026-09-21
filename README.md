@@ -60,7 +60,7 @@ with list-valued fields replacing rather than concatenating.
 ### The `research` ref provider
 
 Schema version 1, kind `research`. Inventory starts with `20*/**/*.md` (every dated
-report, including `__cdx`/`__cld`/`__grk`/`__mus` swarm drafts) and excludes generated infographic
+report, including `__cdx`/`__cld`/`__grk`/`__mus`/`__gem` swarm drafts) and excludes generated infographic
 companion Markdown such as `*_infographic.md` and disambiguated binary pages such as
 `*.png.md`. Declared frontmatter properties: `create_time` and `updated_time`
 (datetime), `status` (enum: `draft`, `review`, `final`, `archived`), `tags` (string
@@ -74,7 +74,7 @@ cited reports.
 Renders new committed research reports into Highlights PDFs for the Obsidian reading
 queue. Restricted to the `research` sidecar, producers `commit`, `sdd`, and
 `finalizer`, `ADD` operations only, and excludes agents matching `research.*.cld` /
-`research.*.cdx` (the swarm's own participants) plus `__cdx`/`__cld`/`__grk`/`__mus`
+`research.*.cdx` (the swarm's own participants) plus `__cdx`/`__cld`/`__grk`/`__mus`/`__gem`
 draft files -- a
 Highlights PDF is only wanted for the consolidated report, not each researcher's draft.
 Artifact-copy events are deliberately excluded because detached artifact execution uses
@@ -96,9 +96,10 @@ diagnostic rather than running someone else's command on your machine.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.
-- `#research_swarm` -- launch up to four per-provider independent researchers plus an
+- `#research_swarm` -- launch up to five per-provider independent researchers plus an
   always-run lead who consolidates their reports; codex + claude researchers plus the
-  lead by default (three agents), grok and muse opt-in via `grok=true` / `muse=true`,
+  lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
+  `muse=true` / `gemini=true`,
   or four agents with the default set when `should_generate_image=true` opts into the
   infographic segment. A provider that is temporarily disabled drops its researcher
   even when requested. Optional `wait` names agent(s) researchers should wait on
@@ -108,10 +109,12 @@ diagnostic rather than running someone else's command on your machine.
   `capacity=N` to every launched agent. SASE rejects authored `capacity=0`. Optional
   `priority` is an integer with no default override: a supplied value applies to every
   launched agent (lower values start first); omission uses SASE's implicit queue
-  priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`, and
-  `lead_model` choose the `.cdx`, `.cld`, `.grk`, `.mus`, and `.final` agent models,
+  priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`,
+  `gemini_model`, and
+  `lead_model` choose the `.cdx`, `.cld`, `.grk`, `.mus`, `.gem`, and `.final` agent models,
   defaulting to `codex/gpt-5.6-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
-  `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory), and
+  `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory),
+  `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort), and
   `@xlarge`.
   Example: `#research_swarm(codex_model=@codex, claude_model=@opus,
   lead_model=@xlarge): compare approaches`.
@@ -124,7 +127,7 @@ diagnostic rather than running someone else's command on your machine.
 
 `default_config.yml` ships the `image` model alias, the `researchers` bucket, and the
 `research` tribe display config. By default, `#research_swarm` uses concrete
-per-provider models for the codex, claude, grok, and muse researchers, this plugin's
+per-provider models for the codex, claude, grok, muse, and gemini researchers, this plugin's
 `image` alias for the opt-in image agent, and SASE's built-in `@xlarge` alias for the
 lead segment, so the swarm works out of the box on a fresh install. Project or user
 config still overrides aliases by normal layer precedence, and callers can override

@@ -89,5 +89,5 @@ Installing this plugin also contributes, through the `sase_config` entry point:
 
 These are ordinary default-config values and are overridden by project or user config
 through normal layer precedence. `#research_swarm` also accepts per-invocation
-`codex_model`, `claude_model`, `grok_model`, `muse_model`, and `lead_model` overrides
+`codex_model`, `claude_model`, `grok_model`, `muse_model`, `gemini_model`, and `lead_model` overrides
 for each researcher role.

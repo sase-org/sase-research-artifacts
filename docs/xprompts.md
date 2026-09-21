@@ -54,10 +54,12 @@ recommendation, then hands off to `#research` to write it up.
 | `claude`                | bool | `true`                                  | Request the claude researcher                            |
 | `grok`                  | bool | `false`                                 | Request the grok researcher                              |
 | `muse`                  | bool | `false`                                 | Request the muse researcher                              |
+| `gemini`                | bool | `false`                                 | Request the gemini (Antigravity) researcher              |
 | `codex_model`           | word | `codex/gpt-5.6-sol@xhigh`               | Model for `<clan>.cdx`                                   |
 | `claude_model`          | word | `claude/opus@xhigh`                     | Model for `<clan>.cld`                                   |
 | `grok_model`            | word | `grok/grok-4.6@xhigh`                   | Model for `<clan>.grk`                                   |
 | `muse_model`            | word | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
+| `gemini_model`          | word | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | word | `@xlarge`                               | Model for `<clan>.final`                                 |
 | `should_generate_image` | bool | `false`                                 | Opt into `<clan>.image`                                  |
 
@@ -65,27 +67,31 @@ Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unqu
 comma is parsed as a separate xprompt argument.
 
 A three-agent xprompt swarm by default (codex + claude researchers plus the lead), up
-to six authored segments (four researchers, the lead, the image agent). `grok=true` /
-`muse=true` each add a researcher; `codex=false` (or any provider flag `false`) drops
-one; turning all four off leaves exactly the lead running solo. A provider that is
-temporarily disabled drops its researcher even when its boolean input is true. When
-`should_generate_image=true` opts into the image segment, the default set runs four
-agents. Optional `wait` gates only the researchers. Optional `priority` applies to
-every launched agent when supplied (lower values start first); omission uses SASE's
-implicit queue priority. Every launched segment authors `%q(w=0.25)`, so the default
-swarm consumes `0.75` runner capacity units; the image opt-in consumes one normal unit
-when all four members are live.
+to seven authored segments (five researchers, the lead, the image agent). `grok=true` /
+`muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag
+`false`) drops one; turning all five off leaves exactly the lead running solo. A
+provider that is temporarily disabled drops its researcher even when its boolean input
+is true. When `should_generate_image=true` opts into the image segment, the default set
+runs four agents. Optional `wait` gates only the researchers. Optional `priority`
+applies to every launched agent when supplied (lower values start first); omission uses
+SASE's implicit queue priority. Every launched segment authors `%q(w=0.25)`, so the
+default swarm consumes `0.75` runner capacity units; the image opt-in consumes one
+normal unit when all four members are live.
 `runners` has no default; when supplied, it adds `capacity=N` to every segment without
 changing the `0.25` weight. `N` must be a positive integer (`capacity=1` is the smallest
-valid budget; four quarter-weight members fit in it). Explicit `runners=0` still renders
+valid budget; four quarter-weight members fit in it, while all five researchers plus
+the lead -- six quarter-weight members -- need `capacity` of at least 2 to run
+concurrently). Explicit `runners=0` still renders
 as `capacity=0` on every launched segment, and SASE rejects that authored value at launch.
-The five model inputs can be supplied independently, for example
+The six model inputs can be supplied independently, for example
 `#research_swarm(codex_model=@codex, claude_model=@opus, lead_model=@xlarge): ...`.
 Omitting them preserves the defaults below. The opt-in image segment always uses
 `@image`, for example
 `#research_swarm(prompt="A research topic", should_generate_image=true)`.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
-("trains on your data"), which is part of why `muse` defaults off.
+("trains on your data"), which is part of why `muse` defaults off. The `agy`
+provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
+no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-low`).
 
 1. **`<clan>.cdx`** -- the codex researcher (`codex/gpt-5.6-sol@xhigh`), writing a
    self-named descriptive report via `#research(suffix=cdx)`; when supplied, also waits
@@ -99,13 +105,17 @@ The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 4. **`<clan>.mus`** -- the muse researcher
    (`muse/muse-spark-1.3-contributor@xhigh`), opt-in via `muse=true`, writing via
    `#research(suffix=mus)`.
-5. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on every surviving
+5. **`<clan>.gem`** -- the gemini (Antigravity) researcher
+   (`agy/gemini-3.8-flash-high`), opt-in via `gemini=true`, writing via
+   `#research(suffix=gem)`. Antigravity (`agy`) rejects explicit `@effort` suffixes,
+   so effort is chosen through the model slug (`-high`/`-medium`/`-low`).
+6. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on every surviving
    researcher (no waits when none ran, running solo instead), who reads the registered
    reports, does further research, and writes a consolidated report merging every
    perspective. Individual researcher reports move to `<name>__<short>.md` under
    `<name>/`, preserving each report's existing suffix; the consolidated report is
    `<name>/<name>.md`. Carries the clan's tribe/summary declaration.
-6. **`<clan>.image`** -- optional; when `should_generate_image=true`, waits on and forks
+7. **`<clan>.image`** -- optional; when `should_generate_image=true`, waits on and forks
    from the lead's segment, then runs `#research/image` against the consolidated report
    using `@image`.
 

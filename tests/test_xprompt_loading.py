@@ -174,10 +174,12 @@ def test_research_swarm_declares_typed_input() -> None:
         ("claude", "bool"),
         ("grok", "bool"),
         ("muse", "bool"),
+        ("gemini", "bool"),
         ("codex_model", "word"),
         ("claude_model", "word"),
         ("grok_model", "word"),
         ("muse_model", "word"),
+        ("gemini_model", "word"),
         ("lead_model", "word"),
         ("should_generate_image", "bool"),
     ]
@@ -189,17 +191,19 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[5].default is True
     assert xp.inputs[6].default is False
     assert xp.inputs[7].default is False
-    assert xp.inputs[8].default == "codex/gpt-5.6-sol@xhigh"
-    assert xp.inputs[9].default == "claude/opus@xhigh"
-    assert xp.inputs[10].default == "grok/grok-4.6@xhigh"
-    assert xp.inputs[11].default == "muse/muse-spark-1.3-contributor@xhigh"
-    assert xp.inputs[12].default == "@xlarge"
-    assert xp.inputs[13].default is False
+    assert xp.inputs[8].default is False
+    assert xp.inputs[9].default == "codex/gpt-5.6-sol@xhigh"
+    assert xp.inputs[10].default == "claude/opus@xhigh"
+    assert xp.inputs[11].default == "grok/grok-4.6@xhigh"
+    assert xp.inputs[12].default == "muse/muse-spark-1.3-contributor@xhigh"
+    assert xp.inputs[13].default == "agy/gemini-3.8-flash-high"
+    assert xp.inputs[14].default == "@xlarge"
+    assert xp.inputs[15].default is False
 
 
-def test_research_swarm_has_six_top_level_segments() -> None:
+def test_research_swarm_has_seven_top_level_segments() -> None:
     segments = _authored_swarm_segments()
-    assert len(segments) == 6
+    assert len(segments) == 7
 
 
 def test_research_swarm_defaults_to_three_expanded_agents() -> None:
@@ -208,6 +212,7 @@ def test_research_swarm_defaults_to_three_expanded_agents() -> None:
     assert all("%id(image" not in segment for segment in segments)
     assert all("%id(grk," not in segment for segment in segments)
     assert all("%id(mus," not in segment for segment in segments)
+    assert all("%id(gem," not in segment for segment in segments)
     cdx, cld, final = segments
     assert "%id(cdx, clan=research.{@1})" in cdx
     assert "%id(cld, clan=research.{@1})" in cld
@@ -229,7 +234,7 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
 
 
 def test_research_swarm_dependency_graph_preserved() -> None:
-    cdx, cld, grk, mus, final, image = _authored_swarm_segments()
+    cdx, cld, grk, mus, gem, final, image = _authored_swarm_segments()
 
     assert '%if(should_run={{ codex and ("codex" | provider_enabled) }})' in cdx
     assert "%id(cdx, clan=research.{@1})" in cdx
@@ -248,6 +253,12 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert '%if(should_run={{ muse and ("muse" | provider_enabled) }})' in mus
     assert "%id(mus, clan=research.{@1})" in mus
     assert "%m:{{ muse_model }}" in mus
+    assert "%clan(" not in mus
+
+    assert '%if(should_run={{ gemini and ("agy" | provider_enabled) }})' in gem
+    assert "%id(gem, clan=research.{@1})" in gem
+    assert "%m:{{ gemini_model }}" in gem
+    assert "%clan(" not in gem
 
     assert "%clan(research.{@1}" in final
     assert "%id:research.{@1}.final" in final
@@ -264,14 +275,14 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%model:codex/gpt-5.6-sol" not in image
     assert all(
         "priority is not none" in segment
-        for segment in (cdx, cld, grk, mus, final, image)
+        for segment in (cdx, cld, grk, mus, gem, final, image)
     )
     assert all(
-        segment.count("%q(") == 1 for segment in (cdx, cld, grk, mus, final, image)
+        segment.count("%q(") == 1 for segment in (cdx, cld, grk, mus, gem, final, image)
     )
     assert all(
         _WEIGHTED_QUEUE_TEMPLATE in segment
-        for segment in (cdx, cld, grk, mus, final, image)
+        for segment in (cdx, cld, grk, mus, gem, final, image)
     )
 
 
@@ -327,15 +338,17 @@ def test_research_swarm_omitted_models_use_per_provider_defaults() -> None:
 
 
 def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
-    cdx, cld, grk, mus, final = _swarm_segments(
+    cdx, cld, grk, mus, gem, final = _swarm_segments(
         {
             "codex_model": "@codex_custom",
             "claude_model": "@claude_custom",
             "grok_model": "@grok_custom",
             "muse_model": "@muse_custom",
+            "gemini_model": "@gemini_custom",
             "lead_model": "@lead_custom",
             "grok": "true",
             "muse": "true",
+            "gemini": "true",
         }
     )
 
@@ -343,14 +356,16 @@ def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
     assert "%m:@claude_custom" in cld
     assert "%m:@grok_custom" in grk
     assert "%m:@muse_custom" in mus
+    assert "%m:@gemini_custom" in gem
     assert "%m:@lead_custom" in final
 
-    assert "@codex_custom" not in cld + grk + mus + final
-    assert "@claude_custom" not in cdx + grk + mus + final
-    assert "@grok_custom" not in cdx + cld + mus + final
-    assert "@muse_custom" not in cdx + cld + grk + final
-    assert "@lead_custom" not in cdx + cld + grk + mus
-    _assert_each_segment_has_one_queue([cdx, cld, grk, mus, final])
+    assert "@codex_custom" not in cld + grk + mus + gem + final
+    assert "@claude_custom" not in cdx + grk + mus + gem + final
+    assert "@grok_custom" not in cdx + cld + mus + gem + final
+    assert "@muse_custom" not in cdx + cld + grk + gem + final
+    assert "@gemini_custom" not in cdx + cld + grk + mus + final
+    assert "@lead_custom" not in cdx + cld + grk + mus + gem
+    _assert_each_segment_has_one_queue([cdx, cld, grk, mus, gem, final])
 
 
 def test_research_swarm_omitted_wait_leaves_researchers_ungated() -> None:
@@ -423,6 +438,33 @@ def test_research_swarm_grok_and_muse_opt_in_add_segments() -> None:
     _assert_each_segment_has_one_queue(both)
 
 
+def test_research_swarm_gemini_opt_in_adds_segment() -> None:
+    segments = _swarm_segments({"gemini": "true"})
+    assert len(segments) == 4
+    cdx, cld, gem, final = segments
+    assert "%id(gem, clan=research.{@1})" in gem
+    assert "%m:agy/gemini-3.8-flash-high" in gem
+    assert "agy/gemini-3.8-flash-high@" not in gem
+    assert "some topic #research(suffix=gem)" in gem
+    assert "3-researcher swarm" in gem
+    assert "%wait:research.{@1}.gem" in final
+    assert "__gem.md" in final
+    _assert_each_segment_has_one_queue(segments)
+
+    all_five = _swarm_segments({"grok": "true", "muse": "true", "gemini": "true"})
+    assert len(all_five) == 6
+    _assert_each_segment_has_one_queue(all_five)
+
+
+def test_research_swarm_disabled_agy_drops_gemini_segment() -> None:
+    disable_provider("agy", 900.0, source="test")
+    segments = _swarm_segments({"gemini": "true"})
+    assert len(segments) == 3
+    assert all("%id(gem," not in segment for segment in segments)
+    final = segments[-1]
+    assert "%wait:research.{@1}.gem" not in final
+
+
 def test_research_swarm_codex_false_drops_cdx() -> None:
     cld, final = _swarm_segments({"codex": "false"})
     assert "%id(cdx," not in cld + final
@@ -447,7 +489,13 @@ def test_research_swarm_disabled_provider_drops_segment() -> None:
 
 def test_research_swarm_all_researchers_off_yields_lead_only() -> None:
     (final,) = _swarm_segments(
-        {"codex": "false", "claude": "false", "grok": "false", "muse": "false"}
+        {
+            "codex": "false",
+            "claude": "false",
+            "grok": "false",
+            "muse": "false",
+            "gemini": "false",
+        }
     )
     assert "%clan(research.{@1}" in final
     assert "%id:research.{@1}.final" in final
@@ -455,17 +503,19 @@ def test_research_swarm_all_researchers_off_yields_lead_only() -> None:
     assert "%wait:research.{@1}.cld" not in final
     assert "%wait:research.{@1}.grk" not in final
     assert "%wait:research.{@1}.mus" not in final
+    assert "%wait:research.{@1}.gem" not in final
     assert "solo researcher" in final
     _assert_each_segment_has_one_queue([final])
 
 
 def test_research_swarm_reports_use_provider_suffixes() -> None:
-    segments = _swarm_segments({"grok": "true", "muse": "true"})
+    segments = _swarm_segments({"grok": "true", "muse": "true", "gemini": "true"})
     by_id = {segment: segment for segment in segments}
     assert any("#research(suffix=cdx)" in s for s in by_id)
     assert any("#research(suffix=cld)" in s for s in by_id)
     assert any("#research(suffix=grk)" in s for s in by_id)
     assert any("#research(suffix=mus)" in s for s in by_id)
+    assert any("#research(suffix=gem)" in s for s in by_id)
     assert all("#research(suffix=a)" not in s for s in segments)
     assert all("#research(suffix=b)" not in s for s in segments)
     final = segments[-1]

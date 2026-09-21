@@ -41,6 +41,10 @@ input:
     type: bool
     default: false
     description: Request the muse researcher.
+  - name: gemini
+    type: bool
+    default: false
+    description: Request the gemini (Antigravity) researcher.
   - name: codex_model
     type: word
     default: "codex/gpt-5.6-sol@xhigh"
@@ -59,6 +63,12 @@ input:
     description:
       Model for `<clan>.mus`. The default carries SASE's `warn` model advisory
       ("trains on your data"), which is part of why `muse` defaults off.
+  - name: gemini_model
+    type: word
+    default: "agy/gemini-3.8-flash-high"
+    description:
+      Model for `<clan>.gem`. Antigravity (`agy`) rejects explicit `@effort`
+      suffixes; choose effort through the model slug (`-high`/`-medium`/`-low`).
   - name: lead_model
     type: word
     default: "@xlarge"
@@ -74,6 +84,7 @@ input:
 + ([{"short": "cld", "provider": "claude", "model": claude_model}] if claude and ("claude" | provider_enabled) else [])
 + ([{"short": "grk", "provider": "grok", "model": grok_model}] if grok and ("grok" | provider_enabled) else [])
 + ([{"short": "mus", "provider": "muse", "model": muse_model}] if muse and ("muse" | provider_enabled) else [])
++ ([{"short": "gem", "provider": "agy", "model": gemini_model}] if gemini and ("agy" | provider_enabled) else [])
 -%}
 {%- set ns = namespace(layout_lines=["<month-dir>/<name>/"]) -%}
 {%- for r in researchers -%}
@@ -170,6 +181,29 @@ leave the report alone. The lead researcher will read every report and synthesiz
 findings after you have all finished.
 
 {{ prompt }} #research(suffix=mus)
+
+---
+
+%if(should_run={{ gemini and ("agy" | provider_enabled) }}) %id(gem, clan=research.{@1})
+%m:{{ gemini_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+{% set peers = researchers | rejectattr("short", "equalto", "gem") | list %}
+You are researcher gem in a {{ researchers | length }}-researcher swarm.
+{% if peers -%}
+The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__gem.md`.
+{% else -%}
+You are the only independent researcher in this swarm. Your report will end in `__gem.md`.
+{% endif %}
+Conduct your research independently and form your own conclusions. Do NOT attempt to
+locate, open, read, or otherwise consult the other researcher's report from this swarm,
+even if it becomes available before you finish. Do not obtain that peer's findings
+indirectly through its chat transcript, summaries, or requests to the peer. You may
+independently use the same external sources, shared input material, and unrelated prior
+research. You may check filenames or file existence to avoid overwriting your own
+output, but do not inspect the peer's report contents. If you encounter its filename,
+leave the report alone. The lead researcher will read every report and synthesize their
+findings after you have all finished.
+
+{{ prompt }} #research(suffix=gem)
 
 ---
 
