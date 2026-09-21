@@ -7,7 +7,7 @@ llm_provider:
         bucket: researchers
     buckets:
       researchers:
-        description: "Research-swarm roles: per-provider independent researchers (codex, claude, grok, muse, gemini), the consolidating lead, and the infographic/image agent."
+        description: "Research-swarm roles: researchers (codex, claude, grok, muse, gemini), the consolidating lead, the optional critique agent, and the infographic agent."
 ace:
   tribes:
     research:

@@ -77,6 +77,8 @@ queue. Restricted to the `research` sidecar, producers `commit`, `sdd`, and
 `research.*.cdx` (the swarm's own participants) plus `__cdx`/`__cld`/`__grk`/`__mus`/`__gem`
 draft files -- a
 Highlights PDF is only wanted for the consolidated report, not each researcher's draft.
+`__critique.md` companions are excluded by the same draft glob, so the critique gets
+no Highlights PDF.
 Artifact-copy events are deliberately excluded because detached artifact execution uses
 durable content-addressed paths whose basenames may include digest suffixes; Bob derives
 its PDF basename and marker id from the input Markdown basename.
@@ -101,7 +103,9 @@ diagnostic rather than running someone else's command on your machine.
   lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
   `muse=true` / `gemini=true`,
   or four agents with the default set when `should_generate_image=true` opts into the
-  infographic segment. A provider that is hard-disabled drops its researcher even when requested; a
+  infographic segment, plus an optional critique agent via `critique=true`
+  (`critique_model`, default `@xlarge`), for example
+  `#research_swarm(prompt="A research topic", critique=true)`. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse
   explicit model launches). Optional `wait` names agent(s) researchers should wait on
   before starting; quote the value when listing several (`wait="a,b"`). Each launched

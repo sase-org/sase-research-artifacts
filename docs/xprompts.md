@@ -62,12 +62,15 @@ recommendation, then hands off to `#research` to write it up.
 | `gemini_model`          | word | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | word | `@xlarge`                               | Model for `<clan>.final`                                 |
 | `should_generate_image` | bool | `false`                                 | Opt into `<clan>.image`                                  |
+| `critique`              | bool | `false`                                 | Opt into `<clan>.critique`                               |
+| `critique_model`        | word | `@xlarge`                               | Model for `<clan>.critique`                              |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
 
 A three-agent xprompt swarm by default (codex + claude researchers plus the lead), up
-to seven authored segments (five researchers, the lead, the image agent). `grok=true` /
+to eight authored segments (five researchers, the lead, the image agent, the critique
+agent). `grok=true` /
 `muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
@@ -77,18 +80,21 @@ runs four agents. Optional `wait` gates only the researchers. Optional `priority
 applies to every launched agent when supplied (lower values start first); omission uses
 SASE's implicit queue priority. Every launched segment authors `%q(w=0.25)`, so the
 default swarm consumes `0.75` runner capacity units; the image opt-in consumes one
-normal unit when all four members are live.
+normal unit when all four members are live, and the critique opt-in adds another
+`0.25` capacity unit.
 `runners` has no default; when supplied, it adds `capacity=N` to every segment without
 changing the `0.25` weight. `N` must be a positive integer (`capacity=1` is the smallest
 valid budget; four quarter-weight members fit in it, while all five researchers plus
 the lead -- six quarter-weight members -- need `capacity` of at least 2 to run
 concurrently). Explicit `runners=0` still renders
 as `capacity=0` on every launched segment, and SASE rejects that authored value at launch.
-The six model inputs can be supplied independently, for example
+The seven model inputs can be supplied independently, for example
 `#research_swarm(codex_model=@codex, claude_model=@opus, lead_model=@xlarge): ...`.
 Omitting them preserves the defaults below. The opt-in image segment always uses
 `@image`, for example
 `#research_swarm(prompt="A research topic", should_generate_image=true)`.
+The opt-in critique segment uses `critique_model` (default `@xlarge`), for example
+`#research_swarm(prompt="A research topic", critique=true)`.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 ("trains on your data"), which is part of why `muse` defaults off. The `agy`
 provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
@@ -119,6 +125,16 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
 7. **`<clan>.image`** -- optional; when `should_generate_image=true`, waits on and forks
    from the lead's segment, then runs `#research/image` against the consolidated report
    using `@image`.
+8. **`<clan>.critique`** -- optional; when `critique=true` (default model `@xlarge`),
+   waits on the lead without forking it, finds the lead's report through
+   `wait.artifacts`, may cross-check the moved researcher drafts, and writes and
+   registers `<name>/<name>__critique.md` without modifying the lead's report or the
+   drafts.
+
+The handoff contract: the lead registers its consolidated report only when
+`critique=true`, and the critic derives its output directory from that registered
+label rather than the current date. For a more independent review, pick a
+`critique_model` on a different provider from `lead_model`.
 
 Each researcher is told the other researchers' agent IDs (`` `research.{@1}.<short>` ``)
 and the `__<short>.md` suffix its report filename will end with, and is explicitly

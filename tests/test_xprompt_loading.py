@@ -53,11 +53,13 @@ def _swarm_body(named_args: dict[str, str]) -> str:
 
 
 def _swarm_segments(
-    named_args: dict[str, str], *, image: bool = False
+    named_args: dict[str, str], *, image: bool = False, critique: bool = False
 ) -> list[str]:
     args = dict(named_args)
     if image:
         args["should_generate_image"] = "true"
+    if critique:
+        args["critique"] = "true"
     return split_segments_protecting_fences(_swarm_body(args))
 
 
@@ -182,6 +184,8 @@ def test_research_swarm_declares_typed_input() -> None:
         ("gemini_model", "word"),
         ("lead_model", "word"),
         ("should_generate_image", "bool"),
+        ("critique", "bool"),
+        ("critique_model", "word"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
@@ -199,11 +203,13 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[13].default == "agy/gemini-3.8-flash-high"
     assert xp.inputs[14].default == "@xlarge"
     assert xp.inputs[15].default is False
+    assert xp.inputs[16].default is False
+    assert xp.inputs[17].default == "@xlarge"
 
 
-def test_research_swarm_has_seven_top_level_segments() -> None:
+def test_research_swarm_has_eight_top_level_segments() -> None:
     segments = _authored_swarm_segments()
-    assert len(segments) == 7
+    assert len(segments) == 8
 
 
 def test_research_swarm_defaults_to_three_expanded_agents() -> None:
@@ -213,7 +219,10 @@ def test_research_swarm_defaults_to_three_expanded_agents() -> None:
     assert all("%id(grk," not in segment for segment in segments)
     assert all("%id(mus," not in segment for segment in segments)
     assert all("%id(gem," not in segment for segment in segments)
+    assert all("%id(critique" not in segment for segment in segments)
     cdx, cld, final = segments
+    assert "sase artifact create" not in final
+    assert "critique" not in final
     assert "%id(cdx, clan=research.{@1})" in cdx
     assert "%id(cld, clan=research.{@1})" in cld
     assert "%clan(research.{@1}" in final
@@ -234,7 +243,7 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
 
 
 def test_research_swarm_dependency_graph_preserved() -> None:
-    cdx, cld, grk, mus, gem, final, image = _authored_swarm_segments()
+    cdx, cld, grk, mus, gem, final, image, critique = _authored_swarm_segments()
 
     assert '%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }})' in cdx
     assert "%id(cdx, clan=research.{@1})" in cdx
@@ -273,21 +282,35 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "#research/image" in image
     assert "%model:@image" in image
     assert "%model:codex/gpt-5.6-sol" not in image
+
+    assert "%if(should_run={{ critique }})" in critique
+    assert "%id(critique, clan=research.{@1})" in critique
+    assert "%m:{{ critique_model }}" in critique
+    assert "%wait:research.{@1}.final" in critique
+    assert "#fork:" not in critique
+    assert "%clan(" not in critique
+    assert critique.count("%q(") == 1
+    assert _WEIGHTED_QUEUE_TEMPLATE in critique
+    assert "priority is not none" in critique
+    assert _WAIT_ARTIFACTS_LOOP in critique
+    assert _WAIT_ARTIFACTS_LOOP in final
+
     assert all(
         "priority is not none" in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image)
+        for segment in (cdx, cld, grk, mus, gem, final, image, critique)
     )
     assert all(
-        segment.count("%q(") == 1 for segment in (cdx, cld, grk, mus, gem, final, image)
+        segment.count("%q(") == 1
+        for segment in (cdx, cld, grk, mus, gem, final, image, critique)
     )
     assert all(
         _WEIGHTED_QUEUE_TEMPLATE in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image)
+        for segment in (cdx, cld, grk, mus, gem, final, image, critique)
     )
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
-    *_researchers, final, _image = _authored_swarm_segments()
+    *_researchers, final, _image, _critique = _authored_swarm_segments()
 
     assert (
         "SASE derives your plan's links from the artifacts you read this turn; use\n"
@@ -675,7 +698,7 @@ def test_research_registers_report_in_every_branch() -> None:
 
 
 def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
-    *_researchers, final, _image = _authored_swarm_segments()
+    *_researchers, final, _image, _critique = _authored_swarm_segments()
 
     assert "wait_chats" not in final
     assert (
@@ -769,5 +792,154 @@ def test_research_swarm_lead_renders_registered_reports_via_wait_artifacts(
     assert "scratch notes" not in rendered
     assert str(scratch) not in rendered
     assert "wait_chats" not in rendered
+    assert "{{" not in rendered
+    assert "{%" not in rendered
+
+
+def test_research_swarm_critique_opt_in_adds_segment() -> None:
+    segments = _swarm_segments({}, critique=True)
+    assert len(segments) == 4
+    *_, final, critique = segments
+    assert "%id(critique, clan=research.{@1})" in critique
+    assert "%m:@xlarge" in critique
+    assert "%wait:research.{@1}.final" in critique
+    assert "__critique.md" in critique
+    assert "sase artifact read" in critique
+    assert "sase artifact create" in critique
+    assert "%if(" not in critique
+    assert "#fork:" not in critique
+
+    assert (
+        'sase artifact create -p "<absolute-report-path>" '
+        '-l "research:<repo-relative-report-path>"'
+    ) in final
+    assert "research.{@1}.critique" in final
+    _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_critique_model_routes_to_critique_only() -> None:
+    segments = _swarm_segments(
+        {"critique_model": "@critique_custom", "lead_model": "@lead_custom"},
+        critique=True,
+    )
+    *_, final, critique = segments
+    assert "%m:@critique_custom" in critique
+    assert "@lead_custom" not in critique
+    assert "@critique_custom" not in final
+    assert "%m:@lead_custom" in final
+    _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_image_plus_critique_run_in_parallel() -> None:
+    segments = _swarm_segments({}, image=True, critique=True)
+    assert len(segments) == 5
+    *_, final, image, critique = segments
+    assert "%id(image, clan=research.{@1})" in image
+    assert "%id(critique, clan=research.{@1})" in critique
+    assert "%wait:research.{@1}.final" in image
+    assert "%wait:research.{@1}.final" in critique
+    assert "%wait:research.{@1}.image" not in critique
+    _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_critique_ignores_swarm_wait_argument() -> None:
+    segments = _swarm_segments({"wait": "research.0f.final"}, critique=True)
+    critique = segments[-1]
+    assert "%id(critique, clan=research.{@1})" in critique
+    assert "%wait:research.0f.final" not in critique
+    assert "%wait:research.{@1}.final" in critique
+
+
+def test_research_swarm_critique_carries_queue_options() -> None:
+    segments = _swarm_segments(
+        {"runners": "8", "priority": "5"}, critique=True
+    )
+    _assert_each_segment_has_one_queue(segments, runners=8, priority=5)
+    critique = segments[-1]
+    assert "%id(critique, clan=research.{@1})" in critique
+    assert "capacity=8" in critique
+    assert "priority=5" in critique
+
+
+def test_research_swarm_critique_lists_drafts_and_synthesis_check() -> None:
+    critique = _swarm_segments({}, critique=True)[-1]
+    assert "<name>__cdx.md" in critique
+    assert "<name>__cld.md" in critique
+    assert "Synthesis check" in critique
+
+    grok_critique = _swarm_segments({"grok": "true"}, critique=True)[-1]
+    assert "<name>__grk.md" in grok_critique
+    assert "Synthesis check" in grok_critique
+
+    solo_critique = _swarm_segments(
+        {
+            "codex": "false",
+            "claude": "false",
+            "grok": "false",
+            "muse": "false",
+            "gemini": "false",
+        },
+        critique=True,
+    )
+    assert len(solo_critique) == 2
+    solo_final, solo_crit = solo_critique
+    assert "no independent researchers ran" in solo_crit.lower()
+    assert "<name>__cdx.md" not in solo_crit
+    assert "<name>__cld.md" not in solo_crit
+    assert "<name>__grk.md" not in solo_crit
+    assert "<name>__mus.md" not in solo_crit
+    assert "<name>__gem.md" not in solo_crit
+    assert "Synthesis check" not in solo_crit
+    assert (
+        'sase artifact create -p "<absolute-report-path>" '
+        '-l "research:<repo-relative-report-path>"'
+    ) in solo_final
+
+
+def test_research_swarm_critique_final_layout_names_companion() -> None:
+    critique = _swarm_segments({}, critique=True)[-1]
+    assert "Final layout:" in critique
+    assert "├── <name>.md" in critique
+    assert critique.rstrip().endswith("└── <name>__critique.md\n```")
+
+
+def test_research_swarm_critique_renders_registered_lead_via_wait_artifacts(
+    tmp_path: Path,
+) -> None:
+    """Mirror the lead end-to-end render for the critique handoff."""
+    artifact_files_root = tmp_path / "artifact_store"
+    index_path = artifact_files_root / "artifact_files.jsonl"
+    final_dir = tmp_path / "agents" / "research.m.final"
+    final_dir.mkdir(parents=True)
+
+    report = tmp_path / "topic.md"
+    report.write_text("# Consolidated findings\n", encoding="utf-8")
+
+    artifact = store_explicit_artifact_file(
+        report,
+        final_dir,
+        label="research:202609/topic/topic.md",
+        artifact_files_root=artifact_files_root,
+        index_path=index_path,
+    )
+
+    artifacts = query_artifact_context(
+        [ArtifactContextProducerGroup("research.m.final", [str(final_dir)])],
+        index_path=index_path,
+    )
+
+    critique = _swarm_segments({}, critique=True)[-1]
+
+    with bind_runtime_template_vars(
+        {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}
+    ):
+        rendered = render_template(critique, {})
+
+    assert (
+        "wait_name=research.m.final label=research:202609/topic/topic.md" in rendered
+    )
+    assert f"source_path={report}" in rendered
+    assert f"path={artifact.path}" in rendered
+    assert f"ref=file:{artifact.id}" in rendered
     assert "{{" not in rendered
     assert "{%" not in rendered
