@@ -101,8 +101,9 @@ diagnostic rather than running someone else's command on your machine.
   lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
   `muse=true` / `gemini=true`,
   or four agents with the default set when `should_generate_image=true` opts into the
-  infographic segment. A provider that is temporarily disabled drops its researcher
-  even when requested. Optional `wait` names agent(s) researchers should wait on
+  infographic segment. A provider that is hard-disabled drops its researcher even when requested; a
+  soft-disabled provider still runs its researcher (soft disables never refuse
+  explicit model launches). Optional `wait` names agent(s) researchers should wait on
   before starting; quote the value when listing several (`wait="a,b"`). Each launched
   segment requests `0.25` runner capacity units by default. `runners` is an optional
   positive-integer capacity budget with no default; when supplied, it applies as
@@ -120,7 +121,7 @@ diagnostic rather than running someone else's command on your machine.
   lead_model=@xlarge): compare approaches`.
   Image example:
   `#research_swarm(prompt="A research topic", should_generate_image=true)`.
-  Provider gating needs a host sase that ships the `provider_enabled` /
+  Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters.
 
 ## Defaults

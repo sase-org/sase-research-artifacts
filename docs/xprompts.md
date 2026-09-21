@@ -70,8 +70,9 @@ A three-agent xprompt swarm by default (codex + claude researchers plus the lead
 to seven authored segments (five researchers, the lead, the image agent). `grok=true` /
 `muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
-provider that is temporarily disabled drops its researcher even when its boolean input
-is true. When `should_generate_image=true` opts into the image segment, the default set
+provider that is hard-disabled drops its researcher even when its boolean input
+is true; a soft-disabled provider still runs its researcher (soft disables never
+refuse explicit model launches). When `should_generate_image=true` opts into the image segment, the default set
 runs four agents. Optional `wait` gates only the researchers. Optional `priority`
 applies to every launched agent when supplied (lower values start first); omission uses
 SASE's implicit queue priority. Every launched segment authors `%q(w=0.25)`, so the
@@ -139,5 +140,5 @@ never by list order, then reads each report through its canonical research refer
 
 By default this depends on the `image` model alias and the `researchers` bucket from
 this plugin's default config, plus SASE's built-in `@xlarge` alias for the lead
-segment. Provider gating needs a host sase that ships the `provider_enabled` /
+segment. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
 `provider_disabled` prompt filters.

@@ -80,11 +80,11 @@ input:
     description: Generate an infographic after the lead researcher finishes.
 ---
 {%- set researchers =
-  ([{"short": "cdx", "provider": "codex", "model": codex_model}] if codex and ("codex" | provider_enabled) else [])
-+ ([{"short": "cld", "provider": "claude", "model": claude_model}] if claude and ("claude" | provider_enabled) else [])
-+ ([{"short": "grk", "provider": "grok", "model": grok_model}] if grok and ("grok" | provider_enabled) else [])
-+ ([{"short": "mus", "provider": "muse", "model": muse_model}] if muse and ("muse" | provider_enabled) else [])
-+ ([{"short": "gem", "provider": "agy", "model": gemini_model}] if gemini and ("agy" | provider_enabled) else [])
+  ([{"short": "cdx", "provider": "codex", "model": codex_model}] if codex and ("codex" | provider_enabled("hard")) else [])
++ ([{"short": "cld", "provider": "claude", "model": claude_model}] if claude and ("claude" | provider_enabled("hard")) else [])
++ ([{"short": "grk", "provider": "grok", "model": grok_model}] if grok and ("grok" | provider_enabled("hard")) else [])
++ ([{"short": "mus", "provider": "muse", "model": muse_model}] if muse and ("muse" | provider_enabled("hard")) else [])
++ ([{"short": "gem", "provider": "agy", "model": gemini_model}] if gemini and ("agy" | provider_enabled("hard")) else [])
 -%}
 {%- set ns = namespace(layout_lines=["<month-dir>/<name>/"]) -%}
 {%- for r in researchers -%}
@@ -92,7 +92,7 @@ input:
 {%- endfor -%}
 {%- set _ = ns.layout_lines.append("└── <name>.md") -%}
 {%- set layout_body = ns.layout_lines | join("\n") -%}
-%if(should_run={{ codex and ("codex" | provider_enabled) }}) %id(cdx, clan=research.{@1})
+%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }}) %id(cdx, clan=research.{@1})
 %m:{{ codex_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "cdx") | list %}
 You are researcher cdx in a {{ researchers | length }}-researcher swarm.
@@ -115,7 +115,7 @@ findings after you have all finished.
 
 ---
 
-%if(should_run={{ claude and ("claude" | provider_enabled) }}) %id(cld, clan=research.{@1})
+%if(should_run={{ claude and ("claude" | provider_enabled("hard")) }}) %id(cld, clan=research.{@1})
 %m:{{ claude_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "cld") | list %}
 You are researcher cld in a {{ researchers | length }}-researcher swarm.
@@ -138,7 +138,7 @@ findings after you have all finished.
 
 ---
 
-%if(should_run={{ grok and ("grok" | provider_enabled) }}) %id(grk, clan=research.{@1})
+%if(should_run={{ grok and ("grok" | provider_enabled("hard")) }}) %id(grk, clan=research.{@1})
 %m:{{ grok_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "grk") | list %}
 You are researcher grk in a {{ researchers | length }}-researcher swarm.
@@ -161,7 +161,7 @@ findings after you have all finished.
 
 ---
 
-%if(should_run={{ muse and ("muse" | provider_enabled) }}) %id(mus, clan=research.{@1})
+%if(should_run={{ muse and ("muse" | provider_enabled("hard")) }}) %id(mus, clan=research.{@1})
 %m:{{ muse_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "mus") | list %}
 You are researcher mus in a {{ researchers | length }}-researcher swarm.
@@ -184,7 +184,7 @@ findings after you have all finished.
 
 ---
 
-%if(should_run={{ gemini and ("agy" | provider_enabled) }}) %id(gem, clan=research.{@1})
+%if(should_run={{ gemini and ("agy" | provider_enabled("hard")) }}) %id(gem, clan=research.{@1})
 %m:{{ gemini_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "gem") | list %}
 You are researcher gem in a {{ researchers | length }}-researcher swarm.

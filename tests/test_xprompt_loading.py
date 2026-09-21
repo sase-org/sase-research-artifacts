@@ -236,26 +236,26 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
 def test_research_swarm_dependency_graph_preserved() -> None:
     cdx, cld, grk, mus, gem, final, image = _authored_swarm_segments()
 
-    assert '%if(should_run={{ codex and ("codex" | provider_enabled) }})' in cdx
+    assert '%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }})' in cdx
     assert "%id(cdx, clan=research.{@1})" in cdx
     assert "%m:{{ codex_model }}" in cdx
     assert "%clan(" not in cdx
 
-    assert '%if(should_run={{ claude and ("claude" | provider_enabled) }})' in cld
+    assert '%if(should_run={{ claude and ("claude" | provider_enabled("hard")) }})' in cld
     assert "%id(cld, clan=research.{@1})" in cld
     assert "%m:{{ claude_model }}" in cld
     assert "%clan(" not in cld
 
-    assert '%if(should_run={{ grok and ("grok" | provider_enabled) }})' in grk
+    assert '%if(should_run={{ grok and ("grok" | provider_enabled("hard")) }})' in grk
     assert "%id(grk, clan=research.{@1})" in grk
     assert "%m:{{ grok_model }}" in grk
 
-    assert '%if(should_run={{ muse and ("muse" | provider_enabled) }})' in mus
+    assert '%if(should_run={{ muse and ("muse" | provider_enabled("hard")) }})' in mus
     assert "%id(mus, clan=research.{@1})" in mus
     assert "%m:{{ muse_model }}" in mus
     assert "%clan(" not in mus
 
-    assert '%if(should_run={{ gemini and ("agy" | provider_enabled) }})' in gem
+    assert '%if(should_run={{ gemini and ("agy" | provider_enabled("hard")) }})' in gem
     assert "%id(gem, clan=research.{@1})" in gem
     assert "%m:{{ gemini_model }}" in gem
     assert "%clan(" not in gem
@@ -456,8 +456,8 @@ def test_research_swarm_gemini_opt_in_adds_segment() -> None:
     _assert_each_segment_has_one_queue(all_five)
 
 
-def test_research_swarm_disabled_agy_drops_gemini_segment() -> None:
-    disable_provider("agy", 900.0, source="test")
+def test_research_swarm_hard_disabled_agy_drops_gemini_segment() -> None:
+    disable_provider("agy", 900.0, source="test", mode="hard")
     segments = _swarm_segments({"gemini": "true"})
     assert len(segments) == 3
     assert all("%id(gem," not in segment for segment in segments)
@@ -476,8 +476,8 @@ def test_research_swarm_codex_false_drops_cdx() -> None:
     _assert_each_segment_has_one_queue([cld, final])
 
 
-def test_research_swarm_disabled_provider_drops_segment() -> None:
-    disable_provider("codex", 900.0, source="test")
+def test_research_swarm_hard_disabled_provider_drops_segment() -> None:
+    disable_provider("codex", 900.0, source="test", mode="hard")
     (cld, final) = _swarm_segments({"codex": "true"})
     assert "%id(cdx," not in cld + final
     assert "%id(cld, clan=research.{@1})" in cld
@@ -485,6 +485,25 @@ def test_research_swarm_disabled_provider_drops_segment() -> None:
     assert "%wait:research.{@1}.cld" in final
     for directives in _plan_agent_payloads([cld, final]):
         assert directives.queue_weight == 0.25
+
+
+def test_research_swarm_soft_disabled_provider_keeps_segment() -> None:
+    disable_provider("codex", 900.0, source="test", mode="soft")
+    segments = _swarm_segments({})
+    assert len(segments) == 3
+    cdx, cld, final = segments
+    assert "%id(cdx, clan=research.{@1})" in cdx
+    assert "%id(cld, clan=research.{@1})" in cld
+    assert "%wait:research.{@1}.cdx" in final
+    assert "2-researcher swarm" in cdx
+    _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_soft_disabled_agy_keeps_gemini_segment() -> None:
+    disable_provider("agy", 900.0, source="test", mode="soft")
+    segments = _swarm_segments({"gemini": "true"})
+    assert len(segments) == 4
+    assert any("%id(gem," in segment for segment in segments)
 
 
 def test_research_swarm_all_researchers_off_yields_lead_only() -> None:
