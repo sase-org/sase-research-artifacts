@@ -57,7 +57,7 @@ def _swarm_segments(
 ) -> list[str]:
     args = dict(named_args)
     if image:
-        args["should_generate_image"] = "true"
+        args["image"] = "true"
     if critique:
         args["critique"] = "true"
     return split_segments_protecting_fences(_swarm_body(args))
@@ -183,7 +183,7 @@ def test_research_swarm_declares_typed_input() -> None:
         ("muse_model", "word"),
         ("gemini_model", "word"),
         ("lead_model", "word"),
-        ("should_generate_image", "bool"),
+        ("image", "bool"),
         ("critique", "bool"),
         ("critique_model", "word"),
     ]
@@ -276,7 +276,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "{% for r in researchers %}%wait:research.{@1}.{{ r.short }}" in final
 
     assert "%id(image, clan=research.{@1})" in image
-    assert "%if(should_run={{ should_generate_image }})" in image
+    assert "%if(should_run={{ image }})" in image
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
     assert "#research/image" in image

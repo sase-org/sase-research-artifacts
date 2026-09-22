@@ -185,7 +185,7 @@ jobs:
 
           xprompts = load_xprompts_from_plugins()
           research_swarm = xprompts["research_swarm"]
-          assert research_swarm.content.count("%q(w=0.25") == 4
+          assert research_swarm.content.count("%q(w=0.25") == 8
           assert "default: 16" not in research_swarm.content
 
           def agent_payloads_for_segments(segments):

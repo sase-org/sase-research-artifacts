@@ -61,7 +61,7 @@ recommendation, then hands off to `#research` to write it up.
 | `muse_model`            | word | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
 | `gemini_model`          | word | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | word | `@xlarge`                               | Model for `<clan>.final`                                 |
-| `should_generate_image` | bool | `false`                                 | Opt into `<clan>.image`                                  |
+| `image`                 | bool | `false`                                 | Opt into `<clan>.image`                                  |
 | `critique`              | bool | `false`                                 | Opt into `<clan>.critique`                               |
 | `critique_model`        | word | `@xlarge`                               | Model for `<clan>.critique`                              |
 
@@ -75,7 +75,7 @@ agent). `grok=true` /
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
 is true; a soft-disabled provider still runs its researcher (soft disables never
-refuse explicit model launches). When `should_generate_image=true` opts into the image segment, the default set
+refuse explicit model launches). When `image=true` opts into the image segment, the default set
 runs four agents. Optional `wait` gates only the researchers. Optional `priority`
 applies to every launched agent when supplied (lower values start first); omission uses
 SASE's implicit queue priority. Every launched segment authors `%q(w=0.25)`, so the
@@ -92,7 +92,7 @@ The seven model inputs can be supplied independently, for example
 `#research_swarm(codex_model=@codex, claude_model=@opus, lead_model=@xlarge): ...`.
 Omitting them preserves the defaults below. The opt-in image segment always uses
 `@image`, for example
-`#research_swarm(prompt="A research topic", should_generate_image=true)`.
+`#research_swarm(prompt="A research topic", image=true)`.
 The opt-in critique segment uses `critique_model` (default `@xlarge`), for example
 `#research_swarm(prompt="A research topic", critique=true)`.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
@@ -122,7 +122,7 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    perspective. Individual researcher reports move to `<name>__<short>.md` under
    `<name>/`, preserving each report's existing suffix; the consolidated report is
    `<name>/<name>.md`. Carries the clan's tribe/summary declaration.
-7. **`<clan>.image`** -- optional; when `should_generate_image=true`, waits on and forks
+7. **`<clan>.image`** -- optional; when `image=true`, waits on and forks
    from the lead's segment, then runs `#research/image` against the consolidated report
    using `@image`.
 8. **`<clan>.critique`** -- optional; when `critique=true` (default model `@xlarge`),

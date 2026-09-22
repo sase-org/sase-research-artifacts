@@ -75,7 +75,7 @@ input:
     default: "@xlarge"
     description:
       Model alias or provider model for the `.final` lead researcher and consolidator.
-  - name: should_generate_image
+  - name: image
     type: bool
     default: false
     description: Generate an infographic after the lead researcher finishes.
@@ -330,7 +330,7 @@ Final layout:
 {% endif %}
 ---
 
-%if(should_run={{ should_generate_image }}) %id(image, clan=research.{@1}) %model:@image
+%if(should_run={{ image }}) %id(image, clan=research.{@1}) %model:@image
 %wait:research.{@1}.final %q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/image
 ---
 

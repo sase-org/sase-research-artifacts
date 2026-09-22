@@ -249,7 +249,7 @@ assert research_names == {
     "research_swarm",
 }, research_names
 research_swarm = xprompts["research_swarm"]
-assert research_swarm.content.count("%q(w=0.25") == 4
+assert research_swarm.content.count("%q(w=0.25") == 8
 assert "default: 16" not in research_swarm.content
 
 def agent_payloads_for_segments(segments):
@@ -263,7 +263,7 @@ def agent_payloads_for_segments(segments):
 def assert_segments(named_args, *, runners=None, priority=None, image=False):
     args = dict(named_args)
     if image:
-        args["should_generate_image"] = "true"
+        args["image"] = "true"
     body = expand_single_xprompt(
         research_swarm,
         ["wheel contract smoke"],
@@ -308,10 +308,16 @@ assert any("llm_provider" in c and "ace" in c for c in configs)
 
 print("WHEEL_CONTRACT_OK")
 """
+    # Run the smoke with an isolated SASE_HOME so machine-wide provider
+    # disables cannot change the expanded segment counts (mirrors the
+    # fast lane's `_isolated_sase_home` fixture).
+    smoke_home = tmp_path / "smoke-home"
+    smoke_home.mkdir(exist_ok=True)
     result = subprocess.run(
         [str(venv_python), "-c", smoke_script],
         capture_output=True,
         text=True,
+        env={**os.environ, "SASE_HOME": str(smoke_home)},
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "WHEEL_CONTRACT_OK" in result.stdout

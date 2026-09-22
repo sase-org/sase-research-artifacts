@@ -104,7 +104,7 @@ diagnostic rather than running someone else's command on your machine.
   always-run lead who consolidates their reports; codex + claude researchers plus the
   lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
   `muse=true` / `gemini=true`,
-  or four agents with the default set when `should_generate_image=true` opts into the
+  or four agents with the default set when `image=true` opts into the
   infographic segment, plus an optional critique agent via `critique=true`
   (`critique_model`, default `@xlarge`), for example
   `#research_swarm(prompt="A research topic", critique=true)`. A provider that is hard-disabled drops its researcher even when requested; a
@@ -126,7 +126,7 @@ diagnostic rather than running someone else's command on your machine.
   Example: `#research_swarm(codex_model=@codex, claude_model=@opus,
   lead_model=@xlarge): compare approaches`.
   Image example:
-  `#research_swarm(prompt="A research topic", should_generate_image=true)`.
+  `#research_swarm(prompt="A research topic", image=true)`.
   Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters.
 
