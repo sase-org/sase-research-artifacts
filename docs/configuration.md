@@ -63,8 +63,10 @@ file_hooks:
 ```
 
 The provider template supplies `description`, `filters` (`sidecars: [research]`,
-`producers: [commit, sdd, finalizer]`, `path_globs: ["20*/**/*.md",
-"!20*/*/*__*.md"]`, `agent_name_globs: ["!research.*.cld", "!research.*.cdx"]`,
+`producers: [commit, sdd, finalizer]`, `path_globs: ["20*/**/*.md", "!20*/*__*.md",
+"!20*/*/*__*.md"]` (plus generated-companion vetoes), `agent_name_globs:
+["!research.*.cdx", "!research.*.cld", "!research.*.grk", "!research.*.mus",
+"!research.*.gem"]`,
 `ops: [ADD]`), and `timeout: 120s`. `command` is deliberately absent from the template
 and listed as `required`: the policy is portable, but the executable is local to your
 machine. Omitting `command` fails soft with a diagnostic naming the missing field rather

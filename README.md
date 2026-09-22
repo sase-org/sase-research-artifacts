@@ -73,10 +73,12 @@ cited reports.
 
 Renders new committed research reports into Highlights PDFs for the Obsidian reading
 queue. Restricted to the `research` sidecar, producers `commit`, `sdd`, and
-`finalizer`, `ADD` operations only, and excludes agents matching `research.*.cld` /
-`research.*.cdx` (the swarm's own participants) plus `__cdx`/`__cld`/`__grk`/`__mus`/`__gem`
-draft files -- a
-Highlights PDF is only wanted for the consolidated report, not each researcher's draft.
+`finalizer`, `ADD` operations only, and excludes agents matching
+`research.*.{cdx,cld,grk,mus,gem}` (the swarm's own researchers) plus
+`__cdx`/`__cld`/`__grk`/`__mus`/`__gem` draft files, both where each researcher commits
+them at the month-dir root (`<YYYYMM>/<stem>__<suffix>.md`) and after the lead agent
+moves them into `<YYYYMM>/<name>/` -- a Highlights PDF is only wanted for the
+consolidated report, not each researcher's draft.
 `__critique.md` companions are excluded by the same draft glob, so the critique gets
 no Highlights PDF.
 Artifact-copy events are deliberately excluded because detached artifact execution uses

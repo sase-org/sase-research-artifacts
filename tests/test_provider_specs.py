@@ -238,6 +238,7 @@ def test_research_highlights_use_resolves_with_local_command(
     assert hook.filters.producers == ("commit", "sdd", "finalizer")
     assert hook.filters.path_globs == (
         "20*/**/*.md",
+        "!20*/*__*.md",
         "!20*/*/*__*.md",
         "!20*/**/*_infographic.md",
         "!20*/**/*.png.md",
@@ -248,7 +249,13 @@ def test_research_highlights_use_resolves_with_local_command(
         "!20*/**/*.svg.md",
         "!20*/**/*.pdf.md",
     )
-    assert hook.filters.agent_name_globs == ("!research.*.cld", "!research.*.cdx")
+    assert hook.filters.agent_name_globs == (
+        "!research.*.cdx",
+        "!research.*.cld",
+        "!research.*.grk",
+        "!research.*.mus",
+        "!research.*.gem",
+    )
     assert hook.filters.ops == ("ADD",)
 
 
