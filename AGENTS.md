@@ -48,3 +48,9 @@ just check      # lint + test
   `sase_file_hooks` even if a class implements both hookspec methods — the registry
   calls both hooks on every discovered plugin regardless of which group found it, so
   dual-registration double-collects specs.
+
+## sase tool runs
+
+Agents run `sase tool run check` here, not bare `just check`: `check` is
+guarded and a raw agent invocation is refused with the wrapped and bypass
+forms. To run raw on purpose: `SASE_TOOL_BYPASS='<why>' just check`.

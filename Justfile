@@ -109,7 +109,13 @@ test *args: _setup
 test-wheel *args: _setup
     SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_SOURCE={{ quote(local_sase_source) }} SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_CORE_SOURCE={{ quote(local_sase_core_source) }} {{ venv_bin }}/pytest -m wheel {{ args }}
 
-check: lint test
+# Agents must run guarded tools through `sase tool run` (sase docs/tool.md).
+# The guard is the first dependency, ahead of `_setup`, so a refusal costs
+# milliseconds rather than a dependency sync.
+_require-tool-run name:
+    @tools/require_tool_run {{ name }}
+
+check: (_require-tool-run "check") lint test
 
 clean:
     rm -rf build/ dist/ *.egg-info src/*.egg-info .mypy_cache/ .ruff_cache/ .pytest_cache/ {{ sase_overrides_file }}
