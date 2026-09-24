@@ -85,6 +85,10 @@ into Bob's derived PDF basename and marker id.
 Installing this plugin also contributes, through the `sase_config` entry point:
 
 - Default model alias `image` (infographic agent) in the `researchers` bucket. The
+  pool round-robins at equal weight across Codex (`codex/gpt-5.6-sol@xhigh`), Grok
+  (`grok/grok-4.6@xhigh`), and Antigravity Gemini (`agy/gemini-3.8-flash-high`); the
+  `agy` member carries no `@effort` suffix because Antigravity puts effort in the
+  model name. The
   research-swarm researchers default to concrete per-provider models and the lead
   defaults to SASE's built-in `@xlarge` alias.
 - The `research` tribe's display config (icon, color, description).
