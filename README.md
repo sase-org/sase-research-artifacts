@@ -111,9 +111,11 @@ diagnostic rather than running someone else's command on your machine.
   soft-disabled provider still runs its researcher (soft disables never refuse
   explicit model launches). Optional `wait` names agent(s) researchers should wait on
   before starting; quote the value when listing several (`wait="a,b"`). Each launched
-  segment requests `0.25` runner capacity units by default. `runners` is an optional
-  positive-integer capacity budget with no default; when supplied, it applies as
-  `capacity=N` to every launched agent. SASE rejects authored `capacity=0`. Optional
+  segment authors `%q(1.5x, w=0.25)` by default: a `0.25` weight against a capacity
+  budget of 1.5 times this machine's effective `max_running_agents` budget.
+  `runners` is an optional positive-integer capacity budget with no default; when
+  supplied, it replaces the `1.5x` multiplier with an absolute budget on every
+  launched agent. SASE rejects an authored budget of `0`. Optional
   `priority` is an integer with no default override: a supplied value applies to every
   launched agent (lower values start first); omission uses SASE's implicit queue
   priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`,

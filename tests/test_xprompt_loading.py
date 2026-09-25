@@ -80,8 +80,8 @@ _WAIT_ARTIFACTS_LOOP = (
     "{% endfor %}"
 )
 _WEIGHTED_QUEUE_TEMPLATE = (
-    "%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}"
-    "{% if priority is not none %}, "
+    "%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}"
+    ", w=0.25{% if priority is not none %}, "
     "priority={{ priority }}{% endif %})"
 )
 
@@ -105,9 +105,10 @@ def _assert_each_segment_has_one_queue(
     runners: int | None = None,
     priority: int | None = None,
 ) -> None:
-    marker = "%q(w=0.25"
     if runners is not None:
-        marker += f", capacity={runners}"
+        marker = f"%q({runners}, w=0.25"
+    else:
+        marker = "%q(1.5x, w=0.25"
     if priority is not None:
         marker += f", priority={priority}"
     marker += ")"
@@ -128,16 +129,23 @@ def _assert_each_segment_has_one_queue(
     for directives in _plan_agent_payloads(segments):
         assert directives.queue_weight == 0.25
         assert directives.queue_weight_explicit is True
-        assert directives.queue_capacity == runners
-        assert directives.wait_runners == runners
+        if runners is None:
+            assert directives.queue_capacity is None
+            assert directives.queue_capacity_multiplier == 1.5
+            assert directives.wait_runners is None
+        else:
+            assert directives.queue_capacity == runners
+            assert directives.queue_capacity_multiplier is None
+            assert directives.wait_runners == runners
         assert directives.wait_priority == priority
 
     if priority is None:
         assert all("priority=" not in segment for segment in segments)
     if runners is None:
-        assert all("capacity=" not in segment for segment in segments)
+        assert all("%q(1.5x, w=0.25" in segment for segment in segments)
     else:
-        assert all(f"capacity={runners}" in segment for segment in segments)
+        assert all(f"%q({runners}, w=0.25" in segment for segment in segments)
+    assert all("capacity=" not in segment for segment in segments)
 
 
 def test_all_five_research_xprompts_load() -> None:
@@ -857,8 +865,7 @@ def test_research_swarm_critique_carries_queue_options() -> None:
     _assert_each_segment_has_one_queue(segments, runners=8, priority=5)
     critique = segments[-1]
     assert "%id(critique, clan=research.{@1})" in critique
-    assert "capacity=8" in critique
-    assert "priority=5" in critique
+    assert "%q(8, w=0.25, priority=5)" in critique
 
 
 def test_research_swarm_critique_lists_drafts_and_synthesis_check() -> None:

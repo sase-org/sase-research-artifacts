@@ -25,7 +25,9 @@ input:
     default: null
     description:
       Optional positive-integer `%queue` capacity budget applied to every swarm member.
-      If null, the swarm uses SASE's global runner-capacity budget.
+      If null, every segment authors the default `1.5x` multiplier (1.5 times this
+      machine's effective `max_running_agents` budget). When supplied, it replaces
+      the multiplier with an absolute budget.
   - name: codex
     type: bool
     default: true
@@ -114,7 +116,7 @@ input:
 {%- set _ = cns.critique_layout_lines.append("└── <name>__critique.md") -%}
 {%- set critique_layout_body = cns.critique_layout_lines | join("\n") -%}
 %if(should_run={{ codex and ("codex" | provider_enabled("hard")) }}) %id(cdx, clan=research.{@1})
-%m:{{ codex_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+%m:{{ codex_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "cdx") | list %}
 You are researcher cdx in a {{ researchers | length }}-researcher swarm.
 {% if peers -%}
@@ -137,7 +139,7 @@ findings after you have all finished.
 ---
 
 %if(should_run={{ claude and ("claude" | provider_enabled("hard")) }}) %id(cld, clan=research.{@1})
-%m:{{ claude_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+%m:{{ claude_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "cld") | list %}
 You are researcher cld in a {{ researchers | length }}-researcher swarm.
 {% if peers -%}
@@ -160,7 +162,7 @@ findings after you have all finished.
 ---
 
 %if(should_run={{ grok and ("grok" | provider_enabled("hard")) }}) %id(grk, clan=research.{@1})
-%m:{{ grok_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+%m:{{ grok_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "grk") | list %}
 You are researcher grk in a {{ researchers | length }}-researcher swarm.
 {% if peers -%}
@@ -183,7 +185,7 @@ findings after you have all finished.
 ---
 
 %if(should_run={{ muse and ("muse" | provider_enabled("hard")) }}) %id(mus, clan=research.{@1})
-%m:{{ muse_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+%m:{{ muse_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "mus") | list %}
 You are researcher mus in a {{ researchers | length }}-researcher swarm.
 {% if peers -%}
@@ -206,7 +208,7 @@ findings after you have all finished.
 ---
 
 %if(should_run={{ gemini and ("agy" | provider_enabled("hard")) }}) %id(gem, clan=research.{@1})
-%m:{{ gemini_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+%m:{{ gemini_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 {% set peers = researchers | rejectattr("short", "equalto", "gem") | list %}
 You are researcher gem in a {{ researchers | length }}-researcher swarm.
 {% if peers -%}
@@ -229,7 +231,7 @@ findings after you have all finished.
 ---
 
 %clan(research.{@1}, tribe=research, summary=[[[bold]RESEARCH PROMPT:[/bold] {{ prompt }}]]) %id:research.{@1}.final %m:{{ lead_model }}
-{% for r in researchers %}%wait:research.{@1}.{{ r.short }} {% endfor %}%q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+{% for r in researchers %}%wait:research.{@1}.{{ r.short }} {% endfor %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 
 {% if researchers -%}
 You are the lead researcher: {{ researchers | length }} independent {{ "researcher has" if researchers | length == 1 else "researchers have" }} reported on the request
@@ -331,11 +333,11 @@ Final layout:
 ---
 
 %if(should_run={{ image }}) %id(image, clan=research.{@1}) %model:@image
-%wait:research.{@1}.final %q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/image
+%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/image
 ---
 
 %if(should_run={{ critique }}) %id(critique, clan=research.{@1}) %m:{{ critique_model }}
-%wait:research.{@1}.final %q(w=0.25{% if runners is not none %}, capacity={{ runners }}{% endif %}{% if priority is not none %}, priority={{ priority }}{% endif %})
+%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 
 You are the critique agent for a research swarm. The lead researcher,
 `research.{@1}.final`, has written a consolidated report on the request below. Your job

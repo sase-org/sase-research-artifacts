@@ -249,7 +249,7 @@ assert research_names == {
     "research_swarm",
 }, research_names
 research_swarm = xprompts["research_swarm"]
-assert research_swarm.content.count("%q(w=0.25") == 8
+assert research_swarm.content.count("%q(1.5x, w=0.25") == 8
 assert "default: 16" not in research_swarm.content
 
 def agent_payloads_for_segments(segments):
@@ -275,10 +275,11 @@ def assert_segments(named_args, *, runners=None, priority=None, image=False):
     for segment in segments:
         assert segment.count("%q(") == 1
         assert "runners=" not in segment
+        assert "capacity=" not in segment
         if runners is None:
-            assert "capacity=" not in segment
+            assert "%q(1.5x, w=0.25" in segment
         else:
-            assert f"capacity={runners}" in segment
+            assert f"%q({runners}, w=0.25" in segment
 
     if runners == 0:
         try:
@@ -292,8 +293,14 @@ def assert_segments(named_args, *, runners=None, priority=None, image=False):
     for directives in agent_payloads_for_segments(segments):
         assert directives.queue_weight == 0.25
         assert directives.queue_weight_explicit is True
-        assert directives.queue_capacity == runners
-        assert directives.wait_runners == runners
+        if runners is None:
+            assert directives.queue_capacity is None
+            assert directives.queue_capacity_multiplier == 1.5
+            assert directives.wait_runners is None
+        else:
+            assert directives.queue_capacity == runners
+            assert directives.queue_capacity_multiplier is None
+            assert directives.wait_runners == runners
         assert directives.wait_priority == priority
 
 assert_segments({})

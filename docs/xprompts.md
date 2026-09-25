@@ -49,7 +49,7 @@ recommendation, then hands off to `#research` to write it up.
 | `prompt`                | text | required                                | Research topic or question for the swarm to investigate  |
 | `wait`                  | word | `null`                                  | Optional agent(s) to wait for before the swarm starts    |
 | `priority`              | int  | `null`                                  | Optional integer queue priority for every launched agent |
-| `runners`               | int  | `null`                                  | Optional positive-integer capacity budget                |
+| `runners`               | int  | `null`                                  | Optional positive-integer capacity budget replacing `1.5x` |
 | `codex`                 | bool | `true`                                  | Request the codex researcher                             |
 | `claude`                | bool | `true`                                  | Request the claude researcher                            |
 | `grok`                  | bool | `false`                                 | Request the grok researcher                              |
@@ -78,16 +78,16 @@ is true; a soft-disabled provider still runs its researcher (soft disables never
 refuse explicit model launches). When `image=true` opts into the image segment, the default set
 runs four agents. Optional `wait` gates only the researchers. Optional `priority`
 applies to every launched agent when supplied (lower values start first); omission uses
-SASE's implicit queue priority. Every launched segment authors `%q(w=0.25)`, so the
-default swarm consumes `0.75` runner capacity units; the image opt-in consumes one
-normal unit when all four members are live, and the critique opt-in adds another
-`0.25` capacity unit.
-`runners` has no default; when supplied, it adds `capacity=N` to every segment without
-changing the `0.25` weight. `N` must be a positive integer (`capacity=1` is the smallest
-valid budget; four quarter-weight members fit in it, while all five researchers plus
-the lead -- six quarter-weight members -- need `capacity` of at least 2 to run
-concurrently). Explicit `runners=0` still renders
-as `capacity=0` on every launched segment, and SASE rejects that authored value at launch.
+SASE's implicit queue priority. Every launched segment authors `%q(1.5x, w=0.25)`,
+so each member's capacity budget is 1.5 times this machine's effective
+`max_running_agents` budget (7.5 capacity units when the effective budget is 5).
+The image opt-in and the critique opt-in author the same directive on their segments.
+`runners` has no default; when supplied, it replaces the `1.5x` multiplier with an
+absolute budget `N` on every segment without changing the `0.25` weight. `N` must be
+a positive integer (`1` is the smallest valid budget; four quarter-weight members fit
+in it, while all five researchers plus the lead -- six quarter-weight members --
+need a budget of at least 2 to run concurrently). Explicit `runners=0` still renders
+as `%q(0, w=0.25)` on every launched segment, and SASE rejects that authored value at launch.
 The seven model inputs can be supplied independently, for example
 `#research_swarm(codex_model=@codex, claude_model=@opus, lead_model=@xlarge): ...`.
 Omitting them preserves the defaults below. The opt-in image segment always uses
