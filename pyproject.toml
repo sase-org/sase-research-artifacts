@@ -12,11 +12,13 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     # SASE 0.17.2 is the release-please-generated host release that carries
-    # unconditional weighted queue support. The core window matches current
-    # SASE so source-coordination and published-minimum lanes resolve the same
-    # 0.34.x cohort instead of the disjoint 0.33.x pin that failed release CI.
+    # unconditional weighted queue support. The direct core requirement is a
+    # floor only. The floor is the published-minimum core with the
+    # runner-capacity APIs, aligned with sase's current core floor. The plugin
+    # never imports `sase_core_rs`, so sase owns the ceiling, and a plugin
+    # ceiling only breaks CI whenever sase moves its core window.
     "sase>=0.17.2",
-    "sase-core-rs>=0.34.23,<0.35.0",
+    "sase-core-rs>=0.35.0",
 ]
 
 [project.urls]

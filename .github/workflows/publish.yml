@@ -163,7 +163,7 @@ jobs:
       - name: Install built wheel with published minimum dependencies
         run: |
           uv venv --python 3.12 /tmp/smoke-minimum-venv
-          uv pip install --python /tmp/smoke-minimum-venv/bin/python "sase==0.17.2" "sase-core-rs==0.34.23" dist/*.whl
+          uv pip install --python /tmp/smoke-minimum-venv/bin/python "sase==0.17.2" "sase-core-rs==0.35.0" dist/*.whl
       - name: Smoke weighted research swarm on published floors
         run: |
           /tmp/smoke-minimum-venv/bin/python - <<'PY'
@@ -177,7 +177,7 @@ jobs:
           from sase.xprompt.processor import expand_single_xprompt
 
           assert importlib.metadata.version("sase") == "0.17.2"
-          assert importlib.metadata.version("sase-core-rs") == "0.34.23"
+          assert importlib.metadata.version("sase-core-rs") == "0.35.0"
           assert hasattr(sase_core_rs, "runner_capacity_snapshot")
           assert hasattr(sase_core_rs, "runner_capacity_policy_schema_version")
           assert sase_core_rs.runner_capacity_policy_schema_version() >= 4
@@ -262,7 +262,7 @@ jobs:
         run: |
           set +e
           uv venv --python 3.12 /tmp/smoke-incompatible-core-venv
-          output="$(uv pip install --python /tmp/smoke-incompatible-core-venv/bin/python "sase-core-rs==0.33.0" dist/*.whl 2>&1)"
+          output="$(uv pip install --python /tmp/smoke-incompatible-core-venv/bin/python "sase-core-rs==0.34.73" dist/*.whl 2>&1)"
           status=$?
           set -e
           printf '%s\n' "$output"

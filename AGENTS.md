@@ -35,9 +35,10 @@ just check      # lint + test
   `@xlarge` alias. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters; revisit the `sase` floor in `pyproject.toml`
   when a release actually carries them.
-- Depends on `sase>=0.17.2` and `sase-core-rs>=0.34.23,<0.35.0`; the `sase` floor is
-  the first release line expected to carry unconditional weighted queue support, and
-  the core window matches current SASE.
+- Depends on `sase>=0.17.2` and `sase-core-rs>=0.35.0`; the `sase` floor is
+  the first release line expected to carry unconditional weighted queue support.
+  The core requirement is floor-only: sase owns the core ceiling, and this
+  plugin only raises the floor when it needs newer core capabilities.
 
 ## Code Conventions
 

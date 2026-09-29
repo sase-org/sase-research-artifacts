@@ -23,8 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DISTRIBUTION_NAME = "sase-research-artifacts"
 PACKAGE_NAME = "sase_research_artifacts"
 MINIMUM_SASE_VERSION = "0.17.2"
-MINIMUM_SASE_CORE_RS_VERSION = "0.34.23"
-MAXIMUM_SASE_CORE_RS_VERSION = "0.35.0"
+MINIMUM_SASE_CORE_RS_VERSION = "0.35.0"
 
 pytestmark = pytest.mark.wheel
 
@@ -80,7 +79,7 @@ def test_distribution_artifacts_use_renamed_identity(
     assert any(
         requirement.startswith("sase-core-rs")
         and f">={MINIMUM_SASE_CORE_RS_VERSION}" in requirement
-        and f"<{MAXIMUM_SASE_CORE_RS_VERSION}" in requirement
+        and "<" not in requirement
         for requirement in requires_dist
     )
     # Guard against accidentally carrying a compatibility package under the old name.
@@ -214,7 +213,7 @@ except PackageNotFoundError:
     pass
 else:
     raise AssertionError("old sase-research distribution is installed")
-assert version("sase-core-rs").startswith("0.34.")
+assert tuple(int(p) for p in version("sase-core-rs").split(".")[:2]) >= (0, 35)
 assert hasattr(sase_core_rs, "runner_capacity_snapshot")
 assert hasattr(sase_core_rs, "runner_capacity_policy_schema_version")
 assert sase_core_rs.runner_capacity_policy_schema_version() >= 4

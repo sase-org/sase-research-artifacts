@@ -17,11 +17,11 @@ from packaging.utils import canonicalize_name
 from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN_CORE_REQUIREMENT = "sase-core-rs>=0.34.23,<0.35.0"
+PLUGIN_CORE_REQUIREMENT = "sase-core-rs>=0.35.0"
 PUBLISHED_MINIMUM_SASE = "sase==0.17.2"
-PUBLISHED_MINIMUM_CORE = "sase-core-rs==0.34.23"
+PUBLISHED_MINIMUM_CORE = "sase-core-rs==0.35.0"
 INCOMPATIBLE_SASE = "sase==0.17.1"
-INCOMPATIBLE_CORE = "sase-core-rs==0.33.0"
+INCOMPATIBLE_CORE = "sase-core-rs==0.34.73"
 
 
 def _read(relative_path: str) -> str:
@@ -123,7 +123,8 @@ def test_wheel_contract_is_source_coordination_not_published_minimum() -> None:
 
     assert "SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_SOURCE" in wheel_test
     assert "maturin" in wheel_test
-    assert 'startswith("0.34.")' in wheel_test
+    assert 'tuple(int(p) for p in version("sase-core-rs").split(".")[:2]) >= (0, 35)' in wheel_test
+    assert 'startswith("0.3' not in wheel_test
     assert "plan_typed_launch_units" in wheel_test
     assert 'selected_project="sase"' in wheel_test
     assert "at least 1" in wheel_test
@@ -136,15 +137,31 @@ def test_wheel_contract_is_source_coordination_not_published_minimum() -> None:
 def test_plugin_core_window_accepts_installed_sase_floor() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
     plugin_core = _core_specifier(list(pyproject["project"]["dependencies"]))
-    assert Version("0.34.23") in plugin_core
-    assert Version("0.34.24") in plugin_core
-    assert Version("0.33.0") not in plugin_core
-    assert Version("0.35.0") not in plugin_core
+    # Deliberately no ceiling: sase owns the core ceiling, and a plugin
+    # ceiling only breaks CI whenever sase moves its core window.
+    assert Version("0.35.0") in plugin_core
+    assert Version("0.35.1") in plugin_core
+    assert Version("0.36.0") in plugin_core
+    assert Version("0.34.73") not in plugin_core
+    for item in plugin_core:
+        assert item.operator not in {"<", "<=", "==", "~=", "!="}, item
 
     sase_core = _core_specifier(list(requires("sase") or []))
     sase_floor = _inclusive_lower_bound(sase_core)
     assert sase_floor in plugin_core, (sase_floor, plugin_core, sase_core)
     assert sase_floor in sase_core
+
+
+def test_plugin_never_imports_core_directly() -> None:
+    offenders = [
+        str(path)
+        for path in (ROOT / "src" / "sase_research_artifacts").rglob("*.py")
+        if "sase_core_rs" in path.read_text() or "sase-core-rs" in path.read_text()
+    ]
+    assert not offenders, (
+        "revisit the no-ceiling policy if the plugin starts calling the core "
+        f"directly: {offenders}"
+    )
 
 
 def test_entry_points_declared_once_each_to_avoid_double_registration() -> None:

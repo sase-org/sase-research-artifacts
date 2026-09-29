@@ -11,7 +11,7 @@ usable from agent workflows.
 
 ## Installation
 
-Requires Python 3.12+, `sase>=0.17.2`, and `sase-core-rs>=0.34.23,<0.35.0`. See
+Requires Python 3.12+, `sase>=0.17.2`, and `sase-core-rs>=0.35.0`. See
 [docs/configuration.md](docs/configuration.md#requirements).
 
 ```bash
