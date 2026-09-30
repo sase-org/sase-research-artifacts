@@ -270,7 +270,7 @@ def assert_segments(named_args, *, runners=None, priority=None, image=False):
         preserve_segment_separators=True,
     )
     segments = split_segments_protecting_fences(body)
-    assert len(segments) == (4 if image else 3), segments
+    assert len(segments) == (5 if image else 3), segments
     for segment in segments:
         assert segment.count("%q(") == 1
         assert "runners=" not in segment

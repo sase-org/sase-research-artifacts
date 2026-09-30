@@ -31,9 +31,16 @@ _DEPTH_2_DRAFTS = (
     "202608/widgets/widgets__a.md",
     "202608/widgets/widgets__b.md",
 )
+# The lead's `__final.md` intermediate: kept in the ref inventory, excluded from
+# the Highlights hook at both depths.
+_FINALS = (
+    "202608/widgets/widgets__final.md",
+    "202608/widgets__final.md",
+)
 _CANDIDATES = (
     "202608/widgets/widgets.md",
     *_DEPTH_2_DRAFTS,
+    *_FINALS,
     *_DEPTH_1_DRAFTS,
     "202608/solo_report.md",
     "202608/widgets/widgets_infographic.md",
@@ -50,6 +57,7 @@ def test_ref_inventory_globs_keep_swarm_drafts() -> None:
     assert result.allowed == (
         "202608/widgets/widgets.md",
         *_DEPTH_2_DRAFTS,
+        *_FINALS,
         *_DEPTH_1_DRAFTS,
         "202608/solo_report.md",
     )
@@ -66,7 +74,7 @@ def test_file_hook_globs_exclude_swarm_drafts() -> None:
     )
 
     assert result.allowed == ("202608/widgets/widgets.md", "202608/solo_report.md")
-    for draft in (*_DEPTH_2_DRAFTS, *_DEPTH_1_DRAFTS):
+    for draft in (*_DEPTH_2_DRAFTS, *_FINALS, *_DEPTH_1_DRAFTS):
         assert draft in result.filtered
     assert "202608/widgets/widgets_infographic.md" in result.filtered
     assert "202608/widgets/widgets.png.md" in result.filtered
@@ -97,7 +105,7 @@ def test_file_hook_filters_restrict_to_committed_routes() -> None:
         ("research.26.mus", False),
         ("research.26.gem", False),
         ("research.26.final", True),
-        ("research.26.critique", True),
+        ("research.26.linker", True),
         ("foo.cld", True),
         (None, True),
     ],

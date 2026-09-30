@@ -79,8 +79,9 @@ queue. Restricted to the `research` sidecar, producers `commit`, `sdd`, and
 them at the month-dir root (`<YYYYMM>/<stem>__<suffix>.md`) and after the lead agent
 moves them into `<YYYYMM>/<name>/` -- a Highlights PDF is only wanted for the
 consolidated report, not each researcher's draft.
-`__critique.md` companions are excluded by the same draft glob, so the critique gets
-no Highlights PDF.
+`__final.md` intermediates are excluded by the same draft glob, so only the linker's
+`<name>.md` gets a PDF. The agent veto intentionally never lists `final`: the lead
+agent publishes `<name>.md` itself on swarms without the linker.
 Artifact-copy events are deliberately excluded because detached artifact execution uses
 durable content-addressed paths whose basenames may include digest suffixes; Bob derives
 its PDF basename and marker id from the input Markdown basename.
@@ -104,10 +105,11 @@ diagnostic rather than running someone else's command on your machine.
   always-run lead who consolidates their reports; codex + claude researchers plus the
   lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
   `muse=true` / `gemini=true`,
-  or four agents with the default set when `image=true` opts into the
-  infographic segment, plus an optional critique agent via `critique=true`
-  (`critique_model`, default `@xlarge`), for example
-  `#research_swarm(prompt="A research topic", critique=true)`. A provider that is hard-disabled drops its researcher even when requested; a
+  or five agents with the default set when `image=true` opts into the
+  infographic segment (`image=true` implies the linker, which embeds the infographic
+  in the published report), plus an optional linker agent via `linker=true`
+  (`linker_model`, default `@xlarge`), for example
+  `#research_swarm(prompt="A research topic", linker=true)`. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse
   explicit model launches). Optional `wait` names agent(s) researchers should wait on
   before starting; quote the value when listing several (`wait="a,b"`). Each launched
@@ -119,12 +121,13 @@ diagnostic rather than running someone else's command on your machine.
   `priority` is an integer with no default override: a supplied value applies to every
   launched agent (lower values start first); omission uses SASE's implicit queue
   priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`,
-  `gemini_model`, and
-  `lead_model` choose the `.cdx`, `.cld`, `.grk`, `.mus`, `.gem`, and `.final` agent models,
+  `gemini_model`,
+  `lead_model`, `image_model`, and `linker_model` choose the `.cdx`, `.cld`, `.grk`,
+  `.mus`, `.gem`, `.final`, `.image`, and `.linker` agent models,
   defaulting to `codex/gpt-5.6-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
   `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory),
-  `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort), and
-  `@xlarge`.
+  `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort),
+  `@xlarge`, the `image` alias, and `@xlarge`.
   Example: `#research_swarm(codex_model=@codex, claude_model=@opus,
   lead_model=@xlarge): compare approaches`.
   Image example:
@@ -137,8 +140,9 @@ diagnostic rather than running someone else's command on your machine.
 `default_config.yml` ships the `image` model alias, the `researchers` bucket, and the
 `research` tribe display config. By default, `#research_swarm` uses concrete
 per-provider models for the codex, claude, grok, muse, and gemini researchers, this plugin's
-`image` alias for the opt-in image agent, and SASE's built-in `@xlarge` alias for the
-lead segment, so the swarm works out of the box on a fresh install. Project or user
+`image` alias for the opt-in image agent (with `image_model` defaulting to the `image`
+alias), and SASE's built-in `@xlarge` alias for the
+lead and linker segments, so the swarm works out of the box on a fresh install. Project or user
 config still overrides aliases by normal layer precedence, and callers can override
 each researcher role model per invocation.
 

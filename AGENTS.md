@@ -31,7 +31,7 @@ just check      # lint + test
   the `researchers` bucket, and the `research` tribe display config, discovered
   through the `sase_config` entry point. The research-swarm researchers default to
   concrete per-provider models and the lead defaults to SASE's built-in `@xlarge`
-  alias; the optional critique agent, like the lead, defaults to SASE's built-in
+  alias; the optional linker agent, like the lead, defaults to SASE's built-in
   `@xlarge` alias. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters; revisit the `sase` floor in `pyproject.toml`
   when a release actually carries them.

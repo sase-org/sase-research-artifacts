@@ -53,13 +53,13 @@ def _swarm_body(named_args: dict[str, str]) -> str:
 
 
 def _swarm_segments(
-    named_args: dict[str, str], *, image: bool = False, critique: bool = False
+    named_args: dict[str, str], *, image: bool = False, linker: bool = False
 ) -> list[str]:
     args = dict(named_args)
     if image:
         args["image"] = "true"
-    if critique:
-        args["critique"] = "true"
+    if linker:
+        args["linker"] = "true"
     return split_segments_protecting_fences(_swarm_body(args))
 
 
@@ -79,6 +79,12 @@ _WAIT_ARTIFACTS_LOOP = (
     "path={{ a.path }} ref={{ a.ref }}\n"
     "{% endfor %}"
 )
+_WAIT_IMAGE_ARTIFACTS_LOOP = (
+    '{% for a in wait.artifacts if a.kind == "image" %}\n'
+    "- wait_name={{ a.wait_name }} label={{ a.label }} vcs_relpath={{ a.vcs_relpath }} "
+    "path={{ a.path }} ref={{ a.ref }}\n"
+    "{% endfor %}"
+)
 _WEIGHTED_QUEUE_TEMPLATE = (
     "%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}"
     ", w=0.25{% if priority is not none %}, "
@@ -87,7 +93,9 @@ _WEIGHTED_QUEUE_TEMPLATE = (
 
 
 def _without_wait_artifacts_loop(segment: str) -> str:
-    return segment.replace(_WAIT_ARTIFACTS_LOOP, "")
+    return segment.replace(_WAIT_ARTIFACTS_LOOP, "").replace(
+        _WAIT_IMAGE_ARTIFACTS_LOOP, ""
+    )
 
 
 def _plan_agent_payloads(segments: list[str]) -> list[AgentUnitWire]:
@@ -192,8 +200,9 @@ def test_research_swarm_declares_typed_input() -> None:
         ("gemini_model", "word"),
         ("lead_model", "word"),
         ("image", "bool"),
-        ("critique", "bool"),
-        ("critique_model", "word"),
+        ("image_model", "word"),
+        ("linker", "bool"),
+        ("linker_model", "word"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
@@ -211,8 +220,9 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[13].default == "agy/gemini-3.8-flash-high"
     assert xp.inputs[14].default == "@xlarge"
     assert xp.inputs[15].default is False
-    assert xp.inputs[16].default is False
-    assert xp.inputs[17].default == "@xlarge"
+    assert xp.inputs[16].default == "@image"
+    assert xp.inputs[17].default is False
+    assert xp.inputs[18].default == "@xlarge"
 
 
 def test_research_swarm_has_eight_top_level_segments() -> None:
@@ -227,10 +237,13 @@ def test_research_swarm_defaults_to_three_expanded_agents() -> None:
     assert all("%id(grk," not in segment for segment in segments)
     assert all("%id(mus," not in segment for segment in segments)
     assert all("%id(gem," not in segment for segment in segments)
-    assert all("%id(critique" not in segment for segment in segments)
+    assert all("%id(linker" not in segment for segment in segments)
     cdx, cld, final = segments
     assert "sase artifact create" not in final
-    assert "critique" not in final
+    assert "__final" not in final
+    assert "linker" not in final
+    assert "Write the consolidated report to `<name>/<name>.md`:" in final
+    assert final.rstrip().endswith("└── <name>.md\n```")
     assert "%id(cdx, clan=research.{@1})" in cdx
     assert "%id(cld, clan=research.{@1})" in cld
     assert "%clan(research.{@1}" in final
@@ -240,18 +253,24 @@ def test_research_swarm_defaults_to_three_expanded_agents() -> None:
 
 def test_research_swarm_can_opt_into_image_agent() -> None:
     segments = _swarm_segments({}, image=True)
-    assert len(segments) == 4
-    image = segments[-1]
+    assert len(segments) == 5
+    *_, final, image, linker = segments
     assert "%id(image, clan=research.{@1})" in image
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
     assert "#research/image" in image
-    assert "%model:@image" in image
+    assert "%m:@image" in image
+    assert "%model:@image" not in image
     assert "%if(" not in image
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
+    assert "<name>_infographic.png" in linker
+    assert "<name>__final.md" in final
 
 
 def test_research_swarm_dependency_graph_preserved() -> None:
-    cdx, cld, grk, mus, gem, final, image, critique = _authored_swarm_segments()
+    cdx, cld, grk, mus, gem, final, image, linker = _authored_swarm_segments()
 
     assert '%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }})' in cdx
     assert "%id(cdx, clan=research.{@1})" in cdx
@@ -288,37 +307,41 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
     assert "#research/image" in image
-    assert "%model:@image" in image
+    assert "%m:{{ image_model }}" in image
+    assert "%model:@image" not in image
     assert "%model:codex/gpt-5.6-sol" not in image
 
-    assert "%if(should_run={{ critique }})" in critique
-    assert "%id(critique, clan=research.{@1})" in critique
-    assert "%m:{{ critique_model }}" in critique
-    assert "%wait:research.{@1}.final" in critique
-    assert "#fork:" not in critique
-    assert "%clan(" not in critique
-    assert critique.count("%q(") == 1
-    assert _WEIGHTED_QUEUE_TEMPLATE in critique
-    assert "priority is not none" in critique
-    assert _WAIT_ARTIFACTS_LOOP in critique
+    assert "%if(should_run={{ run_linker }})" in linker
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%m:{{ linker_model }}" in linker
+    assert "%wait:research.{@1}.final" in linker
+    assert "{% if image %}%wait:research.{@1}.image" in linker
+    assert "#fork:" not in linker
+    assert "%clan(" not in linker
+    assert linker.count("%q(") == 1
+    assert _WEIGHTED_QUEUE_TEMPLATE in linker
+    assert "priority is not none" in linker
+    assert _WAIT_ARTIFACTS_LOOP in linker
     assert _WAIT_ARTIFACTS_LOOP in final
+    assert _WAIT_IMAGE_ARTIFACTS_LOOP in linker
+    assert _WAIT_IMAGE_ARTIFACTS_LOOP not in final
 
     assert all(
         "priority is not none" in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image, critique)
+        for segment in (cdx, cld, grk, mus, gem, final, image, linker)
     )
     assert all(
         segment.count("%q(") == 1
-        for segment in (cdx, cld, grk, mus, gem, final, image, critique)
+        for segment in (cdx, cld, grk, mus, gem, final, image, linker)
     )
     assert all(
         _WEIGHTED_QUEUE_TEMPLATE in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image, critique)
+        for segment in (cdx, cld, grk, mus, gem, final, image, linker)
     )
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
-    *_researchers, final, _image, _critique = _authored_swarm_segments()
+    *_researchers, final, _image, _linker = _authored_swarm_segments()
 
     assert (
         "SASE derives your plan's links from the artifacts you read this turn; use\n"
@@ -347,12 +370,14 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
     assert "%wait:research.{@1}.cld" in final
     _assert_each_segment_has_one_queue([cdx, cld, final])
 
-    *_researchers, image = _swarm_segments(
+    *_researchers, image, linker = _swarm_segments(
         {"wait": "research.0f.final"}, image=True
     )
     assert "%wait:research.0f.final" not in image
     assert "%wait:research.{@1}.final" in image
-    assert "%model:@image" in image
+    assert "%m:@image" in image
+    assert "%wait:research.0f.final" not in linker
+    assert "%wait:research.{@1}.final" in linker
 
 
 def test_research_swarm_omitted_models_use_per_provider_defaults() -> None:
@@ -619,9 +644,11 @@ def test_research_swarm_omitted_priority_uses_weight_only_queue() -> None:
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
 
-    *_researchers, image = _swarm_segments({}, image=True)
+    *_researchers, image, linker = _swarm_segments({}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
 
 
 def test_research_swarm_supplied_zero_runners_renders_on_every_agent() -> None:
@@ -632,9 +659,11 @@ def test_research_swarm_supplied_zero_runners_renders_on_every_agent() -> None:
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
 
-    *_researchers, image = _swarm_segments({"runners": "0"}, image=True)
+    *_researchers, image, linker = _swarm_segments({"runners": "0"}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
 
 
 def test_research_swarm_supplied_runners_renders_on_every_agent() -> None:
@@ -644,9 +673,11 @@ def test_research_swarm_supplied_runners_renders_on_every_agent() -> None:
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
 
-    *_researchers, image = _swarm_segments({"runners": "8"}, image=True)
+    *_researchers, image, linker = _swarm_segments({"runners": "8"}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
 
 
 def test_research_swarm_supplied_priority_renders_on_every_agent() -> None:
@@ -657,9 +688,11 @@ def test_research_swarm_supplied_priority_renders_on_every_agent() -> None:
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
 
-    *_researchers, image = _swarm_segments({"priority": "5"}, image=True)
+    *_researchers, image, linker = _swarm_segments({"priority": "5"}, image=True)
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
 
 
 def test_research_swarm_priority_zero_is_not_omission() -> None:
@@ -681,16 +714,19 @@ def test_research_swarm_priority_composes_with_wait() -> None:
     assert "%wait:research.0f.final" in cld
     assert "%wait:research.0f.final" not in final
 
-    *_researchers, image = _swarm_segments(
+    *_researchers, image, linker = _swarm_segments(
         {"wait": "research.0f.final", "priority": "5", "runners": "0"},
         image=True,
     )
     assert "%wait:research.0f.final" not in image
+    assert "%wait:research.0f.final" not in linker
     assert "%wait:research.{@1}.cdx" in final
     assert "%wait:research.{@1}.cld" in final
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
-    assert "%model:@image" in image
+    assert "%m:@image" in image
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
 
 
 def test_research_registers_report_in_every_branch() -> None:
@@ -706,7 +742,7 @@ def test_research_registers_report_in_every_branch() -> None:
 
 
 def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
-    *_researchers, final, _image, _critique = _authored_swarm_segments()
+    *_researchers, final, _image, _linker = _authored_swarm_segments()
 
     assert "wait_chats" not in final
     assert (
@@ -804,81 +840,119 @@ def test_research_swarm_lead_renders_registered_reports_via_wait_artifacts(
     assert "{%" not in rendered
 
 
-def test_research_swarm_critique_opt_in_adds_segment() -> None:
-    segments = _swarm_segments({}, critique=True)
+def test_research_swarm_linker_opt_in_adds_segment() -> None:
+    segments = _swarm_segments({}, linker=True)
     assert len(segments) == 4
-    *_, final, critique = segments
-    assert "%id(critique, clan=research.{@1})" in critique
-    assert "%m:@xlarge" in critique
-    assert "%wait:research.{@1}.final" in critique
-    assert "__critique.md" in critique
-    assert "sase artifact read" in critique
-    assert "sase artifact create" in critique
-    assert "%if(" not in critique
-    assert "#fork:" not in critique
+    *_, final, linker = segments
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%m:@xlarge" in linker
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" not in linker
+    assert "__final.md" in linker
+    assert "sase artifact read" in linker
+    assert "sase artifact create" in linker
+    assert "%if(" not in linker
+    assert "#fork:" not in linker
+    assert "<name>_infographic.png" not in linker
+    assert "Embed the infographic" not in linker
 
+    assert "Write the consolidated report to `<name>/<name>__final.md`:" in final
     assert (
         'sase artifact create -p "<absolute-report-path>" '
         '-l "research:<repo-relative-report-path>"'
     ) in final
-    assert "research.{@1}.critique" in final
+    assert "research:202609/<name>/<name>__final.md" in final
+    assert "research.{@1}.linker" in final
+    assert "Do not create `<name>/<name>.md`" in final
+    assert final.rstrip().endswith("└── <name>__final.md\n```")
     _assert_each_segment_has_one_queue(segments)
 
 
-def test_research_swarm_critique_model_routes_to_critique_only() -> None:
+def test_research_swarm_linker_model_routes_to_linker_only() -> None:
     segments = _swarm_segments(
-        {"critique_model": "@critique_custom", "lead_model": "@lead_custom"},
-        critique=True,
+        {"linker_model": "@linker_custom", "lead_model": "@lead_custom"},
+        linker=True,
     )
-    *_, final, critique = segments
-    assert "%m:@critique_custom" in critique
-    assert "@lead_custom" not in critique
-    assert "@critique_custom" not in final
+    *_, final, linker = segments
+    assert "%m:@linker_custom" in linker
+    assert "@lead_custom" not in linker
+    assert "@linker_custom" not in final
     assert "%m:@lead_custom" in final
     _assert_each_segment_has_one_queue(segments)
 
 
-def test_research_swarm_image_plus_critique_run_in_parallel() -> None:
-    segments = _swarm_segments({}, image=True, critique=True)
-    assert len(segments) == 5
-    *_, final, image, critique = segments
-    assert "%id(image, clan=research.{@1})" in image
-    assert "%id(critique, clan=research.{@1})" in critique
-    assert "%wait:research.{@1}.final" in image
-    assert "%wait:research.{@1}.final" in critique
-    assert "%wait:research.{@1}.image" not in critique
+def test_research_swarm_image_model_routes_to_image_only() -> None:
+    segments = _swarm_segments(
+        {"image_model": "@image_custom", "lead_model": "@lead_custom"},
+        image=True,
+    )
+    *_, final, image, linker = segments
+    assert "%m:@image_custom" in image
+    assert "@lead_custom" not in image
+    assert "@image_custom" not in final
+    assert "@image_custom" not in linker
+    assert "%m:@lead_custom" in final
+    assert "%m:@xlarge" in linker
     _assert_each_segment_has_one_queue(segments)
 
 
-def test_research_swarm_critique_ignores_swarm_wait_argument() -> None:
-    segments = _swarm_segments({"wait": "research.0f.final"}, critique=True)
-    critique = segments[-1]
-    assert "%id(critique, clan=research.{@1})" in critique
-    assert "%wait:research.0f.final" not in critique
-    assert "%wait:research.{@1}.final" in critique
+def test_research_swarm_image_implies_linker_without_duplicates() -> None:
+    segments = _swarm_segments({}, image=True)
+    assert len(segments) == 5
+    *_, final, image, linker = segments
+    assert "%id(image, clan=research.{@1})" in image
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.{@1}.final" in image
+    assert "%wait:research.{@1}.final" in linker
+    assert "%wait:research.{@1}.image" in linker
+    assert "#fork:research.{@1}.final" in image
+    assert "#fork:" not in linker
+    assert "Embed the infographic" in linker
+    assert "<name>_infographic.png" in linker
+
+    both = _swarm_segments({"linker": "true"}, image=True)
+    assert len(both) == 5
+    assert sum("%id(linker," in segment for segment in both) == 1
+    _assert_each_segment_has_one_queue(segments)
+    _assert_each_segment_has_one_queue(both)
 
 
-def test_research_swarm_critique_carries_queue_options() -> None:
-    segments = _swarm_segments(
-        {"runners": "8", "priority": "5"}, critique=True
-    )
+def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:
+    segments = _swarm_segments({"wait": "research.0f.final"}, linker=True)
+    linker = segments[-1]
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.0f.final" not in linker
+    assert "%wait:research.{@1}.final" in linker
+
+
+def test_research_swarm_linker_carries_queue_options() -> None:
+    segments = _swarm_segments({"runners": "8", "priority": "5"}, linker=True)
     _assert_each_segment_has_one_queue(segments, runners=8, priority=5)
-    critique = segments[-1]
-    assert "%id(critique, clan=research.{@1})" in critique
-    assert "%q(8, w=0.25, priority=5)" in critique
+    linker = segments[-1]
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%q(8, w=0.25, priority=5)" in linker
+
+    combo = _swarm_segments({"runners": "8", "priority": "5"}, image=True)
+    _assert_each_segment_has_one_queue(combo, runners=8, priority=5)
 
 
-def test_research_swarm_critique_lists_drafts_and_synthesis_check() -> None:
-    critique = _swarm_segments({}, critique=True)[-1]
-    assert "<name>__cdx.md" in critique
-    assert "<name>__cld.md" in critique
-    assert "Synthesis check" in critique
+def test_research_swarm_linker_final_layout_publishes_report() -> None:
+    linker = _swarm_segments({}, linker=True)[-1]
+    assert "Final layout:" in linker
+    assert "├── <name>__cdx.md" in linker
+    assert "├── <name>__cld.md" in linker
+    assert "├── <name>__final.md" in linker
+    assert "<name>_infographic.png" not in linker
+    assert linker.rstrip().endswith("└── <name>.md\n```")
 
-    grok_critique = _swarm_segments({"grok": "true"}, critique=True)[-1]
-    assert "<name>__grk.md" in grok_critique
-    assert "Synthesis check" in grok_critique
+    image_linker = _swarm_segments({}, image=True)[-1]
+    assert "├── <name>_infographic.png" in image_linker
+    assert image_linker.rstrip().endswith("└── <name>.md\n```")
 
-    solo_critique = _swarm_segments(
+    grok_linker = _swarm_segments({"grok": "true"}, linker=True)[-1]
+    assert "<name>__grk.md" in grok_linker
+
+    solo_linker_segments = _swarm_segments(
         {
             "codex": "false",
             "claude": "false",
@@ -886,46 +960,36 @@ def test_research_swarm_critique_lists_drafts_and_synthesis_check() -> None:
             "muse": "false",
             "gemini": "false",
         },
-        critique=True,
+        linker=True,
     )
-    assert len(solo_critique) == 2
-    solo_final, solo_crit = solo_critique
-    assert "no independent researchers ran" in solo_crit.lower()
-    assert "<name>__cdx.md" not in solo_crit
-    assert "<name>__cld.md" not in solo_crit
-    assert "<name>__grk.md" not in solo_crit
-    assert "<name>__mus.md" not in solo_crit
-    assert "<name>__gem.md" not in solo_crit
-    assert "Synthesis check" not in solo_crit
+    assert len(solo_linker_segments) == 2
+    solo_final, solo_linker = solo_linker_segments
+    assert "<name>__final.md" in solo_final
     assert (
         'sase artifact create -p "<absolute-report-path>" '
         '-l "research:<repo-relative-report-path>"'
     ) in solo_final
+    assert "research.{@1}.linker" in solo_final
+    assert "├── <name>__final.md" in solo_linker
+    assert solo_linker.rstrip().endswith("└── <name>.md\n```")
 
 
-def test_research_swarm_critique_final_layout_names_companion() -> None:
-    critique = _swarm_segments({}, critique=True)[-1]
-    assert "Final layout:" in critique
-    assert "├── <name>.md" in critique
-    assert critique.rstrip().endswith("└── <name>__critique.md\n```")
-
-
-def test_research_swarm_critique_renders_registered_lead_via_wait_artifacts(
+def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
     tmp_path: Path,
 ) -> None:
-    """Mirror the lead end-to-end render for the critique handoff."""
+    """Mirror the lead end-to-end render for the linker handoff."""
     artifact_files_root = tmp_path / "artifact_store"
     index_path = artifact_files_root / "artifact_files.jsonl"
     final_dir = tmp_path / "agents" / "research.m.final"
     final_dir.mkdir(parents=True)
 
-    report = tmp_path / "topic.md"
+    report = tmp_path / "topic__final.md"
     report.write_text("# Consolidated findings\n", encoding="utf-8")
 
     artifact = store_explicit_artifact_file(
         report,
         final_dir,
-        label="research:202609/topic/topic.md",
+        label="research:202609/topic/topic__final.md",
         artifact_files_root=artifact_files_root,
         index_path=index_path,
     )
@@ -934,19 +998,39 @@ def test_research_swarm_critique_renders_registered_lead_via_wait_artifacts(
         [ArtifactContextProducerGroup("research.m.final", [str(final_dir)])],
         index_path=index_path,
     )
+    artifacts.append(
+        {
+            "kind": "image",
+            "wait_name": "research.m.image",
+            "label": "research:202609/topic/topic_infographic.png",
+            "vcs_relpath": "202609/topic/topic_infographic.png",
+            "path": str(tmp_path / "topic_infographic.png"),
+            "ref": "file:png-id",
+        }
+    )
 
-    critique = _swarm_segments({}, critique=True)[-1]
+    linker = _swarm_segments({}, image=True)[-1]
 
     with bind_runtime_template_vars(
         {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}
     ):
-        rendered = render_template(critique, {})
+        rendered = render_template(linker, {})
 
     assert (
-        "wait_name=research.m.final label=research:202609/topic/topic.md" in rendered
+        "wait_name=research.m.final label=research:202609/topic/topic__final.md"
+        in rendered
     )
     assert f"source_path={report}" in rendered
     assert f"path={artifact.path}" in rendered
     assert f"ref=file:{artifact.id}" in rendered
+    assert "wait_name=research.m.image" in rendered
+    assert "vcs_relpath=202609/topic/topic_infographic.png" in rendered
     assert "{{" not in rendered
     assert "{%" not in rendered
+
+
+def test_research_image_strips_final_stem() -> None:
+    xp = _research_xprompts()["research/image"]
+    assert "topic__final.md" in xp.content
+    assert "topic_infographic.png" in xp.content
+    assert "without overwrite" in xp.content

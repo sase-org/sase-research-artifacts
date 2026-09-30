@@ -13,8 +13,9 @@ infographic companion Markdown pages so binary link companions do not become rep
 The ``research`` ref provider's inventory keeps ``__<suffix>`` swarm drafts, because
 citing a specific researcher's draft with ``@research:...`` is legitimate. The
 ``research-highlights`` file hook excludes drafts, because Bryan does not want a
-Highlights PDF generated per draft -- only for the consolidated report. This divergence
-is intentional, not a porting bug.
+Highlights PDF generated per draft -- only for the consolidated report. That exclusion
+covers the lead's ``__final.md`` intermediate, which the linker republishes as
+``<name>.md``. This divergence is intentional, not a porting bug.
 
 The ``research`` ref provider's ``expansion_format`` uses no ``{checkout_path}``
 placeholder, which makes it a *pointer* kind: ``@research:<path>`` expands to prose
@@ -41,9 +42,11 @@ _COMPANION_MARKDOWN_EXCLUDE_GLOBS = [
     "!20*/**/*.svg.md",
     "!20*/**/*.pdf.md",
 ]
-# Suffixes of the research swarm's per-researcher agents (``research.<N>.<suffix>``),
-# in swarm segment order. Their drafts get no Highlights PDF.
-_SWARM_RESEARCHER_SUFFIXES = ("cdx", "cld", "grk", "mus", "gem")
+# Agent-name suffixes of the research swarm's per-researcher agents
+# (``research.<N>.<suffix>``), in swarm segment order. Commits *by those agents* get
+# no Highlights PDF. This must never include ``final``: the lead agent
+# ``research.<N>.final`` publishes ``<name>.md`` on swarms without the linker.
+_SWARM_RESEARCHER_AGENT_SUFFIXES = ("cdx", "cld", "grk", "mus", "gem")
 _RESEARCH_INVENTORY_GLOBS = [
     "20*/**/*.md",
     *_COMPANION_MARKDOWN_EXCLUDE_GLOBS,
@@ -107,12 +110,13 @@ RESEARCH_HIGHLIGHTS_HOOK_SPEC: Mapping[str, Any] = {
                 "20*/**/*.md",
                 # Researcher drafts committed at the month-dir root.
                 "!20*/*__*.md",
-                # Drafts and critique moved into <month>/<name>/ by the lead agent.
+                # Researcher drafts plus the lead's `__final.md` intermediate, which
+                # the linker republishes as `<name>.md`.
                 "!20*/*/*__*.md",
                 *_COMPANION_MARKDOWN_EXCLUDE_GLOBS,
             ],
             "agent_name_globs": [
-                f"!research.*.{suffix}" for suffix in _SWARM_RESEARCHER_SUFFIXES
+                f"!research.*.{suffix}" for suffix in _SWARM_RESEARCHER_AGENT_SUFFIXES
             ],
             "ops": ["ADD"],
         },

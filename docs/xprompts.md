@@ -22,7 +22,9 @@ the runtime `wait.artifacts` namespace instead of reading transcripts.
 ## `#research/image` -- Generate an Infographic
 
 Generates an infographic illustrating a research markdown file's main points, writing
-`<source-stem>_infographic.png` alongside the source file.
+`<stem>_infographic.png` alongside the source file, where `<stem>` is the source
+file's stem with any trailing `__final` removed (so `topic__final.md` becomes
+`topic_infographic.png`).
 
 ## `#research/more` -- Extend Existing Research
 
@@ -61,40 +63,41 @@ recommendation, then hands off to `#research` to write it up.
 | `muse_model`            | word | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
 | `gemini_model`          | word | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | word | `@xlarge`                               | Model for `<clan>.final`                                 |
-| `image`                 | bool | `false`                                 | Opt into `<clan>.image`                                  |
-| `critique`              | bool | `false`                                 | Opt into `<clan>.critique`                               |
-| `critique_model`        | word | `@xlarge`                               | Model for `<clan>.critique`                              |
+| `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker)             |
+| `image_model`           | word | `@image`                                | Model for `<clan>.image`                                 |
+| `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true`) |
+| `linker_model`          | word | `@xlarge`                               | Model for `<clan>.linker`                                |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
 
 A three-agent xprompt swarm by default (codex + claude researchers plus the lead), up
-to eight authored segments (five researchers, the lead, the image agent, the critique
+to eight authored segments (five researchers, the lead, the image agent, the linker
 agent). `grok=true` /
 `muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
 is true; a soft-disabled provider still runs its researcher (soft disables never
 refuse explicit model launches). When `image=true` opts into the image segment, the default set
-runs four agents. Optional `wait` gates only the researchers. Optional `priority`
+runs five agents, because image implies linker. Optional `wait` gates only the researchers. Optional `priority`
 applies to every launched agent when supplied (lower values start first); omission uses
 SASE's implicit queue priority. Every launched segment authors `%q(1.5x, w=0.25)`,
 so each member's capacity budget is 1.5 times this machine's effective
 `max_running_agents` budget (7.5 capacity units when the effective budget is 5).
-The image opt-in and the critique opt-in author the same directive on their segments.
+The image opt-in and the linker opt-in author the same directive on their segments.
 `runners` has no default; when supplied, it replaces the `1.5x` multiplier with an
 absolute budget `N` on every segment without changing the `0.25` weight. `N` must be
 a positive integer (`1` is the smallest valid budget; four quarter-weight members fit
 in it, while all five researchers plus the lead -- six quarter-weight members --
 need a budget of at least 2 to run concurrently). Explicit `runners=0` still renders
 as `%q(0, w=0.25)` on every launched segment, and SASE rejects that authored value at launch.
-The seven model inputs can be supplied independently, for example
+The eight model inputs can be supplied independently, for example
 `#research_swarm(codex_model=@codex, claude_model=@opus, lead_model=@xlarge): ...`.
-Omitting them preserves the defaults below. The opt-in image segment always uses
-`@image`, for example
+Omitting them preserves the defaults below. The opt-in image segment uses
+`image_model` (default `@image`), for example
 `#research_swarm(prompt="A research topic", image=true)`.
-The opt-in critique segment uses `critique_model` (default `@xlarge`), for example
-`#research_swarm(prompt="A research topic", critique=true)`.
+The opt-in linker segment uses `linker_model` (default `@xlarge`), for example
+`#research_swarm(prompt="A research topic", linker=true)`.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 ("trains on your data"), which is part of why `muse` defaults off. The `agy`
 provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
@@ -123,18 +126,41 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    `<name>/`, preserving each report's existing suffix; the consolidated report is
    `<name>/<name>.md`. Carries the clan's tribe/summary declaration.
 7. **`<clan>.image`** -- optional; when `image=true`, waits on and forks
-   from the lead's segment, then runs `#research/image` against the consolidated report
-   using `@image`.
-8. **`<clan>.critique`** -- optional; when `critique=true` (default model `@xlarge`),
-   waits on the lead without forking it, finds the lead's report through
-   `wait.artifacts`, may cross-check the moved researcher drafts, and writes and
-   registers `<name>/<name>__critique.md` without modifying the lead's report or the
-   drafts.
+   from the lead's segment, then runs `#research/image` against the lead's
+   `<name>__final.md` using `image_model` (default `@image`).
+8. **`<clan>.linker`** -- optional; runs when `linker=true`, and always when
+   `image=true`. Waits on the lead (and on the image agent when `image=true`)
+   without forking, finds the lead's `<name>__final.md` through `wait.artifacts`,
+   and writes and registers the canonical, well-structured `<name>.md` with checked
+   links, in-document jump links, and the embedded infographic.
 
-The handoff contract: the lead registers its consolidated report only when
-`critique=true`, and the critic derives its output directory from that registered
-label rather than the current date. For a more independent review, pick a
-`critique_model` on a different provider from `lead_model`.
+The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
+registers it only when the linker runs, and the linker derives its output directory
+from that registered label rather than the current date. The linker is an editor, not
+a researcher: it must not add claims or sources, and it leaves the lead's report as
+written when it disagrees with it.
+
+Execution matrix (default researchers cdx + cld):
+
+| `linker` | `image` | Agents               | Lead writes                    | Hook fires on                                    |
+| -------- | ------- | -------------------- | ------------------------------ | ------------------------------------------------ |
+| false    | false   | cdx, cld, final (3)  | `<name>.md`, unregistered      | lead's `<name>.md` (byte-identical to before)    |
+| true     | false   | + linker (4)         | `<name>__final.md`, registered | linker's `<name>.md`                             |
+| false    | true    | + image + linker (5) | `<name>__final.md`, registered | linker's `<name>.md`                             |
+| true     | true    | + image + linker (5) | `<name>__final.md`, registered | linker's `<name>.md`                             |
+
+Image implies linker: only the linker's `<name>.md` is hook-eligible, so the
+Highlights PDF is rendered after the infographic exists.
+
+Image failure recovery: named waits release only on completion, so a failed image
+agent leaves the linker parked with no `<name>.md` and no PDF (SASE posts a "Wait
+dependency can never self-resolve" notification). A later successful run of the same
+`research.<N>.image` name releases the parked linker; alternatively, kill the parked
+linker. `<name>__final.md` stays in the repo either way. If the image agent completes
+without producing a PNG, the linker publishes without it and says so.
+
+Setting `image_model` to a single model gives up the `@image` alias's fallback chain
+across providers.
 
 Each researcher is told the other researchers' agent IDs (`` `research.{@1}.<short>` ``)
 and the `__<short>.md` suffix its report filename will end with, and is explicitly
@@ -155,6 +181,6 @@ never by list order, then reads each report through its canonical research refer
 (or the `ref` fallback) with `sase artifact read`.
 
 By default this depends on the `image` model alias and the `researchers` bucket from
-this plugin's default config, plus SASE's built-in `@xlarge` alias for the lead
-segment. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
+this plugin's default config, plus SASE's built-in `@xlarge` alias for the lead and
+linker segments. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
 `provider_disabled` prompt filters.
