@@ -106,8 +106,9 @@ diagnostic rather than running someone else's command on your machine.
   lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
   `muse=true` / `gemini=true`,
   or five agents with the default set when `image=true` opts into the
-  infographic segment (`image=true` implies the linker, which embeds the infographic
-  in the published report), plus an optional linker agent via `linker=true`
+  infographic segment (`image=true` implies the linker, which opens the report with
+  a research-query summary and embeds the infographic directly above the published
+  report's bottom line), plus an optional linker agent via `linker=true`
   (`linker_model`, default `@xlarge`), for example
   `#research_swarm(prompt="A research topic", linker=true)`. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse

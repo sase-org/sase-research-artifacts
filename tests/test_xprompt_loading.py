@@ -974,6 +974,37 @@ def test_research_swarm_linker_final_layout_publishes_report() -> None:
     assert solo_linker.rstrip().endswith("└── <name>.md\n```")
 
 
+def test_research_swarm_linker_opens_with_research_query_then_infographic() -> None:
+    linker = _swarm_segments({}, linker=True)[-1]
+    assert "> **Research query:** <summary>" in linker
+    assert "the research query, and then the bottom-line section" in linker
+    assert "## Bottom line" in linker
+    assert "## Overview" in linker
+    assert "infographic" not in linker
+
+    image_linker = _swarm_segments({}, image=True)[-1]
+    assert (
+        "the research query, the infographic, and then the bottom-line section"
+        in image_linker
+    )
+    assert "directly above the bottom-line section" in image_linker
+    assert "right after the bottom line" not in image_linker
+    research_query_pos = image_linker.index("**Research query.**")
+    infographic_pos = image_linker.index("**Embed the infographic**")
+    bottom_line_pos = image_linker.index("**Bottom-line section.**")
+    assert research_query_pos < infographic_pos < bottom_line_pos
+
+    for prompt in (linker, image_linker):
+        assert "The only prose you write yourself" in prompt
+        assert "summarize it as the file's" in prompt
+        step3 = prompt.split("3. **Restructure**", 1)[1].split(
+            "4. **Validate every link carried over.**", 1
+        )[0]
+        assert not any(
+            line and not line.strip() for line in step3.splitlines()
+        )
+
+
 def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
     tmp_path: Path,
 ) -> None:

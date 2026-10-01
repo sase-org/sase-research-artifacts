@@ -131,8 +131,11 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
 8. **`<clan>.linker`** -- optional; runs when `linker=true`, and always when
    `image=true`. Waits on the lead (and on the image agent when `image=true`)
    without forking, finds the lead's `<name>__final.md` through `wait.artifacts`,
-   and writes and registers the canonical, well-structured `<name>.md` with checked
-   links, in-document jump links, and the embedded infographic.
+   and writes and registers the canonical, well-structured `<name>.md`. The file
+   opens with the title, then a short research-query summary of the swarm's `prompt`,
+   then the infographic when one was generated, then the `## Bottom line` /
+   `## Overview` section. Restructured sections with checked links and in-document
+   jump links follow.
 
 The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
 registers it only when the linker runs, and the linker derives its output directory

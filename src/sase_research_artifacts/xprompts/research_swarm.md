@@ -82,7 +82,8 @@ input:
     default: false
     description:
       Generate an infographic after the lead researcher finishes. Implies the linker
-      agent, which embeds the infographic in the published report.
+      agent, which embeds the infographic directly above the published report's
+      bottom line.
   - name: image_model
     type: word
     default: "@image"
@@ -361,12 +362,14 @@ one SASE renders into a Highlights PDF. You are an editor, not a researcher. The
 file must carry exactly the lead's meaning and intent. Do not do research of your own:
 add no new claims or sources, settle no open questions, and neither soften nor
 strengthen the conclusions or the recommendation. If the lead seems wrong, leave it as
-written.
+written. The only prose you write yourself is the short research-query summary of the
+request that opens the file (step 3).
 
 SASE derives your plan's links from the artifacts you read this turn; use
 `sase artifact read` for context you actually used.
 
-Research request (context only; do not research it):
+Research request (context only; do not research it, but summarize it as the file's
+research query in step 3):
 
 {{ prompt }}
 
@@ -399,23 +402,40 @@ Steps:
    table, and link in the lead's report.
 3. **Restructure** the lead's report into a well-thought-out organization:
    - Keep the frontmatter, updating `updated_time` if present.
-   - One `#` title, then the bottom line or answer first.
-   - `##` and `###` sections ordered by the questions a reader will ask, with
+   - **Open the file in this exact order**, with nothing else between these parts: the frontmatter (if any), one `#` title, the research query, {%- if image %} the infographic, {%- endif %} and then the bottom-line section.
+   - **Research query.** Directly below the title, add one blockquote that summarizes
+     the research request above in one to three sentences, for example
+     `> **Research query:** <summary>`. Phrase it as the question or task being
+     answered, in the requester's own terms: keep the questions, named subjects, and
+     explicit scope or constraints; drop instructions aimed at agents, such as output
+     paths, xprompt or directive syntax, and formatting requests. Summarize what was
+     asked, not material the request quotes or attaches. Use a request that is already
+     one short sentence verbatim. Never fold findings, answers, or scope the request
+     does not state into it. It is not a heading, so it gets no section number and no
+     TOC entry.
+   {%- if image %}
+   - **Embed the infographic** exactly once, directly above the bottom-line section:
+     after the research query and before that section's `##` heading, never further
+     down. Use a relative link with descriptive alt text, for example
+     `![<alt text>](<name>_infographic.png)`. Locate it by the
+     `<name>_infographic.png` convention or the image entries above. Embed only a file
+     you have confirmed exists beside the report in your research checkout. If the
+     image agent completed without producing one, publish without it (the research
+     query then sits directly above the bottom-line section) and say so in the final
+     response.
+   {%- endif %}
+   - **Bottom-line section.** The first `##` section is `## Bottom line` (or
+     `## Overview` when the report surveys options rather than giving one answer) and
+     gives the answer first.
+   - Below it, `##` and `###` sections ordered by the questions a reader will ask, with
      duplicated passages merged.
    - **Never number headings.** The PDF renderer runs pandoc with `--number-sections`,
      so hand-numbered headings render doubly numbered.
    - **No table of contents and no block of jump links.** The PDF already gets a TOC.
    - Keep the lead's wording where it works. Never drop a claim, caveat, or source to
-     save space.
-   {% if image %}
-   - Embed the infographic exactly once, where it best supports the text (usually
-     right after the bottom line). Use a relative link with descriptive alt text, for
-     example `![<alt text>](<name>_infographic.png)`. Locate it by the
-     `<name>_infographic.png` convention or the image entries above. Embed only a file
-     you have confirmed exists beside the report in your research checkout. If the
-     image agent completed without producing one, publish without it and say so in the
-     final response.
-   {% endif %}
+     save space. If the lead's report restates the question or lists its inputs, keep
+     those details in a later section; the research query summarizes the request but
+     does not replace them.
 4. **Validate every link carried over.**
    - Relative links resolve from `<YYYYMM>/<name>/`, and in-document anchors resolve
      against the final headings. Both are hard requirements.
@@ -443,7 +463,7 @@ Steps:
 
 6. **Re-check against the step-2 inventory** and restore anything missing or changed.
    Every URL in `<name>__final.md` must appear in the new file unless it was listed as
-   unrepairable.
+   unrepairable. Then confirm the file opens in the step-3 order: title, research query, {%- if image %} infographic, {%- endif %} bottom-line section.
 
 7. **Write** `<YYYYMM>/<name>/<name>.md` without overwrite. On a collision, stop and
    report it.
