@@ -218,7 +218,9 @@ when the lead's prompt actually renders and only lists non-chat artifacts regist
 the researchers. The loop filters to markdown entries whose label carries the canonical
 `research:<repo-relative-path>` report reference from `#research`'s registration step,
 and prints each entry's `wait_name`, `label`, `source_path`, `path`, and durable `ref`.
-The lead matches each `wait_name` to the `__<suffix>.md` suffix already on the label,
+Each field value renders as inline code, so launch-time Markdown formatting cannot
+rewrite the `__` in labels and paths. The lead matches each `wait_name` to the
+`__<suffix>.md` suffix already on the label,
 never by list order, then reads each report through its canonical research reference
 (or the `ref` fallback) with `sase artifact read`.
 

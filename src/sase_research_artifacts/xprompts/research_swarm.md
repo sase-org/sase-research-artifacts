@@ -284,7 +284,7 @@ Research request:
 The researchers' registered reports:
 
 {% raw %}{% for a in wait.artifacts if a.kind == "markdown" and a.label and a.label.startswith("research:") %}
-- wait_name={{ a.wait_name }} label={{ a.label }} source_path={{ a.source_path }} path={{ a.path }} ref={{ a.ref }}
+- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` source_path=`{{ a.source_path }}` path=`{{ a.path }}` ref=`{{ a.ref }}`
 {% endfor %}{% endraw %}
 
 Month directory (create it if missing):
@@ -399,13 +399,13 @@ research query in step 3):
 The lead researcher's registered report:
 
 {% raw %}{% for a in wait.artifacts if a.kind == "markdown" and a.label and a.label.startswith("research:") %}
-- wait_name={{ a.wait_name }} label={{ a.label }} source_path={{ a.source_path }} path={{ a.path }} ref={{ a.ref }}
+- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` source_path=`{{ a.source_path }}` path=`{{ a.path }}` ref=`{{ a.ref }}`
 {% endfor %}{% endraw %}
 {% if image %}
 The image agent's registered images:
 
 {% raw %}{% for a in wait.artifacts if a.kind == "image" %}
-- wait_name={{ a.wait_name }} label={{ a.label }} vcs_relpath={{ a.vcs_relpath }} path={{ a.path }} ref={{ a.ref }}
+- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` vcs_relpath=`{{ a.vcs_relpath }}` path=`{{ a.path }}` ref=`{{ a.ref }}`
 {% endfor %}{% endraw %}
 {% endif %}
 Steps:

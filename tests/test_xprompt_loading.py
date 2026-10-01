@@ -5,6 +5,8 @@ the swarm's segment count and wait/fork dependency graph survive packaging.
 from __future__ import annotations
 
 from pathlib import Path
+import re
+import shutil
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -81,14 +83,14 @@ def _authored_swarm_segments() -> list[str]:
 _WAIT_ARTIFACTS_LOOP = (
     '{% for a in wait.artifacts if a.kind == "markdown" and a.label '
     'and a.label.startswith("research:") %}\n'
-    "- wait_name={{ a.wait_name }} label={{ a.label }} source_path={{ a.source_path }} "
-    "path={{ a.path }} ref={{ a.ref }}\n"
+    "- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` "
+    "source_path=`{{ a.source_path }}` path=`{{ a.path }}` ref=`{{ a.ref }}`\n"
     "{% endfor %}"
 )
 _WAIT_IMAGE_ARTIFACTS_LOOP = (
     '{% for a in wait.artifacts if a.kind == "image" %}\n'
-    "- wait_name={{ a.wait_name }} label={{ a.label }} vcs_relpath={{ a.vcs_relpath }} "
-    "path={{ a.path }} ref={{ a.ref }}\n"
+    "- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` "
+    "vcs_relpath=`{{ a.vcs_relpath }}` path=`{{ a.path }}` ref=`{{ a.ref }}`\n"
     "{% endfor %}"
 )
 _WEIGHTED_QUEUE_TEMPLATE = (
@@ -793,11 +795,11 @@ def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
         '{% for a in wait.artifacts if a.kind == "markdown" and a.label '
         'and a.label.startswith("research:") %}' in final
     )
-    assert "wait_name={{ a.wait_name }}" in final
-    assert "label={{ a.label }}" in final
-    assert "source_path={{ a.source_path }}" in final
-    assert "path={{ a.path }}" in final
-    assert "ref={{ a.ref }}" in final
+    assert "wait_name=`{{ a.wait_name }}`" in final
+    assert "label=`{{ a.label }}`" in final
+    assert "source_path=`{{ a.source_path }}`" in final
+    assert "path=`{{ a.path }}`" in final
+    assert "ref=`{{ a.ref }}`" in final
     assert "sase artifact read" in final
     assert "predecessor chat transcripts" in final
 
@@ -864,18 +866,20 @@ def test_research_swarm_lead_renders_registered_reports_via_wait_artifacts(
         rendered = render_template(final, {})
 
     assert (
-        "wait_name=research.m.cdx label=research:202609/topic/topic__a.md" in rendered
+        "wait_name=`research.m.cdx` label=`research:202609/topic/topic__a.md`"
+        in rendered
     )
-    assert f"source_path={report_a}" in rendered
-    assert f"path={artifact_a.path}" in rendered
-    assert f"ref=file:{artifact_a.id}" in rendered
+    assert f"source_path=`{report_a}`" in rendered
+    assert f"path=`{artifact_a.path}`" in rendered
+    assert f"ref=`file:{artifact_a.id}`" in rendered
 
     assert (
-        "wait_name=research.m.cld label=research:202609/topic/topic__b.md" in rendered
+        "wait_name=`research.m.cld` label=`research:202609/topic/topic__b.md`"
+        in rendered
     )
-    assert f"source_path={report_b}" in rendered
-    assert f"path={artifact_b.path}" in rendered
-    assert f"ref=file:{artifact_b.id}" in rendered
+    assert f"source_path=`{report_b}`" in rendered
+    assert f"path=`{artifact_b.path}`" in rendered
+    assert f"ref=`file:{artifact_b.id}`" in rendered
 
     assert "scratch notes" not in rendered
     assert str(scratch) not in rendered
@@ -1193,14 +1197,14 @@ def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
         rendered = render_template(linker, {})
 
     assert (
-        "wait_name=research.m.final label=research:202609/topic/topic__final.md"
-        in rendered
+        "wait_name=`research.m.final` "
+        "label=`research:202609/topic/topic__final.md`" in rendered
     )
-    assert f"source_path={report}" in rendered
-    assert f"path={artifact.path}" in rendered
-    assert f"ref=file:{artifact.id}" in rendered
-    assert "wait_name=research.m.image" in rendered
-    assert "vcs_relpath=202609/topic/topic_infographic.png" in rendered
+    assert f"source_path=`{report}`" in rendered
+    assert f"path=`{artifact.path}`" in rendered
+    assert f"ref=`file:{artifact.id}`" in rendered
+    assert "wait_name=`research.m.image`" in rendered
+    assert "vcs_relpath=`202609/topic/topic_infographic.png`" in rendered
     assert "{{" not in rendered
     assert "{%" not in rendered
 
@@ -1210,3 +1214,103 @@ def test_research_image_strips_final_stem() -> None:
     assert "topic__final.md" in xp.content
     assert "topic_infographic.png" in xp.content
     assert "without overwrite" in xp.content
+
+
+_HANDOFF_FIELD_PATTERN = re.compile(
+    r"(wait_name|label|source_path|vcs_relpath|path|ref)="
+)
+
+
+def _render_swarm_with_dunder_artifacts(tmp_path: Path) -> tuple[str, str]:
+    """Render lead and linker segments against `__` labels and paths."""
+    artifact_files_root = tmp_path / "artifact_store"
+    index_path = artifact_files_root / "artifact_files.jsonl"
+    cdx_dir = tmp_path / "agents" / "research.m.cdx"
+    final_dir = tmp_path / "agents" / "research.m.final"
+    cdx_dir.mkdir(parents=True)
+    final_dir.mkdir(parents=True)
+
+    report = cdx_dir / "t__cdx.md"
+    report.write_text("# findings\n", encoding="utf-8")
+    lead_artifact = store_explicit_artifact_file(
+        report,
+        cdx_dir,
+        label="research:202610/t/t__cdx.md",
+        artifact_files_root=artifact_files_root,
+        index_path=index_path,
+    )
+    consolidated = final_dir / "t__final.md"
+    consolidated.write_text("# consolidated\n", encoding="utf-8")
+    store_explicit_artifact_file(
+        consolidated,
+        final_dir,
+        label="research:202610/t/t__final.md",
+        artifact_files_root=artifact_files_root,
+        index_path=index_path,
+    )
+
+    artifacts = query_artifact_context(
+        [
+            ArtifactContextProducerGroup("research.m.cdx", [str(cdx_dir)]),
+            ArtifactContextProducerGroup("research.m.final", [str(final_dir)]),
+        ],
+        index_path=index_path,
+    )
+    artifacts.append(
+        {
+            "kind": "image",
+            "wait_name": "research.m.image",
+            "label": "research:202610/t/t__infographic.png",
+            "vcs_relpath": "202610/t/t__infographic.png",
+            "path": str(tmp_path / "gh_sase-org__sase" / "t__infographic.png"),
+            "ref": "file:png-id",
+        }
+    )
+
+    *_, lead, _image, linker = _swarm_segments({}, image=True)
+    with bind_runtime_template_vars(
+        {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}
+    ):
+        rendered_lead = render_template(lead, {})
+        rendered_linker = render_template(linker, {})
+    assert lead_artifact is not None
+    return rendered_lead, rendered_linker
+
+
+def _assert_handoff_fields_backticked(rendered: str) -> None:
+    """Every handoff field in rendered loop lines starts inline code."""
+    loop_lines = [line for line in rendered.splitlines() if "wait_name=" in line]
+    assert loop_lines, "expected rendered wait.artifacts loop lines"
+    for line in loop_lines:
+        for match in _HANDOFF_FIELD_PATTERN.finditer(line):
+            assert line[match.end()] == "`", (
+                f"handoff field {match.group(0)!r} not backticked in {line!r}"
+            )
+
+
+def test_research_swarm_handoff_fields_render_as_inline_code(
+    tmp_path: Path,
+) -> None:
+    """Dunder labels and paths render backticked in lead and linker loops."""
+    rendered_lead, rendered_linker = _render_swarm_with_dunder_artifacts(tmp_path)
+
+    assert "t__cdx.md" in rendered_lead
+    assert "gh_sase-org__sase" in rendered_linker
+    _assert_handoff_fields_backticked(rendered_lead)
+    _assert_handoff_fields_backticked(rendered_linker)
+
+
+@pytest.mark.skipif(
+    shutil.which("prettier") is None, reason="prettier is unavailable"
+)
+def test_research_swarm_handoff_fields_survive_prompt_formatting(
+    tmp_path: Path,
+) -> None:
+    """Backticked handoff labels and paths survive the prompt formatter."""
+    from sase.file_references import format_agent_prompt_markdown
+
+    rendered_lead, _ = _render_swarm_with_dunder_artifacts(tmp_path)
+    formatted = format_agent_prompt_markdown(rendered_lead)
+    assert "research:202610/t/t__cdx.md" in formatted
+    assert "research:202610/t/t__final.md" in formatted
+    assert "topic**cdx" not in formatted
