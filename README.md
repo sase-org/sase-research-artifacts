@@ -124,7 +124,7 @@ diagnostic rather than running someone else's command on your machine.
   `gemini_model`,
   `lead_model`, `image_model`, and `linker_model` choose the `.cdx`, `.cld`, `.grk`,
   `.mus`, `.gem`, `.final`, `.image`, and `.linker` agent models,
-  defaulting to `codex/gpt-5.6-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
+  defaulting to `codex/gpt-6.1-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
   `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory),
   `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort),
   `@xlarge`, the `image` alias, and `@xlarge`.

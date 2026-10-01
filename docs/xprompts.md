@@ -57,7 +57,7 @@ recommendation, then hands off to `#research` to write it up.
 | `grok`                  | bool | `false`                                 | Request the grok researcher                              |
 | `muse`                  | bool | `false`                                 | Request the muse researcher                              |
 | `gemini`                | bool | `false`                                 | Request the gemini (Antigravity) researcher              |
-| `codex_model`           | word | `codex/gpt-5.6-sol@xhigh`               | Model for `<clan>.cdx`                                   |
+| `codex_model`           | word | `codex/gpt-6.1-sol@xhigh`               | Model for `<clan>.cdx`                                   |
 | `claude_model`          | word | `claude/opus@xhigh`                     | Model for `<clan>.cld`                                   |
 | `grok_model`            | word | `grok/grok-4.6@xhigh`                   | Model for `<clan>.grk`                                   |
 | `muse_model`            | word | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
@@ -103,7 +103,7 @@ The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
 no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-low`).
 
-1. **`<clan>.cdx`** -- the codex researcher (`codex/gpt-5.6-sol@xhigh`), writing a
+1. **`<clan>.cdx`** -- the codex researcher (`codex/gpt-6.1-sol@xhigh`), writing a
    self-named descriptive report via `#research(suffix=cdx)`; when supplied, also waits
    on the `wait` argument's agent(s). Gated by `%if(should_run=...)` on the `codex`
    flag plus the `provider_enabled` filter.

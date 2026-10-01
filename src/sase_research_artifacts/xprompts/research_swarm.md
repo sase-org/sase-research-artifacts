@@ -50,7 +50,7 @@ input:
     description: Request the gemini (Antigravity) researcher.
   - name: codex_model
     type: word
-    default: "codex/gpt-5.6-sol@xhigh"
+    default: "codex/gpt-6.1-sol@xhigh"
     description: Model for `<clan>.cdx`.
   - name: claude_model
     type: word

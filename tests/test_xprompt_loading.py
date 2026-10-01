@@ -213,7 +213,7 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[6].default is False
     assert xp.inputs[7].default is False
     assert xp.inputs[8].default is False
-    assert xp.inputs[9].default == "codex/gpt-5.6-sol@xhigh"
+    assert xp.inputs[9].default == "codex/gpt-6.1-sol@xhigh"
     assert xp.inputs[10].default == "claude/opus@xhigh"
     assert xp.inputs[11].default == "grok/grok-4.6@xhigh"
     assert xp.inputs[12].default == "muse/muse-spark-1.3-contributor@xhigh"
@@ -309,7 +309,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "#research/image" in image
     assert "%m:{{ image_model }}" in image
     assert "%model:@image" not in image
-    assert "%model:codex/gpt-5.6-sol" not in image
+    assert "%model:codex/gpt-6.1-sol" not in image
 
     assert "%if(should_run={{ run_linker }})" in linker
     assert "%id(linker, clan=research.{@1})" in linker
@@ -354,7 +354,7 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
 
     assert "%clan(research.{@1}" in final
     assert "%id:research.{@1}.final" in final
-    assert "%m:codex/gpt-5.6-sol@xhigh" in cdx
+    assert "%m:codex/gpt-6.1-sol@xhigh" in cdx
     assert "%wait:research.0f.final" in cdx
     assert "some topic #research(suffix=cdx)" in cdx
 
@@ -383,10 +383,10 @@ def test_research_swarm_wait_argument_gates_researchers_only() -> None:
 def test_research_swarm_omitted_models_use_per_provider_defaults() -> None:
     cdx, cld, final = _swarm_segments({})
 
-    assert "%m:codex/gpt-5.6-sol@xhigh" in cdx
+    assert "%m:codex/gpt-6.1-sol@xhigh" in cdx
     assert "%m:claude/opus@xhigh" in cld
     assert "%m:@xlarge" in final
-    assert "codex/gpt-5.6-sol@xhigh" not in cld + final
+    assert "codex/gpt-6.1-sol@xhigh" not in cld + final
     assert "claude/opus@xhigh" not in cdx + final
     assert "@xlarge" not in cdx + cld
     assert "@sol_or_grok" not in cdx + cld + final
