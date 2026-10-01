@@ -9,7 +9,8 @@ it regardless of which entry-point group found it, so an object implementing bot
 have its specs collected twice.
 
 Inventory globs intentionally differ between the two providers. Both ignore generated
-infographic companion Markdown pages so binary link companions do not become reports.
+infographic companion Markdown pages and narration scripts so binary link companions
+and audio scripts do not become reports.
 The ``research`` ref provider's inventory keeps ``__<suffix>`` swarm drafts, because
 citing a specific researcher's draft with ``@research:...`` is legitimate. The
 ``research-highlights`` file hook excludes drafts, because Bryan does not want a
@@ -34,6 +35,7 @@ from sase.artifact_providers import hookimpl
 
 _COMPANION_MARKDOWN_EXCLUDE_GLOBS = [
     "!20*/**/*_infographic.md",
+    "!20*/**/*_narration.md",
     "!20*/**/*.png.md",
     "!20*/**/*.jpg.md",
     "!20*/**/*.jpeg.md",

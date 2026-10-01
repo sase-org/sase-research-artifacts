@@ -46,8 +46,9 @@ effective specs and provider digests; pane-only edits are preserved for Python
 presentation and intentionally stay out of the Rust provider digest.
 
 The base inventory deliberately excludes generated infographic companion Markdown pages,
-including `*_infographic.md` and disambiguated binary pages such as `*.png.md`, so link
-companions do not appear as research reports.
+including `*_infographic.md`, narration scripts such as `*_narration.md`, and disambiguated
+binary pages such as `*.png.md`, so link
+companions and audio scripts do not appear as research reports.
 
 An unresolvable `use:` (the plugin is not installed) fails soft: the role is dropped
 with a `missing_ref_provider` diagnostic rather than raising on the launch path. A
@@ -91,10 +92,14 @@ Installing this plugin also contributes, through the `sase_config` entry point:
   model name. The
   research-swarm researchers default to concrete per-provider models and the lead
   defaults to SASE's built-in `@xlarge` alias.
+- Default model alias `audio` (audio-edition narrator script writer) in the
+  `researchers` bucket. The pool alternates between Claude (`claude/opus@high`) and
+  Codex (`codex/gpt-6.1-sol@high`), favoring strong prose writers.
 - The `research` tribe's display config (icon, color, description).
 
 These are ordinary default-config values and are overridden by project or user config
 through normal layer precedence. `#research_swarm` also accepts per-invocation
 `codex_model`, `claude_model`, `grok_model`, `muse_model`, `gemini_model`, `lead_model`,
-`image_model`, and `linker_model` overrides
-for each researcher role. The optional linker agent also defaults to `@xlarge`.
+`image_model`, `linker_model`, and `audio_model` overrides
+for each researcher role. The optional linker agent also defaults to `@xlarge`, and the
+optional audio agent defaults to this plugin's `audio` alias.

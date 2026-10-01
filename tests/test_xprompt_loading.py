@@ -53,13 +53,19 @@ def _swarm_body(named_args: dict[str, str]) -> str:
 
 
 def _swarm_segments(
-    named_args: dict[str, str], *, image: bool = False, linker: bool = False
+    named_args: dict[str, str],
+    *,
+    image: bool = False,
+    linker: bool = False,
+    audio: bool = False,
 ) -> list[str]:
     args = dict(named_args)
     if image:
         args["image"] = "true"
     if linker:
         args["linker"] = "true"
+    if audio:
+        args["audio"] = "true"
     return split_segments_protecting_fences(_swarm_body(args))
 
 
@@ -156,14 +162,33 @@ def _assert_each_segment_has_one_queue(
     assert all("capacity=" not in segment for segment in segments)
 
 
-def test_all_five_research_xprompts_load() -> None:
+def test_all_six_research_xprompts_load() -> None:
     assert set(_research_xprompts()) == {
         "research",
+        "research/audio",
         "research/image",
         "research/more",
         "research/prompt",
         "research_swarm",
     }
+
+
+def test_research_audio_declares_typed_input() -> None:
+    xp = _research_xprompts()["research/audio"]
+    assert [(arg.name, arg.type.value) for arg in xp.inputs] == [
+        ("edition", "word"),
+        ("rewrite", "bool"),
+    ]
+    assert xp.inputs[0].default == "full"
+    assert xp.inputs[1].default is False
+
+
+def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
+    xp = _research_xprompts()["research/audio"]
+    assert "sase-listen guide" in xp.content
+    assert "lint --source" in xp.content
+    assert "render --json" in xp.content
+    assert "sase artifact create" in xp.content
 
 
 def test_research_prompt_declares_typed_input() -> None:
@@ -203,6 +228,8 @@ def test_research_swarm_declares_typed_input() -> None:
         ("image_model", "word"),
         ("linker", "bool"),
         ("linker_model", "word"),
+        ("audio", "bool"),
+        ("audio_model", "word"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
@@ -223,11 +250,13 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[16].default == "@image"
     assert xp.inputs[17].default is False
     assert xp.inputs[18].default == "@xlarge"
+    assert xp.inputs[19].default is False
+    assert xp.inputs[20].default == "@audio"
 
 
-def test_research_swarm_has_eight_top_level_segments() -> None:
+def test_research_swarm_has_nine_top_level_segments() -> None:
     segments = _authored_swarm_segments()
-    assert len(segments) == 8
+    assert len(segments) == 9
 
 
 def test_research_swarm_defaults_to_three_expanded_agents() -> None:
@@ -270,7 +299,7 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
 
 
 def test_research_swarm_dependency_graph_preserved() -> None:
-    cdx, cld, grk, mus, gem, final, image, linker = _authored_swarm_segments()
+    cdx, cld, grk, mus, gem, final, image, linker, audio = _authored_swarm_segments()
 
     assert '%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }})' in cdx
     assert "%id(cdx, clan=research.{@1})" in cdx
@@ -325,23 +354,38 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert _WAIT_ARTIFACTS_LOOP in final
     assert _WAIT_IMAGE_ARTIFACTS_LOOP in linker
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in final
+    assert _WAIT_ARTIFACTS_LOOP not in audio
+    assert _WAIT_IMAGE_ARTIFACTS_LOOP not in audio
+
+    assert "%id(audio, clan=research.{@1})" in audio
+    assert "%if(should_run={{ audio }})" in audio
+    assert "%wait:research.{@1}.final" in audio
+    assert "{% if run_linker %}%wait:research.{@1}.linker" in audio
+    assert "#fork:research.{@1}.final" in audio
+    assert "#research/audio" in audio
+    assert "%m:{{ audio_model }}" in audio
+    assert "%model:@audio" not in audio
+    assert "%clan(" not in audio
+    assert audio.count("%q(") == 1
+    assert _WEIGHTED_QUEUE_TEMPLATE in audio
+    assert "priority is not none" in audio
 
     assert all(
         "priority is not none" in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image, linker)
+        for segment in (cdx, cld, grk, mus, gem, final, image, linker, audio)
     )
     assert all(
         segment.count("%q(") == 1
-        for segment in (cdx, cld, grk, mus, gem, final, image, linker)
+        for segment in (cdx, cld, grk, mus, gem, final, image, linker, audio)
     )
     assert all(
         _WEIGHTED_QUEUE_TEMPLATE in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image, linker)
+        for segment in (cdx, cld, grk, mus, gem, final, image, linker, audio)
     )
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
-    *_researchers, final, _image, _linker = _authored_swarm_segments()
+    *_researchers, final, _image, _linker, _audio = _authored_swarm_segments()
 
     assert (
         "SASE derives your plan's links from the artifacts you read this turn; use\n"
@@ -742,7 +786,7 @@ def test_research_registers_report_in_every_branch() -> None:
 
 
 def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
-    *_researchers, final, _image, _linker = _authored_swarm_segments()
+    *_researchers, final, _image, _linker, _audio = _authored_swarm_segments()
 
     assert "wait_chats" not in final
     assert (
@@ -915,6 +959,107 @@ def test_research_swarm_image_implies_linker_without_duplicates() -> None:
     assert sum("%id(linker," in segment for segment in both) == 1
     _assert_each_segment_has_one_queue(segments)
     _assert_each_segment_has_one_queue(both)
+
+
+def test_research_swarm_audio_false_adds_nothing() -> None:
+    segments = _swarm_segments({})
+    assert len(segments) == 3
+    assert all("%id(audio," not in segment for segment in segments)
+    assert all("#research/audio" not in segment for segment in segments)
+
+    linker_segments = _swarm_segments({}, linker=True)
+    assert len(linker_segments) == 4
+    assert all("%id(audio," not in segment for segment in linker_segments)
+
+    image_segments = _swarm_segments({}, image=True)
+    assert len(image_segments) == 5
+    assert all("%id(audio," not in segment for segment in image_segments)
+
+
+def test_research_swarm_audio_opt_in_adds_segment_without_linker() -> None:
+    segments = _swarm_segments({}, audio=True)
+    assert len(segments) == 4
+    *_, final, audio = segments
+    assert "%id(audio, clan=research.{@1})" in audio
+    assert "%m:@audio" in audio
+    assert "%wait:research.{@1}.final" in audio
+    assert "%wait:research.{@1}.linker" not in audio
+    assert "#fork:research.{@1}.final" in audio
+    assert "#research/audio" in audio
+    assert "%if(" not in audio
+    assert "%id(linker," not in audio
+    assert "%id(linker," not in final
+    assert "Write the consolidated report to `<name>/<name>.md`:" in final
+    assert "<name>_narration.md" in final
+    assert final.rstrip().endswith("└── <name>_narration.md\n```")
+    _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_audio_opt_in_waits_for_linker() -> None:
+    segments = _swarm_segments({}, linker=True, audio=True)
+    assert len(segments) == 5
+    *_, final, linker, audio = segments
+    assert "%id(audio, clan=research.{@1})" in audio
+    assert "%m:@audio" in audio
+    assert "%wait:research.{@1}.final" in audio
+    assert "%wait:research.{@1}.linker" in audio
+    assert "#fork:research.{@1}.final" in audio
+    assert "#research/audio" in audio
+    assert "%if(" not in audio
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "Write the consolidated report to `<name>/<name>__final.md`:" in final
+    assert "<name>_narration.md" in final
+    assert final.rstrip().endswith("└── <name>_narration.md\n```")
+    _assert_each_segment_has_one_queue(segments)
+
+    image_segments = _swarm_segments({}, image=True, audio=True)
+    assert len(image_segments) == 6
+    *_, image_final, image, image_linker, image_audio = image_segments
+    assert "%wait:research.{@1}.linker" in image_audio
+    assert "#research/audio" in image_audio
+    assert "%wait:research.{@1}.image" not in image_audio
+    assert "<name>_narration.md" in image_final
+    assert "<name>_infographic.png" in image_linker
+    _assert_each_segment_has_one_queue(image_segments)
+
+
+def test_research_swarm_audio_does_not_imply_linker() -> None:
+    segments = _swarm_segments({}, audio=True)
+    assert len(segments) == 4
+    assert sum("%id(linker," in segment for segment in segments) == 0
+    assert sum("%id(audio," in segment for segment in segments) == 1
+
+
+def test_research_swarm_audio_model_routes_to_audio_only() -> None:
+    segments = _swarm_segments(
+        {"audio_model": "@audio_custom", "lead_model": "@lead_custom"},
+        audio=True,
+    )
+    *_, final, audio = segments
+    assert "%m:@audio_custom" in audio
+    assert "@lead_custom" not in audio
+    assert "@audio_custom" not in final
+    assert "%m:@lead_custom" in final
+    _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_audio_ignores_swarm_wait_argument() -> None:
+    segments = _swarm_segments({"wait": "research.0f.final"}, audio=True)
+    audio = segments[-1]
+    assert "%id(audio, clan=research.{@1})" in audio
+    assert "%wait:research.0f.final" not in audio
+    assert "%wait:research.{@1}.final" in audio
+
+
+def test_research_swarm_audio_carries_queue_options() -> None:
+    segments = _swarm_segments({"runners": "8", "priority": "5"}, audio=True)
+    _assert_each_segment_has_one_queue(segments, runners=8, priority=5)
+    audio = segments[-1]
+    assert "%id(audio, clan=research.{@1})" in audio
+    assert "%q(8, w=0.25, priority=5)" in audio
+
+    combo = _swarm_segments({"runners": "8", "priority": "5"}, image=True, audio=True)
+    _assert_each_segment_has_one_queue(combo, runners=8, priority=5)
 
 
 def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:

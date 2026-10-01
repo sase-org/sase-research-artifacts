@@ -44,6 +44,7 @@ _CANDIDATES = (
     *_DEPTH_1_DRAFTS,
     "202608/solo_report.md",
     "202608/widgets/widgets_infographic.md",
+    "202608/widgets/widgets_narration.md",
     "202608/widgets/widgets.png.md",
     "notes/scratch.md",
 )
@@ -62,6 +63,7 @@ def test_ref_inventory_globs_keep_swarm_drafts() -> None:
         "202608/solo_report.md",
     )
     assert "202608/widgets/widgets_infographic.md" in result.filtered
+    assert "202608/widgets/widgets_narration.md" in result.filtered
     assert "202608/widgets/widgets.png.md" in result.filtered
     assert "notes/scratch.md" in result.filtered
 
@@ -77,6 +79,7 @@ def test_file_hook_globs_exclude_swarm_drafts() -> None:
     for draft in (*_DEPTH_2_DRAFTS, *_FINALS, *_DEPTH_1_DRAFTS):
         assert draft in result.filtered
     assert "202608/widgets/widgets_infographic.md" in result.filtered
+    assert "202608/widgets/widgets_narration.md" in result.filtered
     assert "202608/widgets/widgets.png.md" in result.filtered
     assert "notes/scratch.md" in result.filtered
 

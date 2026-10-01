@@ -2,7 +2,8 @@
 description:
   Launch independent per-provider research agents, then have a lead researcher extend
   and consolidate their findings. Optionally generate an infographic, with a linker
-  agent that publishes the consolidated report.
+  agent that publishes the consolidated report, and optionally narrate the published
+  report as an audio edition.
 input:
   - name: prompt
     type: text
@@ -99,6 +100,18 @@ input:
     type: word
     default: "@xlarge"
     description: Model alias or provider model for the `<clan>.linker` agent.
+  - name: audio
+    type: bool
+    default: false
+    description:
+      Narrate the published report as an audio edition after the lead researcher
+      finishes (and after the linker when it runs, so the edition narrates the
+      published report and can use the infographic as its cover). Does not imply
+      the linker.
+  - name: audio_model
+    type: word
+    default: "@audio"
+    description: Model alias or provider model for the `<clan>.audio` agent.
 ---
 {%- set researchers =
   ([{"short": "cdx", "provider": "codex", "model": codex_model}] if codex and ("codex" | provider_enabled("hard")) else [])
@@ -113,7 +126,12 @@ input:
 {%- for r in researchers -%}
 {%- set _ = ns.layout_lines.append("├── <name>__" ~ r.short ~ ".md") -%}
 {%- endfor -%}
+{%- if audio -%}
+{%- set _ = ns.layout_lines.append("├── " ~ lead_report) -%}
+{%- set _ = ns.layout_lines.append("└── <name>_narration.md") -%}
+{%- else -%}
 {%- set _ = ns.layout_lines.append("└── " ~ lead_report) -%}
+{%- endif -%}
 {%- set layout_body = ns.layout_lines | join("\n") -%}
 {%- set lns = namespace(linker_layout_lines=["<month-dir>/<name>/"]) -%}
 {%- for r in researchers -%}
@@ -123,7 +141,12 @@ input:
 {%- if image -%}
 {%- set _ = lns.linker_layout_lines.append("├── <name>_infographic.png") -%}
 {%- endif -%}
+{%- if audio -%}
+{%- set _ = lns.linker_layout_lines.append("├── <name>.md") -%}
+{%- set _ = lns.linker_layout_lines.append("└── <name>_narration.md") -%}
+{%- else -%}
 {%- set _ = lns.linker_layout_lines.append("└── <name>.md") -%}
+{%- endif -%}
 {%- set linker_layout_body = lns.linker_layout_lines | join("\n") -%}
 %if(should_run={{ codex and ("codex" | provider_enabled("hard")) }}) %id(cdx, clan=research.{@1})
 %m:{{ codex_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
@@ -479,3 +502,7 @@ Steps:
 Final layout:
 
 {{ "```text\n" ~ linker_layout_body ~ "\n```" }}
+---
+
+%if(should_run={{ audio }}) %id(audio, clan=research.{@1}) %m:{{ audio_model }}
+%wait:research.{@1}.final {% if run_linker %}%wait:research.{@1}.linker {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio

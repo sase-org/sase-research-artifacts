@@ -241,6 +241,7 @@ def test_research_highlights_use_resolves_with_local_command(
         "!20*/*__*.md",
         "!20*/*/*__*.md",
         "!20*/**/*_infographic.md",
+        "!20*/**/*_narration.md",
         "!20*/**/*.png.md",
         "!20*/**/*.jpg.md",
         "!20*/**/*.jpeg.md",

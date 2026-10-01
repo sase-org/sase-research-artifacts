@@ -34,6 +34,9 @@ def test_default_config_loads_expected_model_aliases_and_bucket() -> None:
     assert all("@" not in m for m in members if m.startswith("agy/"))
     assert custom["image"]["bucket"] == "researchers"
     assert custom["image"]["description"]
+    assert custom["audio"]["model"] == "claude/opus@high | codex/gpt-6.1-sol@high"
+    assert custom["audio"]["bucket"] == "researchers"
+    assert custom["audio"]["description"]
 
     buckets = config["llm_provider"]["model_aliases"]["buckets"]
     assert "researchers" in buckets

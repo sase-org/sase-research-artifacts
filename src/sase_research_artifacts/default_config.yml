@@ -5,6 +5,10 @@ llm_provider:
         model: "codex/gpt-6.1-sol@xhigh | grok/grok-4.6@xhigh | agy/gemini-3.8-flash-high"
         description: "Research-swarm infographic and image-generation agent."
         bucket: researchers
+      audio:
+        model: "claude/opus@high | codex/gpt-6.1-sol@high"
+        description: "Research-swarm audio-edition narrator script writer."
+        bucket: researchers
     buckets:
       researchers:
         description: "Research-swarm roles: researchers (codex, claude, grok, muse, gemini), the consolidating lead, the optional linker agent, and the infographic agent."

@@ -26,6 +26,30 @@ Generates an infographic illustrating a research markdown file's main points, wr
 file's stem with any trailing `__final` removed (so `topic__final.md` becomes
 `topic_infographic.png`).
 
+## `#research/audio` -- Narrate an Audio Edition
+
+Narrates a research report as a chaptered MP3 audio edition. Requires
+`uv tool install sase-listen`: the xprompt drives the installed CLI (`guide` to
+author the script, `lint --source` to check it, `render --json` to synthesize it)
+and never depends on it as a package.
+
+### Input
+
+| Name      | Type | Default | Description                                              |
+| --------- | ---- | ------- | -------------------------------------------------------- |
+| `edition` | word | `full`  | Narration edition budget: `full`, `brief`, `digest`, or `verbatim` |
+| `rewrite` | bool | `false` | Rewrite `<stem>_narration.md` even when one already exists |
+
+When invoked with a `@research:` ref the report is read with `sase artifact read`;
+when forked from a swarm lead the agent uses the report it wrote, preferring the
+published `<name>.md` and falling back to `<name>__final.md`. The narration script
+is `<stem>_narration.md` next to the report (with `__final` stripped from the stem,
+following the `#research/image` stem rule) and carries `source`, `source_blob`,
+`date`, `kind: research`, and `cover` when `<stem>_infographic.png` exists. The
+finished MP3 is registered with
+`sase artifact create -p <audio_path> -l "Audio edition: <title>"` so it rides the
+completion notification to Telegram.
+
 ## `#research/more` -- Extend Existing Research
 
 Extends an existing research markdown file with further research, filling gaps left by
@@ -67,13 +91,15 @@ recommendation, then hands off to `#research` to write it up.
 | `image_model`           | word | `@image`                                | Model for `<clan>.image`                                 |
 | `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true`) |
 | `linker_model`          | word | `@xlarge`                               | Model for `<clan>.linker`                                |
+| `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (never implies the linker)       |
+| `audio_model`           | word | `@audio`                                | Model for `<clan>.audio`                                 |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
 
 A three-agent xprompt swarm by default (codex + claude researchers plus the lead), up
-to eight authored segments (five researchers, the lead, the image agent, the linker
-agent). `grok=true` /
+to nine authored segments (five researchers, the lead, the image agent, the linker
+agent, the audio agent). `grok=true` /
 `muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
@@ -91,13 +117,15 @@ a positive integer (`1` is the smallest valid budget; four quarter-weight member
 in it, while all five researchers plus the lead -- six quarter-weight members --
 need a budget of at least 2 to run concurrently). Explicit `runners=0` still renders
 as `%q(0, w=0.25)` on every launched segment, and SASE rejects that authored value at launch.
-The eight model inputs can be supplied independently, for example
+The nine model inputs can be supplied independently, for example
 `#research_swarm(codex_model=@codex, claude_model=@opus, lead_model=@xlarge): ...`.
 Omitting them preserves the defaults below. The opt-in image segment uses
 `image_model` (default `@image`), for example
 `#research_swarm(prompt="A research topic", image=true)`.
 The opt-in linker segment uses `linker_model` (default `@xlarge`), for example
 `#research_swarm(prompt="A research topic", linker=true)`.
+The opt-in audio segment uses `audio_model` (default `@audio`), for example
+`#research_swarm(prompt="A research topic", audio=true)`.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 ("trains on your data"), which is part of why `muse` defaults off. The `agy`
 provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
@@ -136,6 +164,11 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    then the infographic when one was generated, then the `## Bottom line` /
    `## Overview` section. Restructured sections with checked links and in-document
    jump links follow.
+9. **`<clan>.audio`** -- optional; when `audio=true`, waits on the lead (and on the
+   linker when it runs, so the edition narrates the published `<name>.md` and can
+   use the infographic as its cover), forks from the lead's segment, then runs
+   `#research/audio` using `audio_model` (default `@audio`). `audio=true` never
+   implies the linker. Requires `uv tool install sase-listen`.
 
 The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
 registers it only when the linker runs, and the linker derives its output directory
@@ -154,6 +187,12 @@ Execution matrix (default researchers cdx + cld):
 
 Image implies linker: only the linker's `<name>.md` is hook-eligible, so the
 Highlights PDF is rendered after the infographic exists.
+
+`audio=true` adds one `<clan>.audio` agent to every matrix row above and writes
+`<name>_narration.md` beside the report; the lead's output, the hook target, and
+the rest of each row are unchanged. The narration script is excluded from both the
+`@research` inventory and the Highlights hook, like the infographic companion
+pages.
 
 Image failure recovery: named waits release only on completion, so a failed image
 agent leaves the linker parked with no `<name>.md` and no PDF (SASE posts a "Wait
@@ -183,7 +222,8 @@ The lead matches each `wait_name` to the `__<suffix>.md` suffix already on the l
 never by list order, then reads each report through its canonical research reference
 (or the `ref` fallback) with `sase artifact read`.
 
-By default this depends on the `image` model alias and the `researchers` bucket from
+By default this depends on the `image` and `audio` model aliases and the `researchers`
+bucket from
 this plugin's default config, plus SASE's built-in `@xlarge` alias for the lead and
 linker segments. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
 `provider_disabled` prompt filters.

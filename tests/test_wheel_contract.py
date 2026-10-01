@@ -86,7 +86,7 @@ def test_distribution_artifacts_use_renamed_identity(
     assert all("sase_research/" not in name for name in names)
 
 
-def test_wheel_contains_provider_defaults_and_all_five_xprompts(
+def test_wheel_contains_provider_defaults_and_all_six_xprompts(
     built_distributions: Path,
 ) -> None:
     wheel = _single_artifact(built_distributions, "*.whl")
@@ -98,6 +98,7 @@ def test_wheel_contains_provider_defaults_and_all_five_xprompts(
     assert f"{PACKAGE_NAME}/default_config.yml" in names
     for xprompt in (
         "research.md",
+        "research_audio.md",
         "research_image.md",
         "research_more.md",
         "research_prompt.md",
@@ -106,7 +107,7 @@ def test_wheel_contains_provider_defaults_and_all_five_xprompts(
         assert f"{PACKAGE_NAME}/xprompts/{xprompt}" in names
 
 
-def test_sdist_contains_provider_defaults_and_all_five_xprompts(
+def test_sdist_contains_provider_defaults_and_all_six_xprompts(
     built_distributions: Path,
 ) -> None:
     sdist = _single_artifact(built_distributions, "*.tar.gz")
@@ -122,6 +123,7 @@ def test_sdist_contains_provider_defaults_and_all_five_xprompts(
     assert "default_config.yml" in names
     for xprompt in (
         "research.md",
+        "research_audio.md",
         "research_image.md",
         "research_more.md",
         "research_prompt.md",
@@ -242,13 +244,14 @@ xprompts = load_xprompts_from_plugins()
 research_names = {n for n in xprompts if n.startswith("research")}
 assert research_names == {
     "research",
+    "research/audio",
     "research/image",
     "research/more",
     "research/prompt",
     "research_swarm",
 }, research_names
 research_swarm = xprompts["research_swarm"]
-assert research_swarm.content.count("%q(1.5x, w=0.25") == 8
+assert research_swarm.content.count("%q(1.5x, w=0.25") == 9
 assert "default: 16" not in research_swarm.content
 
 def agent_payloads_for_segments(segments):

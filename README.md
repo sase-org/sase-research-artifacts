@@ -61,7 +61,8 @@ with list-valued fields replacing rather than concatenating.
 
 Schema version 1, kind `research`. Inventory starts with `20*/**/*.md` (every dated
 report, including `__cdx`/`__cld`/`__grk`/`__mus`/`__gem` swarm drafts) and excludes generated infographic
-companion Markdown such as `*_infographic.md` and disambiguated binary pages such as
+companion Markdown such as `*_infographic.md`, narration scripts such as
+`*_narration.md`, and disambiguated binary pages such as
 `*.png.md`. Declared frontmatter properties: `create_time` and `updated_time`
 (datetime), `status` (enum: `draft`, `review`, `final`, `archived`), `tags` (string
 list). The provider also declares its Artifacts pane label, row fields, updated-time
@@ -97,6 +98,8 @@ diagnostic rather than running someone else's command on your machine.
 ## Xprompts
 
 - `#research` -- write research to a new dated file in the `research` artifact repo.
+- `#research/audio` -- narrate a research report as a chaptered MP3 audio edition
+  (requires `uv tool install sase-listen`).
 - `#research/image` -- generate an infographic from a research file's main points.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
@@ -110,7 +113,10 @@ diagnostic rather than running someone else's command on your machine.
   a research-query summary and embeds the infographic directly above the published
   report's bottom line), plus an optional linker agent via `linker=true`
   (`linker_model`, default `@xlarge`), for example
-  `#research_swarm(prompt="A research topic", linker=true)`. A provider that is hard-disabled drops its researcher even when requested; a
+  `#research_swarm(prompt="A research topic", linker=true)`, plus an optional audio
+  edition agent via `audio=true` (`audio_model`, default `@audio`), which waits on the
+  lead (and the linker when it runs) and forks the lead to run `#research/audio`
+  (requires `uv tool install sase-listen`). A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse
   explicit model launches). Optional `wait` names agent(s) researchers should wait on
   before starting; quote the value when listing several (`wait="a,b"`). Each launched
@@ -123,26 +129,29 @@ diagnostic rather than running someone else's command on your machine.
   launched agent (lower values start first); omission uses SASE's implicit queue
   priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`,
   `gemini_model`,
-  `lead_model`, `image_model`, and `linker_model` choose the `.cdx`, `.cld`, `.grk`,
-  `.mus`, `.gem`, `.final`, `.image`, and `.linker` agent models,
+  `lead_model`, `image_model`, `linker_model`, and `audio_model` choose the `.cdx`, `.cld`, `.grk`,
+  `.mus`, `.gem`, `.final`, `.image`, `.linker`, and `.audio` agent models,
   defaulting to `codex/gpt-6.1-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
   `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory),
   `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort),
-  `@xlarge`, the `image` alias, and `@xlarge`.
+  `@xlarge`, the `image` alias, `@xlarge`, and the `audio` alias.
   Example: `#research_swarm(codex_model=@codex, claude_model=@opus,
   lead_model=@xlarge): compare approaches`.
   Image example:
   `#research_swarm(prompt="A research topic", image=true)`.
+  Audio example:
+  `#research_swarm(prompt="A research topic", audio=true)`.
   Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters.
 
 ## Defaults
 
-`default_config.yml` ships the `image` model alias, the `researchers` bucket, and the
+`default_config.yml` ships the `image` and `audio` model aliases, the `researchers` bucket, and the
 `research` tribe display config. By default, `#research_swarm` uses concrete
 per-provider models for the codex, claude, grok, muse, and gemini researchers, this plugin's
 `image` alias for the opt-in image agent (with `image_model` defaulting to the `image`
-alias), and SASE's built-in `@xlarge` alias for the
+alias), this plugin's `audio` alias for the opt-in audio agent (with `audio_model`
+defaulting to the `audio` alias), and SASE's built-in `@xlarge` alias for the
 lead and linker segments, so the swarm works out of the box on a fresh install. Project or user
 config still overrides aliases by normal layer precedence, and callers can override
 each researcher role model per invocation.
