@@ -217,9 +217,11 @@ namespace, `wait.artifacts`, which is populated lazily (with one batched query) 
 when the lead's prompt actually renders and only lists non-chat artifacts registered by
 the researchers. The loop filters to markdown entries whose label carries the canonical
 `research:<repo-relative-path>` report reference from `#research`'s registration step,
-and prints each entry's `wait_name`, `label`, `source_path`, `path`, and durable `ref`.
-Each field value renders as inline code, so launch-time Markdown formatting cannot
-rewrite the `__` in labels and paths. The lead matches each `wait_name` to the
+and prints each entry's `wait_name`, `label`, `source_path`, `path`, and durable `ref`
+as plain `key=value` text: the deferred loop renders in sase's launch-time
+top-level pass, where inline code is literal and would leave `{{ ... }}`
+unrendered. The `__` in labels and paths still survives, because sase's
+agent-prompt formatter preserves `_` and `*` literals. The lead matches each `wait_name` to the
 `__<suffix>.md` suffix already on the label,
 never by list order, then reads each report through its canonical research reference
 (or the `ref` fallback) with `sase artifact read`.

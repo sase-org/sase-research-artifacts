@@ -21,11 +21,11 @@ from sase.core.artifact_context_query_facade import (
 )
 from sase.core.artifact_file_explicit import store_explicit_artifact_file
 from sase.llm_provider.provider_disable import disable_provider
+from sase.xprompt import render_toplevel_jinja2
 from sase.xprompt.loader_sources import load_xprompts_from_plugins
 from sase.xprompt.models import UNSET
 from sase.xprompt.processor import expand_single_xprompt
 from sase.xprompt.runtime_context import bind_runtime_template_vars
-from sase.xprompt.workflow_executor_utils import render_template
 
 # Authored capacity=0 is preserved in the swarm expansion (not treated as
 # omission) and rejected by current SASE at parse time.
@@ -83,16 +83,26 @@ def _authored_swarm_segments() -> list[str]:
 _WAIT_ARTIFACTS_LOOP = (
     '{% for a in wait.artifacts if a.kind == "markdown" and a.label '
     'and a.label.startswith("research:") %}\n'
-    "- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` "
-    "source_path=`{{ a.source_path }}` path=`{{ a.path }}` ref=`{{ a.ref }}`\n"
+    "- wait_name={{ a.wait_name }} label={{ a.label }} "
+    "source_path={{ a.source_path }} path={{ a.path }} ref={{ a.ref }}\n"
     "{% endfor %}"
 )
 _WAIT_IMAGE_ARTIFACTS_LOOP = (
     '{% for a in wait.artifacts if a.kind == "image" %}\n'
-    "- wait_name=`{{ a.wait_name }}` label=`{{ a.label }}` "
-    "vcs_relpath=`{{ a.vcs_relpath }}` path=`{{ a.path }}` ref=`{{ a.ref }}`\n"
+    "- wait_name={{ a.wait_name }} label={{ a.label }} "
+    "vcs_relpath={{ a.vcs_relpath }} path={{ a.path }} ref={{ a.ref }}\n"
     "{% endfor %}"
 )
+
+
+def _render_at_launch(segment: str) -> str:
+    """Render a deferred loop the way the launch-time top-level pass does.
+
+    Uses the public launch-time renderer, which treats fenced and inline
+    code as literal, unlike the workflow-step renderer. Must be called with
+    the ``wait`` namespace bound via ``bind_runtime_template_vars``.
+    """
+    return render_toplevel_jinja2(segment)
 _WEIGHTED_QUEUE_TEMPLATE = (
     "%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}"
     ", w=0.25{% if priority is not none %}, "
@@ -795,11 +805,11 @@ def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
         '{% for a in wait.artifacts if a.kind == "markdown" and a.label '
         'and a.label.startswith("research:") %}' in final
     )
-    assert "wait_name=`{{ a.wait_name }}`" in final
-    assert "label=`{{ a.label }}`" in final
-    assert "source_path=`{{ a.source_path }}`" in final
-    assert "path=`{{ a.path }}`" in final
-    assert "ref=`{{ a.ref }}`" in final
+    assert "wait_name={{ a.wait_name }}" in final
+    assert "label={{ a.label }}" in final
+    assert "source_path={{ a.source_path }}" in final
+    assert "path={{ a.path }}" in final
+    assert "ref={{ a.ref }}" in final
     assert "sase artifact read" in final
     assert "predecessor chat transcripts" in final
 
@@ -863,23 +873,23 @@ def test_research_swarm_lead_renders_registered_reports_via_wait_artifacts(
     with bind_runtime_template_vars(
         {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}
     ):
-        rendered = render_template(final, {})
+        rendered = _render_at_launch(final)
 
     assert (
-        "wait_name=`research.m.cdx` label=`research:202609/topic/topic__a.md`"
+        "wait_name=research.m.cdx label=research:202609/topic/topic__a.md"
         in rendered
     )
-    assert f"source_path=`{report_a}`" in rendered
-    assert f"path=`{artifact_a.path}`" in rendered
-    assert f"ref=`file:{artifact_a.id}`" in rendered
+    assert f"source_path={report_a}" in rendered
+    assert f"path={artifact_a.path}" in rendered
+    assert f"ref=file:{artifact_a.id}" in rendered
 
     assert (
-        "wait_name=`research.m.cld` label=`research:202609/topic/topic__b.md`"
+        "wait_name=research.m.cld label=research:202609/topic/topic__b.md"
         in rendered
     )
-    assert f"source_path=`{report_b}`" in rendered
-    assert f"path=`{artifact_b.path}`" in rendered
-    assert f"ref=`file:{artifact_b.id}`" in rendered
+    assert f"source_path={report_b}" in rendered
+    assert f"path={artifact_b.path}" in rendered
+    assert f"ref=file:{artifact_b.id}" in rendered
 
     assert "scratch notes" not in rendered
     assert str(scratch) not in rendered
@@ -1194,17 +1204,17 @@ def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
     with bind_runtime_template_vars(
         {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}
     ):
-        rendered = render_template(linker, {})
+        rendered = _render_at_launch(linker)
 
     assert (
-        "wait_name=`research.m.final` "
-        "label=`research:202609/topic/topic__final.md`" in rendered
+        "wait_name=research.m.final "
+        "label=research:202609/topic/topic__final.md" in rendered
     )
-    assert f"source_path=`{report}`" in rendered
-    assert f"path=`{artifact.path}`" in rendered
-    assert f"ref=`file:{artifact.id}`" in rendered
-    assert "wait_name=`research.m.image`" in rendered
-    assert "vcs_relpath=`202609/topic/topic_infographic.png`" in rendered
+    assert f"source_path={report}" in rendered
+    assert f"path={artifact.path}" in rendered
+    assert f"ref=file:{artifact.id}" in rendered
+    assert "wait_name=research.m.image" in rendered
+    assert "vcs_relpath=202609/topic/topic_infographic.png" in rendered
     assert "{{" not in rendered
     assert "{%" not in rendered
 
@@ -1214,11 +1224,6 @@ def test_research_image_strips_final_stem() -> None:
     assert "topic__final.md" in xp.content
     assert "topic_infographic.png" in xp.content
     assert "without overwrite" in xp.content
-
-
-_HANDOFF_FIELD_PATTERN = re.compile(
-    r"(wait_name|label|source_path|vcs_relpath|path|ref)="
-)
 
 
 def _render_swarm_with_dunder_artifacts(tmp_path: Path) -> tuple[str, str]:
@@ -1271,33 +1276,33 @@ def _render_swarm_with_dunder_artifacts(tmp_path: Path) -> tuple[str, str]:
     with bind_runtime_template_vars(
         {"wait": SimpleNamespace(chats=[], artifacts=artifacts)}
     ):
-        rendered_lead = render_template(lead, {})
-        rendered_linker = render_template(linker, {})
+        rendered_lead = _render_at_launch(lead)
+        rendered_linker = _render_at_launch(linker)
     assert lead_artifact is not None
     return rendered_lead, rendered_linker
 
 
-def _assert_handoff_fields_backticked(rendered: str) -> None:
-    """Every handoff field in rendered loop lines starts inline code."""
-    loop_lines = [line for line in rendered.splitlines() if "wait_name=" in line]
-    assert loop_lines, "expected rendered wait.artifacts loop lines"
-    for line in loop_lines:
-        for match in _HANDOFF_FIELD_PATTERN.finditer(line):
-            assert line[match.end()] == "`", (
-                f"handoff field {match.group(0)!r} not backticked in {line!r}"
-            )
-
-
-def test_research_swarm_handoff_fields_render_as_inline_code(
+def test_research_swarm_handoff_fields_render_values_at_launch(
     tmp_path: Path,
 ) -> None:
-    """Dunder labels and paths render backticked in lead and linker loops."""
+    """Launch rendering substitutes every handoff field, keeping `__` intact."""
     rendered_lead, rendered_linker = _render_swarm_with_dunder_artifacts(tmp_path)
 
-    assert "t__cdx.md" in rendered_lead
+    for rendered in (rendered_lead, rendered_linker):
+        loop_lines = [
+            line for line in rendered.splitlines() if "wait_name=" in line
+        ]
+        assert loop_lines, "expected rendered wait.artifacts loop lines"
+        assert "{{" not in rendered
+        assert "{%" not in rendered
+
+    assert (
+        "wait_name=research.m.cdx label=research:202610/t/t__cdx.md"
+        in rendered_lead
+    )
+    assert "t__final.md" in rendered_lead
     assert "gh_sase-org__sase" in rendered_linker
-    _assert_handoff_fields_backticked(rendered_lead)
-    _assert_handoff_fields_backticked(rendered_linker)
+    assert "202610/t/t__infographic.png" in rendered_linker
 
 
 @pytest.mark.skipif(
@@ -1306,7 +1311,7 @@ def test_research_swarm_handoff_fields_render_as_inline_code(
 def test_research_swarm_handoff_fields_survive_prompt_formatting(
     tmp_path: Path,
 ) -> None:
-    """Backticked handoff labels and paths survive the prompt formatter."""
+    """Launch-rendered handoff labels and paths survive prompt formatting."""
     from sase.file_references import format_agent_prompt_markdown
 
     rendered_lead, _ = _render_swarm_with_dunder_artifacts(tmp_path)
@@ -1314,3 +1319,19 @@ def test_research_swarm_handoff_fields_survive_prompt_formatting(
     assert "research:202610/t/t__cdx.md" in formatted
     assert "research:202610/t/t__final.md" in formatted
     assert "topic**cdx" not in formatted
+
+
+def test_research_xprompts_keep_deferred_jinja_out_of_inline_code() -> None:
+    """No deferred Jinja may sit inside backticks in raw regions."""
+    raw_region = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
+    inline_span = re.compile(r"`[^`\n]*`")
+    for name, xp in sorted(_research_xprompts().items()):
+        for region in raw_region.findall(xp.content):
+            for line in region.splitlines():
+                for span in inline_span.findall(line):
+                    assert "{{" not in span and "{%" not in span, (
+                        f"deferred Jinja inside inline code in {name!r}: "
+                        f"{span!r}; deferred loops render at launch, where "
+                        "inline code is literal and {{ ... }} is never "
+                        "substituted"
+                    )
