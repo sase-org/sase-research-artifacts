@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.1](https://github.com/sase-org/sase-research-artifacts/compare/v0.3.0...v0.3.1) (2026-10-03)
+
+
+### Features
+
+* **macros:** register sase_macros entry points and cut tests to new-first macro imports ([1ade90f](https://github.com/sase-org/sase-research-artifacts/commit/1ade90f31a3fe43f82f6d97aef4039d8f1ecdd90))
+* **xprompts:** default research audio to brief with swarm audio_edition ([912d2de](https://github.com/sase-org/sase-research-artifacts/commit/912d2de4758840c006bd9031db00b7413dba6c61))
+
+
+### Bug Fixes
+
+* **research-audio:** start narration after lead completion ([e26ee6a](https://github.com/sase-org/sase-research-artifacts/commit/e26ee6afda1c6c0dc09944e6fd6d46d1b5b9978e))
+* **xprompts:** defer wait.artifacts loops outside inline code ([7ef4562](https://github.com/sase-org/sase-research-artifacts/commit/7ef45627ad548aae1861cea1dd731976d9c9a122))
+
 ## [0.3.0](https://github.com/sase-org/sase-research-artifacts/compare/v0.2.0...v0.3.0) (2026-10-01)
 
 
