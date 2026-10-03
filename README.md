@@ -114,9 +114,11 @@ diagnostic rather than running someone else's command on your machine.
   report's bottom line), plus an optional linker agent via `linker=true`
   (`linker_model`, default `@xlarge`), for example
   `#research_swarm(prompt="A research topic", linker=true)`, plus an optional audio
-  edition agent via `audio=true` (`audio_model`, default `@audio`), which waits on the
-  lead (and the linker when it runs) and forks the lead to run `#research/audio`
-  (requires `uv tool install sase-listen`). A provider that is hard-disabled drops its researcher even when requested; a
+  edition agent via `audio=true` (`audio_model`, default `@audio`; `audio_edition`,
+  default `brief`), which waits on the lead (and the linker when it runs) and forks
+  the lead to run `#research/audio(edition=<audio_edition>)`
+  (requires `uv tool install sase-listen`). Newly authored narration defaults to
+  `brief`; edition selection never enables audio by itself. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse
   explicit model launches). Optional `wait` names agent(s) researchers should wait on
   before starting; quote the value when listing several (`wait="a,b"`). Each launched
@@ -130,7 +132,8 @@ diagnostic rather than running someone else's command on your machine.
   priority. Optional `codex_model`, `claude_model`, `grok_model`, `muse_model`,
   `gemini_model`,
   `lead_model`, `image_model`, `linker_model`, and `audio_model` choose the `.cdx`, `.cld`, `.grk`,
-  `.mus`, `.gem`, `.final`, `.image`, `.linker`, and `.audio` agent models,
+  `.mus`, `.gem`, `.final`, `.image`, `.linker`, and `.audio` agent models (`audio_edition`,
+  default `brief`, chooses the narration edition),
   defaulting to `codex/gpt-6.1-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
   `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory),
   `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort),
@@ -139,8 +142,10 @@ diagnostic rather than running someone else's command on your machine.
   lead_model=@xlarge): compare approaches`.
   Image example:
   `#research_swarm(prompt="A research topic", image=true)`.
-  Audio example:
+  Audio examples (brief by default):
   `#research_swarm(prompt="A research topic", audio=true)`.
+  `#research_swarm(prompt="A research topic", audio=true, audio_edition=full)`.
+  Direct override: `#research/audio(edition=full)`.
   Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters.
 

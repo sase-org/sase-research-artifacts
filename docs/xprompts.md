@@ -37,18 +37,24 @@ and never depends on it as a package.
 
 | Name      | Type | Default | Description                                              |
 | --------- | ---- | ------- | -------------------------------------------------------- |
-| `edition` | word | `full`  | Narration edition budget: `full`, `brief`, `digest`, or `verbatim` |
+| `edition` | word | `brief` | Narration edition: `brief` or `full` (guide-backed authoring choices) |
 | `rewrite` | bool | `false` | Rewrite `<stem>_narration.md` even when one already exists |
+
+Newly authored narration defaults to `brief` (about 4 minutes); pass
+`#research/audio(edition=full)` for the full edition (about 16 minutes).
+Edition selection affects newly authored narration, not whether audio is
+enabled.
 
 When invoked with a `@research:` ref the report is read with `sase artifact read`;
 when forked from a swarm lead the agent uses the report it wrote, preferring the
 published `<name>.md` and falling back to `<name>__final.md`. The narration script
 is `<stem>_narration.md` next to the report (with `__final` stripped from the stem,
 following the `#research/image` stem rule) and carries `source`, `source_blob`,
-`date`, `kind: research`, and `cover` when `<stem>_infographic.png` exists. The
-finished MP3 is registered with
-`sase artifact create -p <audio_path> -l "Audio edition: <title>"` so it rides the
-completion notification to Telegram.
+`date`, `kind: research`, `edition`, and `cover` when `<stem>_infographic.png`
+exists. An existing script is reused unless direct
+`#research/audio(..., rewrite=true)` is requested. The finished MP3 is registered
+with `sase artifact create -p <audio_path> -l "Audio edition: <title>"` so it rides
+the completion notification to Telegram.
 
 ## `#research/more` -- Extend Existing Research
 
@@ -93,6 +99,7 @@ recommendation, then hands off to `#research` to write it up.
 | `linker_model`          | word | `@xlarge`                               | Model for `<clan>.linker`                                |
 | `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (never implies the linker)       |
 | `audio_model`           | word | `@audio`                                | Model for `<clan>.audio`                                 |
+| `audio_edition`         | word | `brief`                                 | Narration edition for `<clan>.audio` (`brief` or `full`) |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate xprompt argument.
@@ -125,7 +132,12 @@ Omitting them preserves the defaults below. The opt-in image segment uses
 The opt-in linker segment uses `linker_model` (default `@xlarge`), for example
 `#research_swarm(prompt="A research topic", linker=true)`.
 The opt-in audio segment uses `audio_model` (default `@audio`), for example
-`#research_swarm(prompt="A research topic", audio=true)`.
+`#research_swarm(prompt="A research topic", audio=true)`, and `audio_edition`
+(default `brief`), for example
+`#research_swarm(prompt="A research topic", audio=true, audio_edition=full)`.
+A fresh swarm podcast defaults to brief; supplying `audio_edition` alone never
+launches the audio agent. Edition selection affects newly authored narration,
+not whether audio is enabled.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 ("trains on your data"), which is part of why `muse` defaults off. The `agy`
 provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
@@ -167,8 +179,10 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
 9. **`<clan>.audio`** -- optional; when `audio=true`, waits on the lead (and on the
    linker when it runs, so the edition narrates the published `<name>.md` and can
    use the infographic as its cover), forks from the lead's segment, then runs
-   `#research/audio` using `audio_model` (default `@audio`). `audio=true` never
-   implies the linker. Requires `uv tool install sase-listen`.
+   `#research/audio(edition=<audio_edition>)` using `audio_model` (default
+   `@audio`) and `audio_edition` (default `brief`; `brief` or `full` are the
+   supported guide-backed authoring choices). `audio=true` never implies the
+   linker. Requires `uv tool install sase-listen`.
 
 The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
 registers it only when the linker runs, and the linker derives its output directory

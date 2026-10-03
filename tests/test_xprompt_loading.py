@@ -191,8 +191,27 @@ def test_research_audio_declares_typed_input() -> None:
         ("edition", "word"),
         ("rewrite", "bool"),
     ]
-    assert xp.inputs[0].default == "full"
+    assert xp.inputs[0].default == "brief"
     assert xp.inputs[1].default is False
+
+
+def _expand_audio(named_args: dict[str, str]) -> str:
+    xp = _research_xprompts()["research/audio"]
+    return expand_single_xprompt(xp, [], named_args)
+
+
+def test_research_audio_omitted_edition_uses_brief_guide() -> None:
+    expansion = _expand_audio({})
+    assert "sase-listen guide --edition brief" in expansion
+    assert "edition: brief" in expansion
+    assert "sase-listen guide --edition full" not in expansion
+
+
+def test_research_audio_explicit_full_uses_full_guide() -> None:
+    expansion = _expand_audio({"edition": "full"})
+    assert "sase-listen guide --edition full" in expansion
+    assert "edition: full" in expansion
+    assert "sase-listen guide --edition brief" not in expansion
 
 
 def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
@@ -242,6 +261,7 @@ def test_research_swarm_declares_typed_input() -> None:
         ("linker_model", "word"),
         ("audio", "bool"),
         ("audio_model", "word"),
+        ("audio_edition", "word"),
     ]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
@@ -264,6 +284,7 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[18].default == "@xlarge"
     assert xp.inputs[19].default is False
     assert xp.inputs[20].default == "@audio"
+    assert xp.inputs[21].default == "brief"
 
 
 def test_research_swarm_has_nine_top_level_segments() -> None:
@@ -374,7 +395,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%wait:research.{@1}.final" in audio
     assert "{% if run_linker %}%wait:research.{@1}.linker" in audio
     assert "#fork:research.{@1}.final" in audio
-    assert "#research/audio" in audio
+    assert "#research/audio(edition={{ audio_edition }})" in audio
     assert "%m:{{ audio_model }}" in audio
     assert "%model:@audio" not in audio
     assert "%clan(" not in audio
@@ -1074,6 +1095,70 @@ def test_research_swarm_audio_carries_queue_options() -> None:
 
     combo = _swarm_segments({"runners": "8", "priority": "5"}, image=True, audio=True)
     _assert_each_segment_has_one_queue(combo, runners=8, priority=5)
+
+
+def test_research_swarm_audio_edition_defaults_to_brief() -> None:
+    segments = _swarm_segments({}, audio=True)
+    *rest, audio = segments
+    assert "#research/audio(edition=brief)" in audio
+    assert "#research/audio(edition=full)" not in audio
+    assert "{{ audio_edition }}" not in audio
+    assert all("#research/audio" not in segment for segment in rest)
+
+
+def test_research_swarm_audio_edition_propagates_explicit_values() -> None:
+    for edition in ("brief", "full"):
+        segments = _swarm_segments({"audio_edition": edition}, audio=True)
+        *rest, audio = segments
+        assert f"#research/audio(edition={edition})" in audio
+        assert "{{ audio_edition }}" not in audio
+        assert all("#research/audio" not in segment for segment in rest)
+        _assert_each_segment_has_one_queue(segments)
+
+
+def test_research_swarm_audio_edition_reaches_guide_command() -> None:
+    """The swarm's nested audio call expands to the matching guide command."""
+    from sase.macro.processor import process_macro_references_with_catalog
+
+    for edition in ("brief", "full"):
+        segments = _swarm_segments({"audio_edition": edition}, audio=True)
+        audio = segments[-1]
+        catalog = {"research/audio": _research_xprompts()["research/audio"]}
+        expanded = process_macro_references_with_catalog(
+            audio, catalog, raise_on_error=True
+        )
+        assert f"sase-listen guide --edition {edition}" in expanded
+        assert f"edition: {edition}" in expanded
+
+
+def test_research_swarm_audio_edition_alone_launches_no_audio() -> None:
+    segments = _swarm_segments({"audio_edition": "full"})
+    assert len(segments) == 3
+    assert all("%id(audio," not in segment for segment in segments)
+    assert all("#research/audio" not in segment for segment in segments)
+
+
+def test_research_swarm_audio_edition_with_linker_and_image() -> None:
+    linker_segments = _swarm_segments(
+        {"audio_edition": "full"}, linker=True, audio=True
+    )
+    assert len(linker_segments) == 5
+    *_, linker, audio = linker_segments
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.{@1}.linker" in audio
+    assert "#research/audio(edition=full)" in audio
+    assert "{{ audio_edition }}" not in audio
+    _assert_each_segment_has_one_queue(linker_segments)
+
+    image_segments = _swarm_segments(
+        {"audio_edition": "full"}, image=True, audio=True
+    )
+    assert len(image_segments) == 6
+    image_audio = image_segments[-1]
+    assert "%wait:research.{@1}.linker" in image_audio
+    assert "#research/audio(edition=full)" in image_audio
+    assert "{{ audio_edition }}" not in image_audio
+    _assert_each_segment_has_one_queue(image_segments)
 
 
 def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:

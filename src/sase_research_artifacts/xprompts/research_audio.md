@@ -4,10 +4,11 @@ description: Narrate a research report as a chaptered MP3 audio edition with sas
 input:
   - name: edition
     type: word
-    default: "full"
+    default: "brief"
     description:
-      "Narration edition budget: full (about 16 minutes), brief (about 4 minutes),
-      digest, or verbatim. Passed to `sase-listen guide --edition`."
+      "Narration edition: brief (about 4 minutes, the default) or full (about 16
+      minutes) -- the supported guide-backed authoring choices. Passed to
+      `sase-listen guide --edition`."
   - name: rewrite
     type: bool
     default: false
@@ -35,10 +36,12 @@ The script is `<stem>_narration.md` next to the report, with `__final` stripped 
 the stem, following the `research_image.md` stem rule (so `topic__final.md` becomes
 `topic_narration.md`; other stems are unchanged). Create it without overwrite.
 
-- If it exists and `rewrite` is false, reuse it.
+- If it exists and `rewrite` is false, reuse it: an existing script is reused
+  unless direct `#research/audio(..., rewrite=true)` is requested. These
+  edition defaults govern newly authored scripts.
 - Otherwise run `sase-listen guide --edition {{ edition }}` and write the script
-  following it exactly, with `source`, `source_blob`, `date`, `kind: research`, and
-  `cover` when `<stem>_infographic.png` exists.
+  following it exactly, with `source`, `source_blob`, `date`, `kind: research`,
+  `edition: {{ edition }}`, and `cover` when `<stem>_infographic.png` exists.
 - Run `sase-listen lint <script> --source <report>` (the `lint --source`
   number-fidelity check) until it is clean.
 

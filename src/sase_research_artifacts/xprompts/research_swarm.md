@@ -112,6 +112,13 @@ input:
     type: word
     default: "@audio"
     description: Model alias or provider model for the `<clan>.audio` agent.
+  - name: audio_edition
+    type: word
+    default: "brief"
+    description:
+      Narration edition passed to `#research/audio` when `audio=true` (`brief`
+      runs about 4 minutes, `full` about 16 minutes). Supplying it alone never
+      launches the audio agent and never implies the linker.
 ---
 {%- set researchers =
   ([{"short": "cdx", "provider": "codex", "model": codex_model}] if codex and ("codex" | provider_enabled("hard")) else [])
@@ -505,4 +512,4 @@ Final layout:
 ---
 
 %if(should_run={{ audio }}) %id(audio, clan=research.{@1}) %m:{{ audio_model }}
-%wait:research.{@1}.final {% if run_linker %}%wait:research.{@1}.linker {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio
+%wait:research.{@1}.final {% if run_linker %}%wait:research.{@1}.linker {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
