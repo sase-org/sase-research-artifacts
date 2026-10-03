@@ -199,8 +199,8 @@ def test_research_audio_declares_typed_input() -> None:
 
 
 def _expand_audio(named_args: dict[str, str]) -> str:
-    xp = _research_xprompts()["research/audio"]
-    return expand_single_xprompt(xp, [], named_args)
+    xp = _research_macros()["research/audio"]
+    return expand_single_macro(xp, [], named_args)
 
 
 def test_research_audio_omitted_edition_uses_brief_guide() -> None:
@@ -396,7 +396,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%id(audio, clan=research.{@1})" in audio
     assert "%if(should_run={{ audio }})" in audio
     assert "%wait:research.{@1}.final" in audio
-    assert "{% if run_linker %}%wait:research.{@1}.linker" in audio
+    assert "%wait:research.{@1}.linker" not in audio
     assert "#fork:research.{@1}.final" in audio
     assert "#research/audio(edition={{ audio_edition }})" in audio
     assert "%m:{{ audio_model }}" in audio
@@ -1033,14 +1033,14 @@ def test_research_swarm_audio_opt_in_adds_segment_without_linker() -> None:
     _assert_each_segment_has_one_queue(segments)
 
 
-def test_research_swarm_audio_opt_in_waits_for_linker() -> None:
+def test_research_swarm_audio_opt_in_waits_only_for_lead() -> None:
     segments = _swarm_segments({}, linker=True, audio=True)
     assert len(segments) == 5
     *_, final, linker, audio = segments
     assert "%id(audio, clan=research.{@1})" in audio
     assert "%m:@audio" in audio
     assert "%wait:research.{@1}.final" in audio
-    assert "%wait:research.{@1}.linker" in audio
+    assert "%wait:research.{@1}.linker" not in audio
     assert "#fork:research.{@1}.final" in audio
     assert "#research/audio" in audio
     assert "%if(" not in audio
@@ -1053,12 +1053,75 @@ def test_research_swarm_audio_opt_in_waits_for_linker() -> None:
     image_segments = _swarm_segments({}, image=True, audio=True)
     assert len(image_segments) == 6
     *_, image_final, image, image_linker, image_audio = image_segments
-    assert "%wait:research.{@1}.linker" in image_audio
+    assert "%wait:research.{@1}.linker" not in image_audio
     assert "#research/audio" in image_audio
     assert "%wait:research.{@1}.image" not in image_audio
     assert "<name>_narration.md" in image_final
     assert "<name>_infographic.png" in image_linker
     _assert_each_segment_has_one_queue(image_segments)
+
+
+@pytest.mark.parametrize(
+    ("linker", "image"),
+    [(False, False), (True, False), (False, True), (True, True)],
+)
+def test_research_swarm_audio_planner_edges_and_lead_source(
+    linker: bool, image: bool
+) -> None:
+    """Packaged expansion keeps audio on the lead edge across optional work."""
+    from sase.macro.processor import process_macro_references_with_catalog
+
+    segments = _swarm_segments({}, linker=linker, image=image, audio=True)
+    plan = plan_typed_launch_units("\n---\n".join(segments), selected_project="sase")
+    assert plan.diagnostics == []
+
+    by_role = {
+        unit.payload.identity: unit
+        for unit in plan.units
+        if isinstance(unit.payload, AgentUnitWire)
+    }
+    lead = next(
+        unit
+        for unit in plan.units
+        if isinstance(unit.payload.identity, str)
+        and unit.payload.identity.endswith(".final")
+    )
+    audio = by_role["audio"]
+    assert [edge.logical_id for edge in audio.waits] == [lead.logical_id]
+    assert all(edge.kind == "logical" for edge in audio.waits)
+
+    if image:
+        image_unit = by_role["image"]
+        assert [edge.logical_id for edge in image_unit.waits] == [lead.logical_id]
+    if linker or image:
+        linker_unit = by_role["linker"]
+        expected_linker_waits = [lead.logical_id]
+        if image:
+            expected_linker_waits.append(by_role["image"].logical_id)
+        assert [edge.logical_id for edge in linker_unit.waits] == expected_linker_waits
+
+    expanded_audio = process_macro_references_with_catalog(
+        segments[-1],
+        {"research/audio": _research_macros()["research/audio"]},
+        raise_on_error=True,
+    )
+    normalized_audio = re.sub(r"\s+", " ", expanded_audio)
+    assert (
+        "`<name>__final.md`, use that file even if `<name>.md` has since appeared"
+        in normalized_audio
+    )
+    assert (
+        "An explicit `@research:` input selects exactly that report"
+        in normalized_audio
+    )
+    assert "use that same report for `lint --source`" in normalized_audio
+    assert "Do not wait for the image or linker" in normalized_audio
+
+    expected_lead_report = "<name>__final.md" if linker or image else "<name>.md"
+    lead_segment = next(
+        segment for segment in segments if "%id:research.{@1}.final" in segment
+    )
+    assert expected_lead_report in lead_segment
 
 
 def test_research_swarm_audio_does_not_imply_linker() -> None:
@@ -1126,7 +1189,7 @@ def test_research_swarm_audio_edition_reaches_guide_command() -> None:
     for edition in ("brief", "full"):
         segments = _swarm_segments({"audio_edition": edition}, audio=True)
         audio = segments[-1]
-        catalog = {"research/audio": _research_xprompts()["research/audio"]}
+        catalog = {"research/audio": _research_macros()["research/audio"]}
         expanded = process_macro_references_with_catalog(
             audio, catalog, raise_on_error=True
         )
@@ -1148,7 +1211,7 @@ def test_research_swarm_audio_edition_with_linker_and_image() -> None:
     assert len(linker_segments) == 5
     *_, linker, audio = linker_segments
     assert "%id(linker, clan=research.{@1})" in linker
-    assert "%wait:research.{@1}.linker" in audio
+    assert "%wait:research.{@1}.linker" not in audio
     assert "#research/audio(edition=full)" in audio
     assert "{{ audio_edition }}" not in audio
     _assert_each_segment_has_one_queue(linker_segments)
@@ -1158,7 +1221,7 @@ def test_research_swarm_audio_edition_with_linker_and_image() -> None:
     )
     assert len(image_segments) == 6
     image_audio = image_segments[-1]
-    assert "%wait:research.{@1}.linker" in image_audio
+    assert "%wait:research.{@1}.linker" not in image_audio
     assert "#research/audio(edition=full)" in image_audio
     assert "{{ audio_edition }}" not in image_audio
     _assert_each_segment_has_one_queue(image_segments)

@@ -2,8 +2,8 @@
 description:
   Launch independent per-provider research agents, then have a lead researcher extend
   and consolidate their findings. Optionally generate an infographic, with a linker
-  agent that publishes the consolidated report, and optionally narrate the published
-  report as an audio edition.
+  agent that publishes the consolidated report, and optionally narrate the lead's
+  consolidated report while image and linker work continues.
 input:
   - name: prompt
     type: text
@@ -104,10 +104,10 @@ input:
     type: bool
     default: false
     description:
-      Narrate the published report as an audio edition after the lead researcher
-      finishes (and after the linker when it runs, so the edition narrates the
-      published report and can use the infographic as its cover). Does not imply
-      the linker.
+      Narrate the lead's consolidated report after the lead finishes, in parallel with
+      optional image and linker work. Infographic cover art is used only when already
+      available; otherwise the renderer creates its title card. Does not imply the
+      linker.
   - name: audio_model
     type: word
     default: "@audio"
@@ -512,4 +512,4 @@ Final layout:
 ---
 
 %if(should_run={{ audio }}) %id(audio, clan=research.{@1}) %m:{{ audio_model }}
-%wait:research.{@1}.final {% if run_linker %}%wait:research.{@1}.linker {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
+%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
