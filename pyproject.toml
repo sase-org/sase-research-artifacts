@@ -41,6 +41,9 @@ research = "sase_research_artifacts.provider:RESEARCH_REF_PROVIDER"
 [project.entry-points."sase_file_hooks"]
 research-highlights = "sase_research_artifacts.provider:RESEARCH_HIGHLIGHTS_HOOK"
 
+[project.entry-points."sase_macros"]
+sase_research_artifacts = "sase_research_artifacts"
+
 [project.entry-points."sase_xprompts"]
 sase_research_artifacts = "sase_research_artifacts"
 

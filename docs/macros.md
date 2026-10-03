@@ -1,4 +1,4 @@
-# XPrompts
+# Macros
 
 ## `#research` -- Write Research to a Dated File
 
@@ -29,7 +29,7 @@ file's stem with any trailing `__final` removed (so `topic__final.md` becomes
 ## `#research/audio` -- Narrate an Audio Edition
 
 Narrates a research report as a chaptered MP3 audio edition. Requires
-`uv tool install sase-listen`: the xprompt drives the installed CLI (`guide` to
+`uv tool install sase-listen`: the macro drives the installed CLI (`guide` to
 author the script, `lint --source` to check it, `render --json` to synthesize it)
 and never depends on it as a package.
 
@@ -102,9 +102,9 @@ recommendation, then hands off to `#research` to write it up.
 | `audio_edition`         | word | `brief`                                 | Narration edition for `<clan>.audio` (`brief` or `full`) |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
-comma is parsed as a separate xprompt argument.
+comma is parsed as a separate macro argument.
 
-A three-agent xprompt swarm by default (codex + claude researchers plus the lead), up
+A three-agent macro swarm by default (codex + claude researchers plus the lead), up
 to nine authored segments (five researchers, the lead, the image agent, the linker
 agent, the audio agent). `grok=true` /
 `muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag

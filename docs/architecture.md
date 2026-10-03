@@ -2,7 +2,7 @@
 
 ## Plugin System
 
-`sase-research-artifacts` registers four entry points against the host `sase` package.
+`sase-research-artifacts` registers five entry points against the host `sase` package.
 sase's registry instantiates each discovered entry point once and calls both
 `sase_artifact` hookspec methods on it (`artifact_ref_provider_specs`,
 `artifact_file_hook_provider_specs`), regardless of which entry-point group discovered
@@ -17,7 +17,8 @@ from the same registration.
 | -------------------- | ------------------------- | ------------------------------------------------------------- |
 | `sase_artifact_refs` | `research`                | `sase_research_artifacts.provider:RESEARCH_REF_PROVIDER`      |
 | `sase_file_hooks`    | `research-highlights`     | `sase_research_artifacts.provider:RESEARCH_HIGHLIGHTS_HOOK`   |
-| `sase_xprompts`      | `sase_research_artifacts` | `sase_research_artifacts` (package, for `xprompts/*.md`)      |
+| `sase_macros`        | `sase_research_artifacts` | `sase_research_artifacts` (package, for `xprompts/*.md`)      |
+| `sase_xprompts`      | `sase_research_artifacts` | legacy alias of `sase_macros` (same package)                  |
 | `sase_config`        | `sase_research_artifacts` | `sase_research_artifacts` (package, for `default_config.yml`) |
 
 ### `provider.py`
@@ -45,9 +46,9 @@ A project opts into the `research` ref provider per sidecar role, either with on
 (`ref: {use: sase-research-artifacts@research}`) or a fully inline spec. Both spellings normalize to the same
 effective policy -- see `docs/configuration.md`.
 
-## Xprompt and Default-Config Discovery
+## Macro and Default-Config Discovery
 
-`sase_xprompts` and `sase_config` are resource entry-point groups: the entry point
+`sase_macros` (plus its `sase_xprompts` legacy alias) and `sase_config` are resource entry-point groups: the entry point
 resolves to the bare `sase_research_artifacts` package (no attribute), and sase locates
 `xprompts/*.md` and `default_config.yml` inside it via `importlib.resources`. Both ship
 automatically in a hatchling wheel because they live inside

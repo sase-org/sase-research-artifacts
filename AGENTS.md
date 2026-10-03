@@ -2,10 +2,10 @@
 
 ## Overview
 
-Research artifact-reference, file-hook, config, and xprompt provider plugin for sase.
+Research artifact-reference, file-hook, config, and macro provider plugin for sase.
 It integrates the `sase-org/sase--research` sidecar by contributing the `research`
 artifact-reference provider, `research-highlights` file hook, default research model
-aliases, and `#research*` xprompts.
+aliases, and `#research*` macros.
 
 ## Build & Run
 
@@ -25,8 +25,9 @@ just check      # lint + test
   (`RESEARCH_HIGHLIGHTS_HOOK`), each a pluggy hookimpl object registered under its own
   `sase_artifact_refs` / `sase_file_hooks` entry point.
 - `src/sase_research_artifacts/xprompts/` — the `#research`, `#research/image`,
-  `#research/more`, `#research/prompt`, and `#research_swarm` xprompts, discovered
-  through the `sase_xprompts` entry point.
+  `#research/more`, `#research/prompt`, and `#research_swarm` macros, discovered
+  through the `sase_macros` entry point (`sase_xprompts` stays registered as a
+  legacy alias; the packaged directory keeps its `xprompts/` name).
 - `src/sase_research_artifacts/default_config.yml` — the `image` default model alias,
   the `researchers` bucket, and the `research` tribe display config, discovered
   through the `sase_config` entry point. The research-swarm researchers default to

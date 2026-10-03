@@ -117,6 +117,7 @@ jobs:
                   "research-highlights": "sase_research_artifacts.provider:RESEARCH_HIGHLIGHTS_HOOK"
               },
               "sase_config": {"sase_research_artifacts": "sase_research_artifacts"},
+              "sase_macros": {"sase_research_artifacts": "sase_research_artifacts"},
               "sase_xprompts": {"sase_research_artifacts": "sase_research_artifacts"},
           }
 

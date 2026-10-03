@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sase.xprompt.loader_parsing import parse_yaml_front_matter
+from sase_macro_compat import parse_yaml_front_matter
 
 from sase_research_artifacts.provider import RESEARCH_REF_PROVIDER_SPEC
 

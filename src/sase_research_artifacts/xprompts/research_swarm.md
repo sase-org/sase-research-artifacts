@@ -14,7 +14,7 @@ input:
     description:
       Name of the sase agent to wait for before starting the swarm. Quote the value to
       pass several comma-separated agents (`wait="a,b"`); an unquoted comma is parsed as
-      a separate xprompt argument. If null, the swarm starts immediately.
+      a separate macro argument. If null, the swarm starts immediately.
   - name: priority
     type: int
     default: null
@@ -438,7 +438,7 @@ Steps:
      `> **Research query:** <summary>`. Phrase it as the question or task being
      answered, in the requester's own terms: keep the questions, named subjects, and
      explicit scope or constraints; drop instructions aimed at agents, such as output
-     paths, xprompt or directive syntax, and formatting requests. Summarize what was
+     paths, macro or directive syntax, and formatting requests. Summarize what was
      asked, not material the request quotes or attaches. Use a request that is already
      one short sentence verbatim. Never fold findings, answers, or scope the request
      does not state into it. It is not a heading, so it gets no section number and no

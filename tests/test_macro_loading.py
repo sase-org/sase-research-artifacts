@@ -1,4 +1,4 @@
-"""Load all packaged xprompts through sase's public plugin loader and prove
+"""Load all packaged macros through sase's public plugin loader and prove
 the swarm's segment count and wait/fork dependency graph survive packaging.
 """
 
@@ -12,7 +12,6 @@ from unittest.mock import patch
 
 import pytest
 from sase.agent.multi_prompt import split_segments_protecting_fences
-from sase.agent.xprompt_swarm import expand_xprompt_swarms_with_metadata
 from sase.core.agent_launch_facade import plan_typed_launch_units
 from sase.core.agent_launch_wire_records import AgentUnitWire
 from sase.core.artifact_context_query_facade import (
@@ -21,11 +20,15 @@ from sase.core.artifact_context_query_facade import (
 )
 from sase.core.artifact_file_explicit import store_explicit_artifact_file
 from sase.llm_provider.provider_disable import disable_provider
-from sase.xprompt import render_toplevel_jinja2
-from sase.xprompt.loader_sources import load_xprompts_from_plugins
-from sase.xprompt.models import UNSET
-from sase.xprompt.processor import expand_single_xprompt
-from sase.xprompt.runtime_context import bind_runtime_template_vars
+
+from sase_macro_compat import (
+    UNSET,
+    bind_runtime_template_vars,
+    expand_macro_swarms_with_metadata,
+    expand_single_macro,
+    load_macros_from_plugins,
+    render_toplevel_jinja2,
+)
 
 # Authored capacity=0 is preserved in the swarm expansion (not treated as
 # omission) and rejected by current SASE at parse time.
@@ -42,14 +45,14 @@ def _isolated_sase_home(
     monkeypatch.setenv("SASE_HOME", str(home))
 
 
-def _research_xprompts() -> dict:
-    xprompts = load_xprompts_from_plugins()
-    return {name: xp for name, xp in xprompts.items() if name.startswith("research")}
+def _research_macros() -> dict:
+    macros = load_macros_from_plugins()
+    return {name: xp for name, xp in macros.items() if name.startswith("research")}
 
 
 def _swarm_body(named_args: dict[str, str]) -> str:
-    xp = _research_xprompts()["research_swarm"]
-    return expand_single_xprompt(
+    xp = _research_macros()["research_swarm"]
+    return expand_single_macro(
         xp, ["some topic"], named_args, preserve_segment_separators=True
     )
 
@@ -72,7 +75,7 @@ def _swarm_segments(
 
 
 def _authored_swarm_segments() -> list[str]:
-    xp = _research_xprompts()["research_swarm"]
+    xp = _research_macros()["research_swarm"]
     return [segment.strip() for segment in xp.content.split("\n---\n") if segment.strip()]
 
 
@@ -174,8 +177,8 @@ def _assert_each_segment_has_one_queue(
     assert all("capacity=" not in segment for segment in segments)
 
 
-def test_all_six_research_xprompts_load() -> None:
-    assert set(_research_xprompts()) == {
+def test_all_six_research_macros_load() -> None:
+    assert set(_research_macros()) == {
         "research",
         "research/audio",
         "research/image",
@@ -186,7 +189,7 @@ def test_all_six_research_xprompts_load() -> None:
 
 
 def test_research_audio_declares_typed_input() -> None:
-    xp = _research_xprompts()["research/audio"]
+    xp = _research_macros()["research/audio"]
     assert [(arg.name, arg.type.value) for arg in xp.inputs] == [
         ("edition", "word"),
         ("rewrite", "bool"),
@@ -215,7 +218,7 @@ def test_research_audio_explicit_full_uses_full_guide() -> None:
 
 
 def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
-    xp = _research_xprompts()["research/audio"]
+    xp = _research_macros()["research/audio"]
     assert "sase-listen guide" in xp.content
     assert "lint --source" in xp.content
     assert "render --json" in xp.content
@@ -223,12 +226,12 @@ def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
 
 
 def test_research_prompt_declares_typed_input() -> None:
-    xprompts = _research_xprompts()
+    macros = _research_macros()
 
-    xp = xprompts["research/prompt"]
+    xp = macros["research/prompt"]
     assert [(arg.name, arg.type.value) for arg in xp.inputs] == [("prompt", "text")]
 
-    research = xprompts["research"]
+    research = macros["research"]
     assert [(arg.name, arg.type.value) for arg in research.inputs] == [
         ("report_target", "path"),
         ("suffix", "word"),
@@ -238,7 +241,7 @@ def test_research_prompt_declares_typed_input() -> None:
 
 
 def test_research_swarm_declares_typed_input() -> None:
-    xp = _research_xprompts()["research_swarm"]
+    xp = _research_macros()["research_swarm"]
     assert [(arg.name, arg.type.value) for arg in xp.inputs] == [
         ("prompt", "text"),
         ("wait", "word"),
@@ -521,7 +524,7 @@ def test_research_swarm_researchers_carry_distinct_suffixes() -> None:
     with patch("sase.core.time.generate_timestamp", return_value="260820_161407"):
         first_cdx, first_cld, _first_final, second_cdx, second_cld, *_ = [
             record.prompt
-            for record in expand_xprompt_swarms_with_metadata(
+            for record in expand_macro_swarms_with_metadata(
                 [
                     "#!research_swarm: some topic",
                     "#!research_swarm: some topic",
@@ -695,21 +698,21 @@ def test_research_swarm_clan_resolves_from_lead_declaration() -> None:
 
 
 def test_research_prompt_suffix_branch_renders_without_artifacts() -> None:
-    xp = _research_xprompts()["research"]
+    xp = _research_macros()["research"]
 
-    suffix_expansion = expand_single_xprompt(xp, [], {"suffix": "a"})
+    suffix_expansion = expand_single_macro(xp, [], {"suffix": "a"})
     assert "__a" in suffix_expansion
     assert "<stem>__a.md" in suffix_expansion
     assert "{%" not in suffix_expansion
     assert "{{ suffix }}" not in suffix_expansion
 
-    explicit_target_expansion = expand_single_xprompt(
+    explicit_target_expansion = expand_single_macro(
         xp, [], {"report_target": "x.md", "suffix": "a"}
     )
     assert "x.md" in explicit_target_expansion
     assert "<stem>__a.md" not in explicit_target_expansion
 
-    default_expansion = expand_single_xprompt(xp, [], {})
+    default_expansion = expand_single_macro(xp, [], {})
     assert "new markdown file under" in default_expansion
     assert "<stem>__" not in default_expansion
 
@@ -807,14 +810,14 @@ def test_research_swarm_priority_composes_with_wait() -> None:
 
 
 def test_research_registers_report_in_every_branch() -> None:
-    xp = _research_xprompts()["research"]
+    xp = _research_macros()["research"]
     registration_command = (
         'sase artifact create -p "<absolute-report-path>" '
         '-l "research:<repo-relative-report-path>"'
     )
 
     for named_args in ({"report_target": "x.md"}, {"suffix": "a"}, {}):
-        expansion = expand_single_xprompt(xp, [], named_args)
+        expansion = expand_single_macro(xp, [], named_args)
         assert registration_command in expansion
 
 
@@ -1305,7 +1308,7 @@ def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
 
 
 def test_research_image_strips_final_stem() -> None:
-    xp = _research_xprompts()["research/image"]
+    xp = _research_macros()["research/image"]
     assert "topic__final.md" in xp.content
     assert "topic_infographic.png" in xp.content
     assert "without overwrite" in xp.content
@@ -1406,11 +1409,11 @@ def test_research_swarm_handoff_fields_survive_prompt_formatting(
     assert "topic**cdx" not in formatted
 
 
-def test_research_xprompts_keep_deferred_jinja_out_of_inline_code() -> None:
+def test_research_macros_keep_deferred_jinja_out_of_inline_code() -> None:
     """No deferred Jinja may sit inside backticks in raw regions."""
     raw_region = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
     inline_span = re.compile(r"`[^`\n]*`")
-    for name, xp in sorted(_research_xprompts().items()):
+    for name, xp in sorted(_research_macros().items()):
         for region in raw_region.findall(xp.content):
             for line in region.splitlines():
                 for span in inline_span.findall(line):

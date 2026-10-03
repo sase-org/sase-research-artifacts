@@ -3,7 +3,7 @@
 `sase-research-artifacts` is an installable Python plugin for
 [sase](https://github.com/sase-org/sase) that ships the `research`
 artifact-reference provider, the `research-highlights` file-hook provider, the
-`#research*` xprompts, and default model/tribe config for research workflows.
+`#research*` macros, and default model/tribe config for research workflows.
 Durable research reports and generated media live in the
 [`sase-org/sase--research`](https://github.com/sase-org/sase--research) sidecar; this
 plugin supplies the SASE integrations that make those artifacts discoverable and
@@ -18,7 +18,7 @@ Requires Python 3.12+, `sase>=0.17.2`, and `sase-core-rs>=0.35.0`. See
 pip install sase-research-artifacts
 ```
 
-Installing the distribution registers four entry points that sase discovers
+Installing the distribution registers five entry points that sase discovers
 automatically; a linked-repo clone alone does not install the package or register its
 entry points.
 
@@ -28,7 +28,8 @@ entry points.
 | -------------------- | ------------------------- | ------------------------------------------------------------- |
 | `sase_artifact_refs` | `research`                | `sase_research_artifacts.provider:RESEARCH_REF_PROVIDER`      |
 | `sase_file_hooks`    | `research-highlights`     | `sase_research_artifacts.provider:RESEARCH_HIGHLIGHTS_HOOK`   |
-| `sase_xprompts`      | `sase_research_artifacts` | `sase_research_artifacts`                                     |
+| `sase_macros`        | `sase_research_artifacts` | `sase_research_artifacts`                                     |
+| `sase_xprompts`      | `sase_research_artifacts` | `sase_research_artifacts` (legacy alias)                      |
 | `sase_config`        | `sase_research_artifacts` | `sase_research_artifacts`                                     |
 
 ## Provider configuration
@@ -95,7 +96,7 @@ hook excludes them because a Highlights PDF per draft is noise. This is not a po
 `use: sase-research-artifacts@research-highlights` without a local `command:` override fails soft with a
 diagnostic rather than running someone else's command on your machine.
 
-## Xprompts
+## Macros
 
 - `#research` -- write research to a new dated file in the `research` artifact repo.
 - `#research/audio` -- narrate a research report as a chaptered MP3 audio edition
@@ -181,7 +182,7 @@ core floors before uploading this plugin.
 
 - [Architecture](docs/architecture.md)
 - [Configuration](docs/configuration.md)
-- [XPrompts](docs/xprompts.md)
+- [Macros](docs/macros.md)
 
 ## License
 

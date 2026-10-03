@@ -86,7 +86,7 @@ def test_distribution_artifacts_use_renamed_identity(
     assert all("sase_research/" not in name for name in names)
 
 
-def test_wheel_contains_provider_defaults_and_all_six_xprompts(
+def test_wheel_contains_provider_defaults_and_all_six_macros(
     built_distributions: Path,
 ) -> None:
     wheel = _single_artifact(built_distributions, "*.whl")
@@ -96,7 +96,8 @@ def test_wheel_contains_provider_defaults_and_all_six_xprompts(
 
     assert f"{PACKAGE_NAME}/provider.py" in names
     assert f"{PACKAGE_NAME}/default_config.yml" in names
-    for xprompt in (
+    # The packaged directory keeps its `xprompts/` name during the transition.
+    for macro in (
         "research.md",
         "research_audio.md",
         "research_image.md",
@@ -104,10 +105,10 @@ def test_wheel_contains_provider_defaults_and_all_six_xprompts(
         "research_prompt.md",
         "research_swarm.md",
     ):
-        assert f"{PACKAGE_NAME}/xprompts/{xprompt}" in names
+        assert f"{PACKAGE_NAME}/xprompts/{macro}" in names
 
 
-def test_sdist_contains_provider_defaults_and_all_six_xprompts(
+def test_sdist_contains_provider_defaults_and_all_six_macros(
     built_distributions: Path,
 ) -> None:
     sdist = _single_artifact(built_distributions, "*.tar.gz")
@@ -121,7 +122,7 @@ def test_sdist_contains_provider_defaults_and_all_six_xprompts(
     assert all("src/sase_research/" not in member for member in members)
     assert "provider.py" in names
     assert "default_config.yml" in names
-    for xprompt in (
+    for macro in (
         "research.md",
         "research_audio.md",
         "research_image.md",
@@ -129,7 +130,7 @@ def test_sdist_contains_provider_defaults_and_all_six_xprompts(
         "research_prompt.md",
         "research_swarm.md",
     ):
-        assert xprompt in names
+        assert macro in names
 
 
 def test_wheel_installs_into_fresh_venv_with_discoverable_entry_points(
@@ -201,8 +202,12 @@ from sase.artifact_providers import assemble_artifact_provider_registry
 from sase.config.loading import load_plugin_configs
 from sase.agent.multi_prompt import split_segments_protecting_fences
 from sase.core.agent_launch_facade import plan_typed_launch_units
-from sase.xprompt.loader_sources import load_xprompts_from_plugins
-from sase.xprompt.processor import expand_single_xprompt
+try:
+    from sase.macro.loader_sources import load_macros_from_plugins
+    from sase.macro.processor import expand_single_macro
+except ImportError:
+    from sase.xprompt.loader_sources import load_xprompts_from_plugins as load_macros_from_plugins
+    from sase.xprompt.processor import expand_single_xprompt as expand_single_macro
 import importlib.resources
 import sase_core_rs
 import sase_research_artifacts
@@ -227,6 +232,7 @@ expected = {
         "research-highlights": "sase_research_artifacts.provider:RESEARCH_HIGHLIGHTS_HOOK"
     },
     "sase_config": {"sase_research_artifacts": "sase_research_artifacts"},
+    "sase_macros": {"sase_research_artifacts": "sase_research_artifacts"},
     "sase_xprompts": {"sase_research_artifacts": "sase_research_artifacts"},
 }
 discovered = entry_points()
@@ -240,8 +246,8 @@ assert registry.diagnostics == (), registry.diagnostics
 assert "research" in registry.ref_providers_by_id
 assert "research-highlights" in registry.file_hook_providers_by_id
 
-xprompts = load_xprompts_from_plugins()
-research_names = {n for n in xprompts if n.startswith("research")}
+macros = load_macros_from_plugins()
+research_names = {n for n in macros if n.startswith("research")}
 assert research_names == {
     "research",
     "research/audio",
@@ -250,7 +256,7 @@ assert research_names == {
     "research/prompt",
     "research_swarm",
 }, research_names
-research_swarm = xprompts["research_swarm"]
+research_swarm = macros["research_swarm"]
 assert research_swarm.content.count("%q(1.5x, w=0.25") == 9
 assert "default: 16" not in research_swarm.content
 
@@ -266,7 +272,7 @@ def assert_segments(named_args, *, runners=None, priority=None, image=False):
     args = dict(named_args)
     if image:
         args["image"] = "true"
-    body = expand_single_xprompt(
+    body = expand_single_macro(
         research_swarm,
         ["wheel contract smoke"],
         args,
