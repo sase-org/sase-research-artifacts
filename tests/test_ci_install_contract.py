@@ -123,7 +123,10 @@ def test_wheel_contract_is_source_coordination_not_published_minimum() -> None:
 
     assert "SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_SOURCE" in wheel_test
     assert "maturin" in wheel_test
-    assert 'tuple(int(p) for p in version("sase-core-rs").split(".")[:2]) >= (0, 35)' in wheel_test
+    assert (
+        'tuple(int(p) for p in version("sase-core-rs").split(".")[:2]) >= (0, 35)'
+        in wheel_test
+    )
     assert 'startswith("0.3' not in wheel_test
     assert "plan_typed_launch_units" in wheel_test
     assert 'selected_project="sase"' in wheel_test

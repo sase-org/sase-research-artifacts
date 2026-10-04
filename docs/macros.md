@@ -45,16 +45,19 @@ Newly authored narration defaults to `brief` (about 4 minutes); pass
 Edition selection affects newly authored narration, not whether audio is
 enabled.
 
-When invoked with a `@research:` ref the report is read with `sase artifact read`;
-when forked from a swarm lead the agent uses the report it wrote, preferring the
-published `<name>.md` and falling back to `<name>__final.md`. The narration script
-is `<stem>_narration.md` next to the report (with `__final` stripped from the stem,
-following the `#research/image` stem rule) and carries `source`, `source_blob`,
-`date`, `kind: research`, `edition`, and `cover` when `<stem>_infographic.png`
-exists. An existing script is reused unless direct
+When invoked with a `@research:` ref the report is read with `sase artifact read`
+and that file is the one narrated. When forked from a swarm lead the agent
+narrates the report the lead wrote: `<name>__final.md` when the linker runs,
+otherwise the lead's `<name>.md`. Do not poll for a later published file. The
+narration script is `<stem>_narration.md` next to the report (with `__final`
+stripped from the stem, following the `#research/image` stem rule) and carries
+`source`, `source_blob`, `date`, `kind: research`, `edition`, and `cover` when
+`<stem>_infographic.png` exists beside the report after syncing the research
+checkout. An existing script is reused unless direct
 `#research/audio(..., rewrite=true)` is requested. The finished MP3 is registered
-with `sase artifact create -p <audio_path> -l "Audio edition: <title>"` so it rides
-the completion notification to Telegram.
+with `sase artifact create -p <audio_path> -k file -l "audio:<episode_id>"` and
+the agent sets `sase var set audio` from `render --json`. A failed TTS render
+sets `audio.ok=false`, registers no artifact, and completes normally.
 
 ## `#research/more` -- Extend Existing Research
 
@@ -95,9 +98,9 @@ recommendation, then hands off to `#research` to write it up.
 | `lead_model`            | word | `@xlarge`                               | Model for `<clan>.final`                                 |
 | `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker)             |
 | `image_model`           | word | `@image`                                | Model for `<clan>.image`                                 |
-| `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true`) |
+| `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true` or `audio=true`) |
 | `linker_model`          | word | `@xlarge`                               | Model for `<clan>.linker`                                |
-| `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (never implies the linker)       |
+| `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (implies the linker)             |
 | `audio_model`           | word | `@audio`                                | Model for `<clan>.audio`                                 |
 | `audio_edition`         | word | `brief`                                 | Narration edition for `<clan>.audio` (`brief` or `full`) |
 
@@ -111,8 +114,9 @@ agent, the audio agent). `grok=true` /
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
 is true; a soft-disabled provider still runs its researcher (soft disables never
-refuse explicit model launches). When `image=true` opts into the image segment, the default set
-runs five agents, because image implies linker. Optional `wait` gates only the researchers. Optional `priority`
+refuse explicit model launches). When `image=true` or `audio=true` opts into those segments, the default set
+runs five agents, because each implies the linker; both together run six.
+Optional `wait` gates only the researchers. Optional `priority`
 applies to every launched agent when supplied (lower values start first); omission uses
 SASE's implicit queue priority. Every launched segment authors `%q(1.5x, w=0.25)`,
 so each member's capacity budget is 1.5 times this machine's effective
@@ -169,20 +173,21 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    from the lead's segment, then runs `#research/image` against the lead's
    `<name>__final.md` using `image_model` (default `@image`).
 8. **`<clan>.linker`** -- optional; runs when `linker=true`, and always when
-   `image=true`. Waits on the lead (and on the image agent when `image=true`)
-   without forking, finds the lead's `<name>__final.md` through `wait.artifacts`,
-   and writes and registers the canonical, well-structured `<name>.md`. The file
-   opens with the title, then a short research-query summary of the swarm's `prompt`,
-   then the infographic when one was generated, then the `## Bottom line` /
-   `## Overview` section. Restructured sections with checked links and in-document
-   jump links follow.
+   `image=true` or `audio=true`. Waits on the lead (and on the image agent when
+   `image=true`, and on the audio agent when `audio=true`) without forking, finds
+   the lead's `<name>__final.md` through `wait.artifacts`, and writes and
+   registers the canonical, well-structured `<name>.md`. The file opens with the
+   title, then a short research-query summary of the swarm's `prompt`, then the
+   listen card when audio succeeded, then the infographic when one was generated,
+   then the `## Bottom line` / `## Overview` section. Restructured sections with
+   checked links and in-document jump links follow.
 9. **`<clan>.audio`** -- optional; when `audio=true`, waits on the lead (and on the
-   linker when it runs, so the edition narrates the published `<name>.md` and can
-   use the infographic as its cover), forks from the lead's segment, then runs
+   image agent when `image=true`, so the infographic can be the cover) and never
+   on the linker, forks from the lead's segment, then runs
    `#research/audio(edition=<audio_edition>)` using `audio_model` (default
    `@audio`) and `audio_edition` (default `brief`; `brief` or `full` are the
-   supported guide-backed authoring choices). `audio=true` never implies the
-   linker. Requires `uv tool install sase-listen`.
+   supported guide-backed authoring choices). `audio=true` implies the linker,
+   which publishes a listen card. Requires `uv tool install sase-listen`.
 
 The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
 registers it only when the linker runs, and the linker derives its output directory
@@ -192,28 +197,73 @@ written when it disagrees with it.
 
 Execution matrix (default researchers cdx + cld):
 
-| `linker` | `image` | Agents               | Lead writes                    | Hook fires on                                    |
-| -------- | ------- | -------------------- | ------------------------------ | ------------------------------------------------ |
-| false    | false   | cdx, cld, final (3)  | `<name>.md`, unregistered      | lead's `<name>.md` (byte-identical to before)    |
-| true     | false   | + linker (4)         | `<name>__final.md`, registered | linker's `<name>.md`                             |
-| false    | true    | + image + linker (5) | `<name>__final.md`, registered | linker's `<name>.md`                             |
-| true     | true    | + image + linker (5) | `<name>__final.md`, registered | linker's `<name>.md`                             |
+| `audio` | `image` | `linker` arg | Agents | Lead writes  | Hook-eligible file                 |
+| ------- | ------- | ------------ | ------ | ------------ | ---------------------------------- |
+| false   | false   | false        | 3      | `<name>.md`  | lead's `<name>.md`                 |
+| false   | false   | true         | 4      | `__final.md` | linker's `<name>.md`               |
+| false   | true    | (implied)    | 5      | `__final.md` | linker's `<name>.md` + infographic |
+| true    | false   | (implied)    | 5      | `__final.md` | linker's `<name>.md` + listen card |
+| true    | true    | (implied)    | 6      | `__final.md` | both companions                    |
 
-Image implies linker: only the linker's `<name>.md` is hook-eligible, so the
-Highlights PDF is rendered after the infographic exists.
+`image=true` or `audio=true` implies the linker: only the linker's `<name>.md` is
+hook-eligible. The narration script is excluded from both the `@research`
+inventory and the Highlights hook, like the infographic companion pages. No MP3
+enters the public research repo.
 
-`audio=true` adds one `<clan>.audio` agent to every matrix row above and writes
-`<name>_narration.md` beside the report; the lead's output, the hook target, and
-the rest of each row are unchanged. The narration script is excluded from both the
-`@research` inventory and the Highlights hook, like the infographic companion
-pages.
+### Listen card
 
-Image failure recovery: named waits release only on completion, so a failed image
-agent leaves the linker parked with no `<name>.md` and no PDF (SASE posts a "Wait
-dependency can never self-resolve" notification). A later successful run of the same
-`research.<N>.image` name releases the parked linker; alternatively, kill the parked
-linker. `<name>__final.md` stays in the repo either way. If the image agent completes
+When `audio=true` and the audio agent completes with `ok: true`, the linker
+inserts a listen card directly below the research-query blockquote and above
+the infographic (order: frontmatter, `#` title, research query, listen card,
+infographic, bottom-line section):
+
+```markdown
+<div class="listen">
+
+♫ **Brief audio edition** · 4 min · 3 chapters ·
+[Narration script](<name>_narration.md)
+
+</div>
+```
+
+and copies these numbers into report frontmatter (no library path, MP3 path,
+feed URL, artifact id, or `file:` ref):
+
+```yaml
+audio:
+  edition: brief
+  duration_s: 250.34
+  chapter_count: 3
+  episode_id: a-listen-link-for-research-reports-d74298
+```
+
+Minutes are `max(1, round(duration_s / 60))`; the edition word is capitalized;
+`1 chapter` is singular; the chapters segment is dropped when the count is
+unknown; the narration-script link is included only when
+`<name>_narration.md` exists beside the report.
+
+A failed TTS render completes the audio agent with `audio.ok=false` and no
+artifact, so the linker publishes without a card or `audio:` frontmatter and
+says so (never "audio pending"). A *crashed* audio agent parks the linker
+exactly like a crashed image agent: named waits release only on completion
+(SASE posts a "Wait dependency can never self-resolve" notification). Rerun
+the named `research.<N>.audio` agent or kill the parked linker.
+`<name>__final.md` stays in the repo either way. If the image agent completes
 without producing a PNG, the linker publishes without it and says so.
+
+The audio agent's `sase var set audio` is keyed in the linker's `agents`
+namespace by the producer's stable name: a clan member such as
+`%id(audio, clan=research.{@1})` is `research.<n>.audio` (the concrete dotted
+name), while a keyed template such as `%id:build-@` is the template base
+(`build`, not `build-0`). The linker therefore iterates every `agents` entry
+that carries an `audio` variable rather than hard-coding a key. A
+`/sase_monitor` handoff inside the audio agent keeps `%wait:research.{@1}.audio`
+unresolved until the follow-up turn settles (`resolve_wait_dependency` goes
+through the clan/session container). The follow-up's `sase var set audio`
+writes the same artifacts dir the linker later reads via
+`resolve_resume_agent_name`. If the variable is missing, the linker falls
+back to a `wait.artifacts` entry labeled `audio:<episode_id>` and
+`sase-listen ls <episode_id> --json`.
 
 Setting `image_model` to a single model gives up the `@image` alias's fallback chain
 across providers.

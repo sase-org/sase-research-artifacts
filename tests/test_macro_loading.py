@@ -5,6 +5,7 @@ the swarm's segment count and wait/fork dependency graph survive packaging.
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import re
 import shutil
 from types import SimpleNamespace
@@ -36,9 +37,7 @@ _ZERO_CAPACITY_ERROR = "at least 1"
 
 
 @pytest.fixture(autouse=True)
-def _isolated_sase_home(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def _isolated_sase_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Keep swarm rendering independent of machine-wide provider disables."""
     home = tmp_path / "sase-home"
     home.mkdir(exist_ok=True)
@@ -76,7 +75,9 @@ def _swarm_segments(
 
 def _authored_swarm_segments() -> list[str]:
     xp = _research_macros()["research_swarm"]
-    return [segment.strip() for segment in xp.content.split("\n---\n") if segment.strip()]
+    return [
+        segment.strip() for segment in xp.content.split("\n---\n") if segment.strip()
+    ]
 
 
 # The lead's runtime `wait.artifacts` loop is deliberately raw-protected so it
@@ -96,6 +97,19 @@ _WAIT_IMAGE_ARTIFACTS_LOOP = (
     "vcs_relpath={{ a.vcs_relpath }} path={{ a.path }} ref={{ a.ref }}\n"
     "{% endfor %}"
 )
+_WAIT_AUDIO_ARTIFACTS_LOOP = (
+    '{% for a in wait.artifacts if a.kind == "file" and a.label '
+    'and a.label.startswith("audio:") %}\n'
+    "- wait_name={{ a.wait_name }} label={{ a.label }} "
+    "path={{ a.path }} ref={{ a.ref }}\n"
+    "{% endfor %}"
+)
+_AGENTS_AUDIO_LOOP = (
+    "{% if agents is defined %}{% for key, outputs in agents.items() "
+    "if outputs.audio is defined %}\n"
+    "- agent={{ key }} audio={{ outputs.audio }}\n"
+    "{% endfor %}{% endif %}"
+)
 
 
 def _render_at_launch(segment: str) -> str:
@@ -106,6 +120,8 @@ def _render_at_launch(segment: str) -> str:
     the ``wait`` namespace bound via ``bind_runtime_template_vars``.
     """
     return render_toplevel_jinja2(segment)
+
+
 _WEIGHTED_QUEUE_TEMPLATE = (
     "%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}"
     ", w=0.25{% if priority is not none %}, "
@@ -114,8 +130,11 @@ _WEIGHTED_QUEUE_TEMPLATE = (
 
 
 def _without_wait_artifacts_loop(segment: str) -> str:
-    return segment.replace(_WAIT_ARTIFACTS_LOOP, "").replace(
-        _WAIT_IMAGE_ARTIFACTS_LOOP, ""
+    return (
+        segment.replace(_WAIT_ARTIFACTS_LOOP, "")
+        .replace(_WAIT_IMAGE_ARTIFACTS_LOOP, "")
+        .replace(_WAIT_AUDIO_ARTIFACTS_LOOP, "")
+        .replace(_AGENTS_AUDIO_LOOP, "")
     )
 
 
@@ -223,6 +242,11 @@ def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
     assert "lint --source" in xp.content
     assert "render --json" in xp.content
     assert "sase artifact create" in xp.content
+    assert '-l "audio:<episode_id>"' in xp.content
+    assert "sase var set audio" in xp.content
+    assert "complete normally" in xp.content
+    assert "Never poll or wait for the image in this prompt" in xp.content
+    assert "Do not wait for the image or linker" not in xp.content
 
 
 def test_research_prompt_declares_typed_input() -> None:
@@ -342,7 +366,9 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%m:{{ codex_model }}" in cdx
     assert "%clan(" not in cdx
 
-    assert '%if(should_run={{ claude and ("claude" | provider_enabled("hard")) }})' in cld
+    assert (
+        '%if(should_run={{ claude and ("claude" | provider_enabled("hard")) }})' in cld
+    )
     assert "%id(cld, clan=research.{@1})" in cld
     assert "%m:{{ claude_model }}" in cld
     assert "%clan(" not in cld
@@ -381,6 +407,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%m:{{ linker_model }}" in linker
     assert "%wait:research.{@1}.final" in linker
     assert "{% if image %}%wait:research.{@1}.image" in linker
+    assert "{% if audio %}%wait:research.{@1}.audio" in linker
     assert "#fork:" not in linker
     assert "%clan(" not in linker
     assert linker.count("%q(") == 1
@@ -390,12 +417,19 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert _WAIT_ARTIFACTS_LOOP in final
     assert _WAIT_IMAGE_ARTIFACTS_LOOP in linker
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in final
+    assert _WAIT_AUDIO_ARTIFACTS_LOOP in linker
+    assert _AGENTS_AUDIO_LOOP in linker
+    assert _WAIT_AUDIO_ARTIFACTS_LOOP not in final
+    assert _AGENTS_AUDIO_LOOP not in final
     assert _WAIT_ARTIFACTS_LOOP not in audio
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in audio
+    assert _WAIT_AUDIO_ARTIFACTS_LOOP not in audio
+    assert _AGENTS_AUDIO_LOOP not in audio
 
     assert "%id(audio, clan=research.{@1})" in audio
     assert "%if(should_run={{ audio }})" in audio
     assert "%wait:research.{@1}.final" in audio
+    assert "{% if image %}%wait:research.{@1}.image" in audio
     assert "%wait:research.{@1}.linker" not in audio
     assert "#fork:research.{@1}.final" in audio
     assert "#research/audio(edition={{ audio_edition }})" in audio
@@ -900,16 +934,14 @@ def test_research_swarm_lead_renders_registered_reports_via_wait_artifacts(
         rendered = _render_at_launch(final)
 
     assert (
-        "wait_name=research.m.cdx label=research:202609/topic/topic__a.md"
-        in rendered
+        "wait_name=research.m.cdx label=research:202609/topic/topic__a.md" in rendered
     )
     assert f"source_path={report_a}" in rendered
     assert f"path={artifact_a.path}" in rendered
     assert f"ref=file:{artifact_a.id}" in rendered
 
     assert (
-        "wait_name=research.m.cld label=research:202609/topic/topic__b.md"
-        in rendered
+        "wait_name=research.m.cld label=research:202609/topic/topic__b.md" in rendered
     )
     assert f"source_path={report_b}" in rendered
     assert f"path={artifact_b.path}" in rendered
@@ -1014,10 +1046,10 @@ def test_research_swarm_audio_false_adds_nothing() -> None:
     assert all("%id(audio," not in segment for segment in image_segments)
 
 
-def test_research_swarm_audio_opt_in_adds_segment_without_linker() -> None:
+def test_research_swarm_audio_opt_in_adds_segment_with_linker() -> None:
     segments = _swarm_segments({}, audio=True)
-    assert len(segments) == 4
-    *_, final, audio = segments
+    assert len(segments) == 5
+    *_, final, linker, audio = segments
     assert "%id(audio, clan=research.{@1})" in audio
     assert "%m:@audio" in audio
     assert "%wait:research.{@1}.final" in audio
@@ -1025,9 +1057,9 @@ def test_research_swarm_audio_opt_in_adds_segment_without_linker() -> None:
     assert "#fork:research.{@1}.final" in audio
     assert "#research/audio" in audio
     assert "%if(" not in audio
-    assert "%id(linker," not in audio
-    assert "%id(linker," not in final
-    assert "Write the consolidated report to `<name>/<name>.md`:" in final
+    assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.{@1}.audio" in linker
+    assert "Write the consolidated report to `<name>/<name>__final.md`:" in final
     assert "<name>_narration.md" in final
     assert final.rstrip().endswith("└── <name>_narration.md\n```")
     _assert_each_segment_has_one_queue(segments)
@@ -1041,10 +1073,12 @@ def test_research_swarm_audio_opt_in_waits_only_for_lead() -> None:
     assert "%m:@audio" in audio
     assert "%wait:research.{@1}.final" in audio
     assert "%wait:research.{@1}.linker" not in audio
+    assert "%wait:research.{@1}.image" not in audio
     assert "#fork:research.{@1}.final" in audio
     assert "#research/audio" in audio
     assert "%if(" not in audio
     assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.{@1}.audio" in linker
     assert "Write the consolidated report to `<name>/<name>__final.md`:" in final
     assert "<name>_narration.md" in final
     assert final.rstrip().endswith("└── <name>_narration.md\n```")
@@ -1055,7 +1089,8 @@ def test_research_swarm_audio_opt_in_waits_only_for_lead() -> None:
     *_, image_final, image, image_linker, image_audio = image_segments
     assert "%wait:research.{@1}.linker" not in image_audio
     assert "#research/audio" in image_audio
-    assert "%wait:research.{@1}.image" not in image_audio
+    assert "%wait:research.{@1}.image" in image_audio
+    assert "%wait:research.{@1}.audio" in image_linker
     assert "<name>_narration.md" in image_final
     assert "<name>_infographic.png" in image_linker
     _assert_each_segment_has_one_queue(image_segments)
@@ -1087,18 +1122,22 @@ def test_research_swarm_audio_planner_edges_and_lead_source(
         and unit.payload.identity.endswith(".final")
     )
     audio = by_role["audio"]
-    assert [edge.logical_id for edge in audio.waits] == [lead.logical_id]
+    expected_audio_waits = [lead.logical_id]
+    if image:
+        expected_audio_waits.append(by_role["image"].logical_id)
+    assert [edge.logical_id for edge in audio.waits] == expected_audio_waits
     assert all(edge.kind == "logical" for edge in audio.waits)
+    assert "linker" in by_role
 
     if image:
         image_unit = by_role["image"]
         assert [edge.logical_id for edge in image_unit.waits] == [lead.logical_id]
-    if linker or image:
-        linker_unit = by_role["linker"]
-        expected_linker_waits = [lead.logical_id]
-        if image:
-            expected_linker_waits.append(by_role["image"].logical_id)
-        assert [edge.logical_id for edge in linker_unit.waits] == expected_linker_waits
+    linker_unit = by_role["linker"]
+    expected_linker_waits = [lead.logical_id]
+    if image:
+        expected_linker_waits.append(by_role["image"].logical_id)
+    expected_linker_waits.append(audio.logical_id)
+    assert [edge.logical_id for edge in linker_unit.waits] == expected_linker_waits
 
     expanded_audio = process_macro_references_with_catalog(
         segments[-1],
@@ -1111,23 +1150,22 @@ def test_research_swarm_audio_planner_edges_and_lead_source(
         in normalized_audio
     )
     assert (
-        "An explicit `@research:` input selects exactly that report"
-        in normalized_audio
+        "An explicit `@research:` input selects exactly that report" in normalized_audio
     )
     assert "use that same report for `lint --source`" in normalized_audio
-    assert "Do not wait for the image or linker" in normalized_audio
+    assert "Never poll or wait for the image in this prompt" in normalized_audio
+    assert "Do not wait for the image or linker" not in normalized_audio
 
-    expected_lead_report = "<name>__final.md" if linker or image else "<name>.md"
     lead_segment = next(
         segment for segment in segments if "%id:research.{@1}.final" in segment
     )
-    assert expected_lead_report in lead_segment
+    assert "<name>__final.md" in lead_segment
 
 
-def test_research_swarm_audio_does_not_imply_linker() -> None:
+def test_research_swarm_audio_implies_linker() -> None:
     segments = _swarm_segments({}, audio=True)
-    assert len(segments) == 4
-    assert sum("%id(linker," in segment for segment in segments) == 0
+    assert len(segments) == 5
+    assert sum("%id(linker," in segment for segment in segments) == 1
     assert sum("%id(audio," in segment for segment in segments) == 1
 
 
@@ -1136,10 +1174,11 @@ def test_research_swarm_audio_model_routes_to_audio_only() -> None:
         {"audio_model": "@audio_custom", "lead_model": "@lead_custom"},
         audio=True,
     )
-    *_, final, audio = segments
+    *_, final, linker, audio = segments
     assert "%m:@audio_custom" in audio
     assert "@lead_custom" not in audio
     assert "@audio_custom" not in final
+    assert "@audio_custom" not in linker
     assert "%m:@lead_custom" in final
     _assert_each_segment_has_one_queue(segments)
 
@@ -1201,7 +1240,9 @@ def test_research_swarm_audio_edition_alone_launches_no_audio() -> None:
     segments = _swarm_segments({"audio_edition": "full"})
     assert len(segments) == 3
     assert all("%id(audio," not in segment for segment in segments)
+    assert all("%id(linker," not in segment for segment in segments)
     assert all("#research/audio" not in segment for segment in segments)
+    assert all('<div class="listen">' not in segment for segment in segments)
 
 
 def test_research_swarm_audio_edition_with_linker_and_image() -> None:
@@ -1211,20 +1252,95 @@ def test_research_swarm_audio_edition_with_linker_and_image() -> None:
     assert len(linker_segments) == 5
     *_, linker, audio = linker_segments
     assert "%id(linker, clan=research.{@1})" in linker
+    assert "%wait:research.{@1}.audio" in linker
     assert "%wait:research.{@1}.linker" not in audio
     assert "#research/audio(edition=full)" in audio
     assert "{{ audio_edition }}" not in audio
     _assert_each_segment_has_one_queue(linker_segments)
 
-    image_segments = _swarm_segments(
-        {"audio_edition": "full"}, image=True, audio=True
-    )
+    image_segments = _swarm_segments({"audio_edition": "full"}, image=True, audio=True)
     assert len(image_segments) == 6
-    image_audio = image_segments[-1]
+    *_, image_linker, image_audio = image_segments
     assert "%wait:research.{@1}.linker" not in image_audio
+    assert "%wait:research.{@1}.image" in image_audio
+    assert "%wait:research.{@1}.audio" in image_linker
     assert "#research/audio(edition=full)" in image_audio
     assert "{{ audio_edition }}" not in image_audio
     _assert_each_segment_has_one_queue(image_segments)
+
+
+def test_research_swarm_linker_listen_card_only_when_audio() -> None:
+    audio_linker = _swarm_segments({}, audio=True)[-2]
+    assert "%id(linker, clan=research.{@1})" in audio_linker
+    assert "**Listen card.**" in audio_linker
+    assert '<div class="listen">' in audio_linker
+    assert "♫ **Brief audio edition**" in audio_linker
+    assert _AGENTS_AUDIO_LOOP in audio_linker
+    assert _WAIT_AUDIO_ARTIFACTS_LOOP in audio_linker
+    assert "the research query, the listen card, and then the bottom-line section" in (
+        audio_linker
+    )
+    assert 'never write "audio pending"' in audio_linker
+    assert "sase-listen ls <episode_id> --json" in audio_linker
+    assert "%wait:research.{@1}.audio" in audio_linker
+    _assert_each_segment_has_one_queue(_swarm_segments({}, audio=True))
+
+    image_audio_linker = _swarm_segments({}, image=True, audio=True)[-2]
+    assert (
+        "the research query, the listen card, the infographic, and then "
+        "the bottom-line section" in image_audio_linker
+    )
+    assert "**Listen card.**" in image_audio_linker
+    research_query_pos = image_audio_linker.index("**Research query.**")
+    listen_card_pos = image_audio_linker.index("**Listen card.**")
+    infographic_pos = image_audio_linker.index("**Embed the infographic**")
+    bottom_line_pos = image_audio_linker.index("**Bottom-line section.**")
+    assert research_query_pos < listen_card_pos < infographic_pos < bottom_line_pos
+
+
+def test_research_swarm_linker_renders_audio_handoff_at_launch() -> None:
+    """The deferred agents/audio: loops render at launch from wait context."""
+
+    class _JsonMap(dict):
+        def __str__(self) -> str:
+            return json.dumps(self, separators=(",", ":"), sort_keys=True)
+
+    audio_facts = _JsonMap(
+        {
+            "ok": True,
+            "episode_id": "ep-1",
+            "edition": "brief",
+            "duration_s": 250.34,
+            "chapter_count": 3,
+        }
+    )
+    linker = _swarm_segments({}, audio=True)[-2]
+    with bind_runtime_template_vars(
+        {
+            "agents": {"research.m.audio": {"audio": audio_facts}},
+            "wait": SimpleNamespace(
+                chats=[],
+                artifacts=[
+                    {
+                        "kind": "file",
+                        "wait_name": "research.m.audio",
+                        "label": "audio:ep-1",
+                        "path": "/tmp/ep-1.mp3",
+                        "ref": "file:audio-id",
+                    }
+                ],
+            ),
+        }
+    ):
+        rendered = _render_at_launch(linker)
+
+    assert "agent=research.m.audio audio=" in rendered
+    assert '"episode_id":"ep-1"' in rendered
+    assert "wait_name=research.m.audio label=audio:ep-1" in rendered
+    assert "path=/tmp/ep-1.mp3" in rendered
+    assert "ref=file:audio-id" in rendered
+    assert "{{" not in rendered
+    assert "{%" not in rendered
 
 
 def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:
@@ -1291,12 +1407,18 @@ def test_research_swarm_linker_opens_with_research_query_then_infographic() -> N
     assert "## Bottom line" in linker
     assert "## Overview" in linker
     assert "infographic" not in linker
+    assert '<div class="listen">' not in linker
+    assert "%wait:research.{@1}.audio" not in linker
+    assert _WAIT_AUDIO_ARTIFACTS_LOOP not in linker
+    assert _AGENTS_AUDIO_LOOP not in linker
 
     image_linker = _swarm_segments({}, image=True)[-1]
     assert (
         "the research query, the infographic, and then the bottom-line section"
         in image_linker
     )
+    assert '<div class="listen">' not in image_linker
+    assert "%wait:research.{@1}.audio" not in image_linker
     assert "directly above the bottom-line section" in image_linker
     assert "right after the bottom line" not in image_linker
     research_query_pos = image_linker.index("**Research query.**")
@@ -1310,9 +1432,7 @@ def test_research_swarm_linker_opens_with_research_query_then_infographic() -> N
         step3 = prompt.split("3. **Restructure**", 1)[1].split(
             "4. **Validate every link carried over.**", 1
         )[0]
-        assert not any(
-            line and not line.strip() for line in step3.splitlines()
-        )
+        assert not any(line and not line.strip() for line in step3.splitlines())
 
 
 def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
@@ -1440,25 +1560,18 @@ def test_research_swarm_handoff_fields_render_values_at_launch(
     rendered_lead, rendered_linker = _render_swarm_with_dunder_artifacts(tmp_path)
 
     for rendered in (rendered_lead, rendered_linker):
-        loop_lines = [
-            line for line in rendered.splitlines() if "wait_name=" in line
-        ]
+        loop_lines = [line for line in rendered.splitlines() if "wait_name=" in line]
         assert loop_lines, "expected rendered wait.artifacts loop lines"
         assert "{{" not in rendered
         assert "{%" not in rendered
 
-    assert (
-        "wait_name=research.m.cdx label=research:202610/t/t__cdx.md"
-        in rendered_lead
-    )
+    assert "wait_name=research.m.cdx label=research:202610/t/t__cdx.md" in rendered_lead
     assert "t__final.md" in rendered_lead
     assert "gh_sase-org__sase" in rendered_linker
     assert "202610/t/t__infographic.png" in rendered_linker
 
 
-@pytest.mark.skipif(
-    shutil.which("prettier") is None, reason="prettier is unavailable"
-)
+@pytest.mark.skipif(shutil.which("prettier") is None, reason="prettier is unavailable")
 def test_research_swarm_handoff_fields_survive_prompt_formatting(
     tmp_path: Path,
 ) -> None:

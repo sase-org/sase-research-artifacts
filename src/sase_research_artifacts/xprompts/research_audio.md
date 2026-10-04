@@ -46,11 +46,13 @@ the stem, following the `research_image.md` stem rule (so `topic__final.md` beco
   following it exactly, with `source`, `source_blob`, `date`, `kind: research`, and
   `edition: {{ edition }}`. Set both `source` and `source_blob` from the selected
   report above, and use that same report for `lint --source`.
-- Use the corresponding `<stem>_infographic.png` as `cover` only when it is already
-  available beside the report. Strip `__final` when deriving `<stem>`. If the image is
-  not already available, omit `cover` and let the renderer generate its title card.
-  Do not wait for the image or linker, and do not rerender automatically when an image
-  later arrives.
+- After syncing the research checkout, use the corresponding
+  `<stem>_infographic.png` as `cover` when it exists beside the report. Strip
+  `__final` when deriving `<stem>`. In a swarm with `image=true` this agent starts
+  after the image agent, so the infographic is already there when one was produced.
+  Never poll or wait for the image in this prompt; omit `cover` when the file is
+  absent and let the renderer generate its title card. Do not rerender
+  automatically when an image later arrives.
 - Run `sase-listen lint <script> --source <report>` (the `lint --source`
   number-fidelity check) until it is clean.
 
@@ -62,14 +64,37 @@ approaches the inline ceiling, hand it to `/sase_monitor`.
 
 ## 5. Deliver
 
-Register the finished MP3 with
-`sase artifact create -p <audio_path> -l "Audio edition: <title>"`. The MP3 rides
-the completion notification to Telegram.
+Whichever turn finishes the render, including a `/sase_monitor` follow-up:
+
+1. Register the finished MP3 with
+   `sase artifact create -p <audio_path> -k file -l "audio:<episode_id>"`.
+   The structured label lets consumers filter exactly; Telegram still
+   `sendAudio`s it from ID3 tags, which it reads independently of the label.
+2. Publish the handoff variable from `sase-listen render --json`
+   (`chapter_count` is `len(chapters)`):
+
+   ```
+   sase var set audio --json --value-file - <<'JSON'
+   {
+     "ok": true,
+     "episode_id": "<episode_id>",
+     "title": "<title>",
+     "edition": "<edition>",
+     "duration_s": <duration_s>,
+     "chapter_count": <chapter_count>,
+     "script": "<YYYYMM>/<name>/<name>_narration.md",
+     "audio_path": "<audio_path>",
+     "published": <published>
+   }
+   JSON
+   ```
 
 ## 6. Report
 
 Report the duration, chapters, approximate cost, and whether it was published to the
 feed.
 
-On a render failure, report the error code and hint, and never switch narrators
-silently.
+On a render failure, run
+`sase var set audio --json --value '{"ok": false, "error": "<code>: <message>"}'`,
+register no artifact, report the error code and hint, never switch narrators, and
+complete normally so the linker can publish without a listen card.

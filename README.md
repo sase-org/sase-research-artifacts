@@ -116,11 +116,13 @@ diagnostic rather than running someone else's command on your machine.
   (`linker_model`, default `@xlarge`), for example
   `#research_swarm(prompt="A research topic", linker=true)`, plus an optional audio
   edition agent via `audio=true` (`audio_model`, default `@audio`; `audio_edition`,
-  default `brief`), which narrates the lead's consolidated report as soon as the lead
-  finishes, in parallel with optional image and linker work. Infographic cover art is
-  used only when it is already available; otherwise the renderer generates its title
-  card. The audio agent forks the lead to run
-  `#research/audio(edition=<audio_edition>)` (requires `uv tool install sase-listen`).
+  default `brief`), which implies the linker. The audio agent waits on the lead (and
+  on the image agent when `image=true`, using the infographic as cover), narrates
+  the lead's `<name>__final.md`, and completes with `sase var set audio` even on a
+  failed TTS render. The linker waits on audio and publishes `<name>.md` with a
+  listen card plus `audio:` frontmatter when the render succeeded. The audio agent
+  forks the lead to run `#research/audio(edition=<audio_edition>)` (requires
+  `uv tool install sase-listen`).
   Newly authored narration defaults to `brief`; edition selection never enables audio
   by itself. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse

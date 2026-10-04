@@ -1,9 +1,9 @@
 ---
 description:
   Launch independent per-provider research agents, then have a lead researcher extend
-  and consolidate their findings. Optionally generate an infographic, with a linker
-  agent that publishes the consolidated report, and optionally narrate the lead's
-  consolidated report while image and linker work continues.
+  and consolidate their findings. Optionally generate an infographic and/or a narrated
+  audio edition; `image=true` or `audio=true` implies a linker agent that publishes
+  the canonical report (with a listen card when audio succeeds).
 input:
   - name: prompt
     type: text
@@ -94,8 +94,9 @@ input:
     default: false
     description:
       Run a linker agent after the lead researcher (and after the image agent when
-      `image=true`). The lead then writes `<name>__final.md` while the linker
-      publishes `<name>.md`. The linker always runs when `image=true`.
+      `image=true`, and after the audio agent when `audio=true`). The lead then
+      writes `<name>__final.md` while the linker publishes `<name>.md`. The linker
+      always runs when `image=true` or `audio=true`.
   - name: linker_model
     type: word
     default: "@xlarge"
@@ -104,10 +105,11 @@ input:
     type: bool
     default: false
     description:
-      Narrate the lead's consolidated report after the lead finishes, in parallel with
-      optional image and linker work. Infographic cover art is used only when already
-      available; otherwise the renderer creates its title card. Does not imply the
-      linker.
+      Narrate the lead's consolidated report after the lead finishes, and after the
+      image agent when `image=true` (using the infographic as cover). Implies the
+      linker, which waits on this agent and publishes a listen card plus `audio:`
+      frontmatter. A failed TTS render completes this agent with `audio.ok=false` so
+      the linker publishes without a card.
   - name: audio_model
     type: word
     default: "@audio"
@@ -127,7 +129,7 @@ input:
 + ([{"short": "mus", "provider": "muse", "model": muse_model}] if muse and ("muse" | provider_enabled("hard")) else [])
 + ([{"short": "gem", "provider": "agy", "model": gemini_model}] if gemini and ("agy" | provider_enabled("hard")) else [])
 -%}
-{%- set run_linker = linker or image -%}
+{%- set run_linker = linker or image or audio -%}
 {%- set lead_report = "<name>__final.md" if run_linker else "<name>.md" -%}
 {%- set ns = namespace(layout_lines=["<month-dir>/<name>/"]) -%}
 {%- for r in researchers -%}
@@ -383,7 +385,7 @@ Final layout:
 ---
 
 %if(should_run={{ run_linker }}) %id(linker, clan=research.{@1}) %m:{{ linker_model }}
-%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
+%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}{% if audio %}%wait:research.{@1}.audio {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
 
 You are the linker agent for a research swarm. The lead researcher,
 `research.{@1}.final`, has written a consolidated report on the request below. Your job
@@ -415,6 +417,16 @@ The image agent's registered images:
 - wait_name={{ a.wait_name }} label={{ a.label }} vcs_relpath={{ a.vcs_relpath }} path={{ a.path }} ref={{ a.ref }}
 {% endfor %}{% endraw %}
 {% endif %}
+{% if audio %}
+The audio agent's narrated edition:
+
+{% raw %}{% if agents is defined %}{% for key, outputs in agents.items() if outputs.audio is defined %}
+- agent={{ key }} audio={{ outputs.audio }}
+{% endfor %}{% endif %}
+{% for a in wait.artifacts if a.kind == "file" and a.label and a.label.startswith("audio:") %}
+- wait_name={{ a.wait_name }} label={{ a.label }} path={{ a.path }} ref={{ a.ref }}
+{% endfor %}{% endraw %}
+{% endif %}
 Steps:
 
 1. **Identify the source.** From the registered reports above, find exactly one entry
@@ -432,7 +444,7 @@ Steps:
    table, and link in the lead's report.
 3. **Restructure** the lead's report into a well-thought-out organization:
    - Keep the frontmatter, updating `updated_time` if present.
-   - **Open the file in this exact order**, with nothing else between these parts: the frontmatter (if any), one `#` title, the research query, {%- if image %} the infographic, {%- endif %} and then the bottom-line section.
+   - **Open the file in this exact order**, with nothing else between these parts: the frontmatter (if any), one `#` title, the research query,{%- if audio %} the listen card,{%- endif %}{%- if image %} the infographic,{%- endif %} and then the bottom-line section.
    - **Research query.** Directly below the title, add one blockquote that summarizes
      the research request above in one to three sentences, for example
      `> **Research query:** <summary>`. Phrase it as the question or task being
@@ -443,15 +455,54 @@ Steps:
      one short sentence verbatim. Never fold findings, answers, or scope the request
      does not state into it. It is not a heading, so it gets no section number and no
      TOC entry.
+   {%- if audio %}
+   - **Listen card.** Facts come from the `audio` variable of `research.{@1}.audio`
+     when `ok` is true. If the variable is missing but an `audio:<episode_id>`
+     artifact is listed, recover the facts with `sase-listen ls <episode_id> --json`
+     (or `uvx sase-listen …`): `audio.duration_s`, chapter count, `script.edition`.
+     If `ok` is false or nothing is listed, publish with no card and no `audio:`
+     frontmatter, and say so in the final response (never write "audio pending").
+     Add this frontmatter mapping (create a frontmatter block if the lead's report
+     has none), copying numbers verbatim, never inventing them:
+
+     ```yaml
+     audio:
+       edition: brief
+       duration_s: 250.34
+       chapter_count: 3
+       episode_id: a-listen-link-for-research-reports-d74298
+     ```
+
+     No library path, MP3 path, feed URL, artifact id, or `file:` ref — the research
+     repo is public. Insert the card exactly once, directly below the research-query
+     blockquote and above the infographic, with the blank lines shown (they make
+     GitHub and pandoc parse the inner Markdown):
+
+     ```markdown
+     <div class="listen">
+
+     ♫ **Brief audio edition** · 4 min · 3 chapters · [Narration
+     script](<name>_narration.md)
+
+     </div>
+     ```
+
+     Rules: edition word capitalized (`Brief` / `Full`); minutes =
+     `max(1, round(duration_s / 60))`; `1 chapter` singular; drop the chapters
+     segment if the count is unknown; include the script segment only when
+     `<name>_narration.md` exists beside the report in the research checkout;
+     nothing else inside the div; not a heading; not inside the blockquote; never
+     a link to an MP3, library path, feed URL, or `highlights://` URI.
+   {%- endif %}
    {%- if image %}
    - **Embed the infographic** exactly once, directly above the bottom-line section:
-     after the research query and before that section's `##` heading, never further
+     after the{% if audio %} listen card{% else %} research query{% endif %} and before that section's `##` heading, never further
      down. Use a relative link with descriptive alt text, for example
      `![<alt text>](<name>_infographic.png)`. Locate it by the
      `<name>_infographic.png` convention or the image entries above. Embed only a file
      you have confirmed exists beside the report in your research checkout. If the
-     image agent completed without producing one, publish without it (the research
-     query then sits directly above the bottom-line section) and say so in the final
+     image agent completed without producing one, publish without it (the{% if audio %} listen
+     card{% else %} research query{% endif %} then sits directly above the bottom-line section) and say so in the final
      response.
    {%- endif %}
    - **Bottom-line section.** The first `##` section is `## Bottom line` (or
@@ -493,7 +544,7 @@ Steps:
 
 6. **Re-check against the step-2 inventory** and restore anything missing or changed.
    Every URL in `<name>__final.md` must appear in the new file unless it was listed as
-   unrepairable. Then confirm the file opens in the step-3 order: title, research query, {%- if image %} infographic, {%- endif %} bottom-line section.
+   unrepairable. Then confirm the file opens in the step-3 order: title, research query,{%- if audio %} listen card,{%- endif %}{%- if image %} infographic,{%- endif %} bottom-line section.
 
 7. **Write** `<YYYYMM>/<name>/<name>.md` without overwrite. On a collision, stop and
    report it.
@@ -512,4 +563,4 @@ Final layout:
 ---
 
 %if(should_run={{ audio }}) %id(audio, clan=research.{@1}) %m:{{ audio_model }}
-%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
+%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
