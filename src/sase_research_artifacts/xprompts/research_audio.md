@@ -3,7 +3,7 @@ name: research/audio
 description: Narrate a research report as a chaptered MP3 audio edition with sase-listen.
 input:
   - name: edition
-    type: word
+    type: sase-research-artifacts@audio_edition
     default: "brief"
     description:
       "Narration edition: brief (about 4 minutes, the default) or full (about 16

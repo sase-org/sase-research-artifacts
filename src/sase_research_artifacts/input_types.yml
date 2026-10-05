@@ -1,0 +1,7 @@
+schema_version: 1
+types:
+  audio_edition:
+    description: Narration length for guide-backed audio editions.
+    choices:
+      - { value: brief, description: About 4 minutes }
+      - { value: full, label: Full edition, description: About 16 minutes }

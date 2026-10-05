@@ -38,7 +38,7 @@ a package.
 
 | Name      | Type | Default | Description                                              |
 | --------- | ---- | ------- | -------------------------------------------------------- |
-| `edition` | word | `brief` | Narration edition: `brief` or `full` (guide-backed authoring choices) |
+| `edition` | `sase-research-artifacts@audio_edition` | `brief` | Narration edition: `brief` or `full` (guide-backed authoring choices) |
 | `rewrite` | bool | `false` | Rewrite `<stem>_narration.md` even when one already exists |
 
 Newly authored narration defaults to `brief` (about 4 minutes); pass
@@ -92,19 +92,19 @@ recommendation, then hands off to `#research` to write it up.
 | `grok`                  | bool | `false`                                 | Request the grok researcher                              |
 | `muse`                  | bool | `false`                                 | Request the muse researcher                              |
 | `gemini`                | bool | `false`                                 | Request the gemini (Antigravity) researcher              |
-| `codex_model`           | word | `codex/gpt-6.1-sol@xhigh`               | Model for `<clan>.cdx`                                   |
-| `claude_model`          | word | `claude/opus@xhigh`                     | Model for `<clan>.cld`                                   |
-| `grok_model`            | word | `grok/grok-4.6@xhigh`                   | Model for `<clan>.grk`                                   |
-| `muse_model`            | word | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
-| `gemini_model`          | word | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
-| `lead_model`            | word | `@xlarge`                               | Model for `<clan>.final`                                 |
+| `codex_model`           | model | `codex/gpt-6.1-sol@xhigh`               | Model for `<clan>.cdx`                                   |
+| `claude_model`          | model | `claude/opus@xhigh`                     | Model for `<clan>.cld`                                   |
+| `grok_model`            | model | `grok/grok-4.6@xhigh`                   | Model for `<clan>.grk`                                   |
+| `muse_model`            | model | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
+| `gemini_model`          | model | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
+| `lead_model`            | model | `@xlarge`                               | Model for `<clan>.final`                                 |
 | `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker)             |
-| `image_model`           | word | `@image`                                | Model for `<clan>.image`                                 |
+| `image_model`           | model | `@image`                                | Model for `<clan>.image`                                 |
 | `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true` or `audio=true`) |
-| `linker_model`          | word | `@xlarge`                               | Model for `<clan>.linker`                                |
+| `linker_model`          | model | `@xlarge`                               | Model for `<clan>.linker`                                |
 | `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (implies the linker)             |
-| `audio_model`           | word | `@audio`                                | Model for `<clan>.audio`                                 |
-| `audio_edition`         | word | `brief`                                 | Narration edition for `<clan>.audio` (`brief` or `full`) |
+| `audio_model`           | model | `@audio`                                | Model for `<clan>.audio`                                 |
+| `audio_edition`         | `sase-research-artifacts@audio_edition` | `brief` | Narration edition for `<clan>.audio` (`brief` or `full`) |
 
 Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unquoted
 comma is parsed as a separate macro argument.

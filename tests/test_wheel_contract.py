@@ -96,6 +96,7 @@ def test_wheel_contains_provider_defaults_and_all_six_macros(
 
     assert f"{PACKAGE_NAME}/provider.py" in names
     assert f"{PACKAGE_NAME}/default_config.yml" in names
+    assert f"{PACKAGE_NAME}/input_types.yml" in names
     # The packaged directory keeps its `xprompts/` name during the transition.
     for macro in (
         "research.md",
@@ -122,6 +123,7 @@ def test_sdist_contains_provider_defaults_and_all_six_macros(
     assert all("src/sase_research/" not in member for member in members)
     assert "provider.py" in names
     assert "default_config.yml" in names
+    assert "input_types.yml" in names
     for macro in (
         "research.md",
         "research_audio.md",

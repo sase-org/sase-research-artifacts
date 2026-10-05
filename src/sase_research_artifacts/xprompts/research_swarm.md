@@ -50,31 +50,31 @@ input:
     default: false
     description: Request the gemini (Antigravity) researcher.
   - name: codex_model
-    type: word
+    type: model
     default: "codex/gpt-6.1-sol@xhigh"
     description: Model for `<clan>.cdx`.
   - name: claude_model
-    type: word
+    type: model
     default: "claude/opus@xhigh"
     description: Model for `<clan>.cld`.
   - name: grok_model
-    type: word
+    type: model
     default: "grok/grok-4.6@xhigh"
     description: Model for `<clan>.grk`.
   - name: muse_model
-    type: word
+    type: model
     default: "muse/muse-spark-1.3-contributor@xhigh"
     description:
       Model for `<clan>.mus`. The default carries SASE's `warn` model advisory
       ("trains on your data"), which is part of why `muse` defaults off.
   - name: gemini_model
-    type: word
+    type: model
     default: "agy/gemini-3.8-flash-high"
     description:
       Model for `<clan>.gem`. Antigravity (`agy`) rejects explicit `@effort`
       suffixes; choose effort through the model slug (`-high`/`-medium`/`-low`).
   - name: lead_model
-    type: word
+    type: model
     default: "@xlarge"
     description:
       Model alias or provider model for the `.final` lead researcher and consolidator.
@@ -86,7 +86,7 @@ input:
       agent, which embeds the infographic directly above the published report's
       bottom line.
   - name: image_model
-    type: word
+    type: model
     default: "@image"
     description: Model alias or provider model for the `<clan>.image` agent.
   - name: linker
@@ -98,7 +98,7 @@ input:
       writes `<name>__final.md` while the linker publishes `<name>.md`. The linker
       always runs when `image=true` or `audio=true`.
   - name: linker_model
-    type: word
+    type: model
     default: "@xlarge"
     description: Model alias or provider model for the `<clan>.linker` agent.
   - name: audio
@@ -111,11 +111,11 @@ input:
       listen card plus `audio:` frontmatter. A failed TTS render completes this
       agent with `audio.ok=false` so the linker publishes without a card.
   - name: audio_model
-    type: word
+    type: model
     default: "@audio"
     description: Model alias or provider model for the `<clan>.audio` agent.
   - name: audio_edition
-    type: word
+    type: sase-research-artifacts@audio_edition
     default: "brief"
     description:
       Narration edition passed to `#research/audio` when `audio=true` (`brief`

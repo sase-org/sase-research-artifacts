@@ -207,12 +207,27 @@ def test_all_six_research_macros_load() -> None:
     }
 
 
+def test_input_types_yml_is_importable_from_the_package() -> None:
+    import importlib.resources
+
+    text = (
+        importlib.resources.files("sase_research_artifacts")
+        .joinpath("input_types.yml")
+        .read_text(encoding="utf-8")
+    )
+    assert "audio_edition:" in text
+    assert "value: brief" in text
+    assert "value: full" in text
+
+
 def test_research_audio_declares_typed_input() -> None:
     xp = _research_macros()["research/audio"]
-    assert [(arg.name, arg.type.value) for arg in xp.inputs] == [
-        ("edition", "word"),
+    assert [(arg.name, arg.named_type or arg.type.value) for arg in xp.inputs] == [
+        ("edition", "sase-research-artifacts@audio_edition"),
         ("rewrite", "bool"),
     ]
+    assert xp.inputs[0].type.value == "enum"
+    assert [choice.value for choice in xp.inputs[0].choices] == ["brief", "full"]
     assert xp.inputs[0].default == "brief"
     assert xp.inputs[1].default is False
 
@@ -234,6 +249,26 @@ def test_research_audio_explicit_full_uses_full_guide() -> None:
     assert "sase-listen guide --edition full" in expansion
     assert "edition: full" in expansion
     assert "sase-listen guide --edition brief" not in expansion
+
+
+def test_research_audio_rejects_misspelled_edition_with_brief_suggestion() -> None:
+    from sase.macro._exceptions import MacroArgumentError
+
+    with pytest.raises(MacroArgumentError, match="did you mean `brief`"):
+        _expand_audio({"edition": "breif"})
+
+
+def test_research_audio_colon_shorthand_rejects_breif() -> None:
+    from sase.macro._exceptions import MacroError
+    from sase.macro.processor import process_macro_references_with_catalog
+
+    catalog = {"research/audio": _research_macros()["research/audio"]}
+    with pytest.raises(MacroError, match="did you mean `brief`"):
+        process_macro_references_with_catalog(
+            "#research/audio:breif",
+            catalog,
+            raise_on_error=True,
+        )
 
 
 def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
@@ -273,7 +308,7 @@ def test_research_prompt_declares_typed_input() -> None:
 
 def test_research_swarm_declares_typed_input() -> None:
     xp = _research_macros()["research_swarm"]
-    assert [(arg.name, arg.type.value) for arg in xp.inputs] == [
+    assert [(arg.name, arg.named_type or arg.type.value) for arg in xp.inputs] == [
         ("prompt", "text"),
         ("wait", "word"),
         ("priority", "int"),
@@ -283,20 +318,23 @@ def test_research_swarm_declares_typed_input() -> None:
         ("grok", "bool"),
         ("muse", "bool"),
         ("gemini", "bool"),
-        ("codex_model", "word"),
-        ("claude_model", "word"),
-        ("grok_model", "word"),
-        ("muse_model", "word"),
-        ("gemini_model", "word"),
-        ("lead_model", "word"),
+        ("codex_model", "model"),
+        ("claude_model", "model"),
+        ("grok_model", "model"),
+        ("muse_model", "model"),
+        ("gemini_model", "model"),
+        ("lead_model", "model"),
         ("image", "bool"),
-        ("image_model", "word"),
+        ("image_model", "model"),
         ("linker", "bool"),
-        ("linker_model", "word"),
+        ("linker_model", "model"),
         ("audio", "bool"),
-        ("audio_model", "word"),
-        ("audio_edition", "word"),
+        ("audio_model", "model"),
+        ("audio_edition", "sase-research-artifacts@audio_edition"),
     ]
+    audio_edition = next(arg for arg in xp.inputs if arg.name == "audio_edition")
+    assert audio_edition.type.value == "enum"
+    assert [choice.value for choice in audio_edition.choices] == ["brief", "full"]
     assert xp.inputs[0].default is UNSET
     assert xp.inputs[1].default is None
     assert xp.inputs[2].default is None
@@ -319,6 +357,22 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[19].default is False
     assert xp.inputs[20].default == "@audio"
     assert xp.inputs[21].default == "brief"
+
+
+def test_research_swarm_rejects_unroutable_model_with_suggestion() -> None:
+    from sase.macro._exceptions import MacroArgumentError, MacroError
+    from sase.macro.processor import process_macro_references_with_catalog
+
+    xp = _research_macros()["research_swarm"]
+    with pytest.raises(MacroArgumentError, match="did you mean"):
+        expand_single_macro(xp, ["some topic"], {"claude_model": "opsu"})
+
+    with pytest.raises(MacroError, match="did you mean"):
+        process_macro_references_with_catalog(
+            "#research_swarm(claude_model=opsu): some topic",
+            {"research_swarm": xp},
+            raise_on_error=True,
+        )
 
 
 def test_research_swarm_has_nine_top_level_segments() -> None:
@@ -518,31 +572,31 @@ def test_research_swarm_omitted_models_use_per_provider_defaults() -> None:
 def test_research_swarm_custom_models_route_to_matching_roles_only() -> None:
     cdx, cld, grk, mus, gem, final = _swarm_segments(
         {
-            "codex_model": "@codex_custom",
-            "claude_model": "@claude_custom",
-            "grok_model": "@grok_custom",
-            "muse_model": "@muse_custom",
-            "gemini_model": "@gemini_custom",
-            "lead_model": "@lead_custom",
+            "codex_model": "codex/codex-custom",
+            "claude_model": "claude/claude-custom",
+            "grok_model": "grok/grok-custom",
+            "muse_model": "muse/muse-custom",
+            "gemini_model": "agy/gemini-custom",
+            "lead_model": "codex/lead-custom",
             "grok": "true",
             "muse": "true",
             "gemini": "true",
         }
     )
 
-    assert "%m:@codex_custom" in cdx
-    assert "%m:@claude_custom" in cld
-    assert "%m:@grok_custom" in grk
-    assert "%m:@muse_custom" in mus
-    assert "%m:@gemini_custom" in gem
-    assert "%m:@lead_custom" in final
+    assert "%m:codex/codex-custom" in cdx
+    assert "%m:claude/claude-custom" in cld
+    assert "%m:grok/grok-custom" in grk
+    assert "%m:muse/muse-custom" in mus
+    assert "%m:agy/gemini-custom" in gem
+    assert "%m:codex/lead-custom" in final
 
-    assert "@codex_custom" not in cld + grk + mus + gem + final
-    assert "@claude_custom" not in cdx + grk + mus + gem + final
-    assert "@grok_custom" not in cdx + cld + mus + gem + final
-    assert "@muse_custom" not in cdx + cld + grk + gem + final
-    assert "@gemini_custom" not in cdx + cld + grk + mus + final
-    assert "@lead_custom" not in cdx + cld + grk + mus + gem
+    assert "codex/codex-custom" not in cld + grk + mus + gem + final
+    assert "claude/claude-custom" not in cdx + grk + mus + gem + final
+    assert "grok/grok-custom" not in cdx + cld + mus + gem + final
+    assert "muse/muse-custom" not in cdx + cld + grk + gem + final
+    assert "agy/gemini-custom" not in cdx + cld + grk + mus + final
+    assert "codex/lead-custom" not in cdx + cld + grk + mus + gem
     _assert_each_segment_has_one_queue([cdx, cld, grk, mus, gem, final])
 
 
@@ -992,28 +1046,28 @@ def test_research_swarm_linker_opt_in_adds_segment() -> None:
 
 def test_research_swarm_linker_model_routes_to_linker_only() -> None:
     segments = _swarm_segments(
-        {"linker_model": "@linker_custom", "lead_model": "@lead_custom"},
+        {"linker_model": "codex/linker-custom", "lead_model": "codex/lead-custom"},
         linker=True,
     )
     *_, final, linker = segments
-    assert "%m:@linker_custom" in linker
-    assert "@lead_custom" not in linker
-    assert "@linker_custom" not in final
-    assert "%m:@lead_custom" in final
+    assert "%m:codex/linker-custom" in linker
+    assert "codex/lead-custom" not in linker
+    assert "codex/linker-custom" not in final
+    assert "%m:codex/lead-custom" in final
     _assert_each_segment_has_one_queue(segments)
 
 
 def test_research_swarm_image_model_routes_to_image_only() -> None:
     segments = _swarm_segments(
-        {"image_model": "@image_custom", "lead_model": "@lead_custom"},
+        {"image_model": "agy/image-custom", "lead_model": "codex/lead-custom"},
         image=True,
     )
     *_, final, image, linker = segments
-    assert "%m:@image_custom" in image
-    assert "@lead_custom" not in image
-    assert "@image_custom" not in final
-    assert "@image_custom" not in linker
-    assert "%m:@lead_custom" in final
+    assert "%m:agy/image-custom" in image
+    assert "codex/lead-custom" not in image
+    assert "agy/image-custom" not in final
+    assert "agy/image-custom" not in linker
+    assert "%m:codex/lead-custom" in final
     assert "%m:@xlarge" in linker
     _assert_each_segment_has_one_queue(segments)
 
@@ -1211,15 +1265,15 @@ def test_research_swarm_audio_implies_linker() -> None:
 
 def test_research_swarm_audio_model_routes_to_audio_only() -> None:
     segments = _swarm_segments(
-        {"audio_model": "@audio_custom", "lead_model": "@lead_custom"},
+        {"audio_model": "codex/audio-custom", "lead_model": "codex/lead-custom"},
         audio=True,
     )
     *_, final, linker, audio = segments
-    assert "%m:@audio_custom" in audio
-    assert "@lead_custom" not in audio
-    assert "@audio_custom" not in final
-    assert "@audio_custom" not in linker
-    assert "%m:@lead_custom" in final
+    assert "%m:codex/audio-custom" in audio
+    assert "codex/lead-custom" not in audio
+    assert "codex/audio-custom" not in final
+    assert "codex/audio-custom" not in linker
+    assert "%m:codex/lead-custom" in final
     _assert_each_segment_has_one_queue(segments)
 
 
