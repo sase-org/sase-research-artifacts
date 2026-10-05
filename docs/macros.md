@@ -28,10 +28,11 @@ file's stem with any trailing `__final` removed (so `topic__final.md` becomes
 
 ## `#research/audio` -- Narrate an Audio Edition
 
-Narrates a research report as a chaptered MP3 audio edition. Requires
-`uv tool install sase-listen`: the macro drives the installed CLI (`guide` to
-author the script, `lint --source` to check it, `render --json` to synthesize it)
-and never depends on it as a package.
+Narrates a research report as a chaptered MP3 audio edition with a generated
+podcast title card. Requires `uv tool install sase-listen`: the macro drives
+the installed CLI (`guide` to author the script, `lint --source` to check it,
+`render --generated-cover --json` to synthesize it) and never depends on it as
+a package.
 
 ### Input
 
@@ -51,10 +52,11 @@ narrates the report the lead wrote: `<name>__final.md` when the linker runs,
 otherwise the lead's `<name>.md`. Do not poll for a later published file. The
 narration script is `<stem>_narration.md` next to the report (with `__final`
 stripped from the stem, following the `#research/image` stem rule) and carries
-`source`, `source_blob`, `date`, `kind: research`, `edition`, and `cover` when
-`<stem>_infographic.png` exists beside the report after syncing the research
-checkout. An existing script is reused unless direct
-`#research/audio(..., rewrite=true)` is requested. The finished MP3 is registered
+`source`, `source_blob`, `date`, `kind: research`, and `edition`. Newly authored
+scripts omit `cover`; reused scripts retain their narration and metadata, with
+`sase-listen render --generated-cover` overriding any existing artwork. An
+existing script is reused unless direct `#research/audio(..., rewrite=true)` is
+requested. The finished MP3 is registered
 with `sase artifact create -p <audio_path> -k file -l "audio:<episode_id>"` and
 the agent sets `sase var set audio` from `render --json`. A failed TTS render
 sets `audio.ok=false`, registers no artifact, and completes normally.
@@ -181,13 +183,14 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    listen card when audio succeeded, then the infographic when one was generated,
    then the `## Bottom line` / `## Overview` section. Restructured sections with
    checked links and in-document jump links follow.
-9. **`<clan>.audio`** -- optional; when `audio=true`, waits on the lead (and on the
-   image agent when `image=true`, so the infographic can be the cover) and never
-   on the linker, forks from the lead's segment, then runs
-   `#research/audio(edition=<audio_edition>)` using `audio_model` (default
-   `@audio`) and `audio_edition` (default `brief`; `brief` or `full` are the
-   supported guide-backed authoring choices). `audio=true` implies the linker,
-   which publishes a listen card. Requires `uv tool install sase-listen`.
+9. **`<clan>.audio`** -- optional; when `audio=true`, waits only on the lead and
+   never on the linker, running alongside the optional image agent, forks from
+   the lead's segment, then runs `#research/audio(edition=<audio_edition>)`
+   using `audio_model` (default `@audio`) and `audio_edition` (default `brief`;
+   `brief` or `full` are the supported guide-backed authoring choices) with a
+   generated podcast title card. `audio=true` implies the linker, which joins
+   all enabled outputs and publishes a listen card. Requires
+   `uv tool install sase-listen`.
 
 The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
 registers it only when the linker runs, and the linker derives its output directory

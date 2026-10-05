@@ -241,12 +241,19 @@ def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
     assert "sase-listen guide" in xp.content
     assert "lint --source" in xp.content
     assert "render --json" in xp.content
+    assert "--generated-cover" in xp.content
+    assert "sase-listen render <script> --generated-cover --json" in xp.content
     assert "sase artifact create" in xp.content
     assert '-l "audio:<episode_id>"' in xp.content
     assert "sase var set audio" in xp.content
     assert "complete normally" in xp.content
     assert "Never poll or wait for the image in this prompt" in xp.content
     assert "Do not wait for the image or linker" not in xp.content
+    assert "render --help" in xp.content
+    assert "audio.ok=false" in xp.content
+    assert "Do not silently drop the option" in xp.content
+    assert "Omit `cover`" in xp.content
+    assert "as `cover` when it exists" not in xp.content
 
 
 def test_research_prompt_declares_typed_input() -> None:
@@ -429,7 +436,8 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%id(audio, clan=research.{@1})" in audio
     assert "%if(should_run={{ audio }})" in audio
     assert "%wait:research.{@1}.final" in audio
-    assert "{% if image %}%wait:research.{@1}.image" in audio
+    assert "%wait:research.{@1}.image" not in audio
+    assert "{% if image %}%wait:research.{@1}.image" not in audio
     assert "%wait:research.{@1}.linker" not in audio
     assert "#fork:research.{@1}.final" in audio
     assert "#research/audio(edition={{ audio_edition }})" in audio
@@ -1087,10 +1095,13 @@ def test_research_swarm_audio_opt_in_waits_only_for_lead() -> None:
     image_segments = _swarm_segments({}, image=True, audio=True)
     assert len(image_segments) == 6
     *_, image_final, image, image_linker, image_audio = image_segments
+    assert "%wait:research.{@1}.final" in image_audio
     assert "%wait:research.{@1}.linker" not in image_audio
     assert "#research/audio" in image_audio
-    assert "%wait:research.{@1}.image" in image_audio
+    assert "%wait:research.{@1}.image" not in image_audio
+    assert "%wait:research.{@1}.final" in image
     assert "%wait:research.{@1}.audio" in image_linker
+    assert "%wait:research.{@1}.image" in image_linker
     assert "<name>_narration.md" in image_final
     assert "<name>_infographic.png" in image_linker
     _assert_each_segment_has_one_queue(image_segments)
@@ -1122,16 +1133,15 @@ def test_research_swarm_audio_planner_edges_and_lead_source(
         and unit.payload.identity.endswith(".final")
     )
     audio = by_role["audio"]
-    expected_audio_waits = [lead.logical_id]
-    if image:
-        expected_audio_waits.append(by_role["image"].logical_id)
-    assert [edge.logical_id for edge in audio.waits] == expected_audio_waits
+    assert [edge.logical_id for edge in audio.waits] == [lead.logical_id]
     assert all(edge.kind == "logical" for edge in audio.waits)
     assert "linker" in by_role
 
     if image:
         image_unit = by_role["image"]
         assert [edge.logical_id for edge in image_unit.waits] == [lead.logical_id]
+        assert audio.logical_id not in [edge.logical_id for edge in image_unit.waits]
+        assert image_unit.logical_id not in [edge.logical_id for edge in audio.waits]
     linker_unit = by_role["linker"]
     expected_linker_waits = [lead.logical_id]
     if image:
@@ -1155,11 +1165,41 @@ def test_research_swarm_audio_planner_edges_and_lead_source(
     assert "use that same report for `lint --source`" in normalized_audio
     assert "Never poll or wait for the image in this prompt" in normalized_audio
     assert "Do not wait for the image or linker" not in normalized_audio
+    assert "--generated-cover" in normalized_audio
+    assert "sase-listen render <script> --generated-cover --json" in normalized_audio
+    assert "render --help" in normalized_audio
+    assert "audio.ok=false" in normalized_audio
+    assert "Do not silently drop the option" in normalized_audio
+    assert "as `cover` when it exists" not in normalized_audio
 
     lead_segment = next(
         segment for segment in segments if "%id:research.{@1}.final" in segment
     )
     assert "<name>__final.md" in lead_segment
+
+
+def test_research_swarm_audio_expanded_uses_generated_cover_across_editions() -> None:
+    """Full and brief expanded audio both use the generated-cover render."""
+
+    from sase.macro.processor import process_macro_references_with_catalog
+
+    for edition in ("brief", "full"):
+        for image in (False, True):
+            segments = _swarm_segments(
+                {"audio_edition": edition}, image=image, audio=True
+            )
+            expanded = process_macro_references_with_catalog(
+                segments[-1],
+                {"research/audio": _research_macros()["research/audio"]},
+                raise_on_error=True,
+            )
+            normalized = re.sub(r"\s+", " ", expanded)
+            assert "sase-listen render <script> --generated-cover --json" in normalized
+            assert f"sase-listen guide --edition {edition}" in normalized
+            assert f"edition: {edition}" in normalized
+            assert "render --help" in normalized
+            assert "audio.ok=false" in normalized
+            assert "as `cover` when it exists" not in normalized
 
 
 def test_research_swarm_audio_implies_linker() -> None:
@@ -1261,8 +1301,9 @@ def test_research_swarm_audio_edition_with_linker_and_image() -> None:
     image_segments = _swarm_segments({"audio_edition": "full"}, image=True, audio=True)
     assert len(image_segments) == 6
     *_, image_linker, image_audio = image_segments
+    assert "%wait:research.{@1}.final" in image_audio
     assert "%wait:research.{@1}.linker" not in image_audio
-    assert "%wait:research.{@1}.image" in image_audio
+    assert "%wait:research.{@1}.image" not in image_audio
     assert "%wait:research.{@1}.audio" in image_linker
     assert "#research/audio(edition=full)" in image_audio
     assert "{{ audio_edition }}" not in image_audio

@@ -105,11 +105,11 @@ input:
     type: bool
     default: false
     description:
-      Narrate the lead's consolidated report after the lead finishes, and after the
-      image agent when `image=true` (using the infographic as cover). Implies the
-      linker, which waits on this agent and publishes a listen card plus `audio:`
-      frontmatter. A failed TTS render completes this agent with `audio.ok=false` so
-      the linker publishes without a card.
+      Narrate the lead's consolidated report after the lead finishes, running
+      alongside the optional image agent when `image=true` and using a generated
+      title card. Implies the linker, which waits on this agent and publishes a
+      listen card plus `audio:` frontmatter. A failed TTS render completes this
+      agent with `audio.ok=false` so the linker publishes without a card.
   - name: audio_model
     type: word
     default: "@audio"
@@ -563,4 +563,4 @@ Final layout:
 ---
 
 %if(should_run={{ audio }}) %id(audio, clan=research.{@1}) %m:{{ audio_model }}
-%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
+%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
