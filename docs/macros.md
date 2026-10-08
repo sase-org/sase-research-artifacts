@@ -110,8 +110,9 @@ Quote `wait` when passing several comma-separated agents (`wait="a,b"`); an unqu
 comma is parsed as a separate macro argument.
 
 A three-agent macro swarm by default (codex + claude researchers plus the lead), up
-to nine authored segments (five researchers, the lead, the image agent, the linker
-agent, the audio agent). `grok=true` /
+to nine launched agents (five researchers, the lead, the image agent, the linker
+agent, the audio agent). Each enabled researcher is rendered from one shared
+researcher template. `grok=true` /
 `muse=true` / `gemini=true` each add a researcher; `codex=false` (or any provider flag
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
@@ -151,8 +152,8 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
 
 1. **`<clan>.cdx`** -- the codex researcher (`codex/gpt-6.1-sol@xhigh`), writing a
    self-named descriptive report via `#research(suffix=cdx)`; when supplied, also waits
-   on the `wait` argument's agent(s). Gated by `%if(should_run=...)` on the `codex`
-   flag plus the `provider_enabled` filter.
+   on the `wait` argument's agent(s). Rendered only when `codex` is true
+   and the provider is not hard-disabled.
 2. **`<clan>.cld`** -- the claude researcher (`claude/opus@xhigh`), run independently
    in parallel, writing a self-named descriptive report via `#research(suffix=cld)`;
    when supplied, also waits on the `wait` argument's agent(s). Gated the same way.

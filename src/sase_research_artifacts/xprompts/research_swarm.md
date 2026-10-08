@@ -121,6 +121,18 @@ input:
       Narration edition passed to `#research/audio` when `audio=true` (`brief`
       runs about 4 minutes, `full` about 16 minutes). Supplying it alone never
       launches the audio agent and never implies the linker.
+macros:
+  _queue:
+    description: Runner-queue admission shared by every swarm member.
+    content: |-
+      %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
+  _report_records:
+    description:
+      Launch-time list of the research reports registered by the awaited agents.
+    content: |-
+      {% raw %}{% for a in wait.artifacts if a.kind == "markdown" and a.label and a.label.startswith("research:") %}
+      - wait_name={{ a.wait_name }} label={{ a.label }} source_path={{ a.source_path }} path={{ a.path }} ref={{ a.ref }}
+      {% endfor %}{% endraw %}
 ---
 {%- set researchers =
   ([{"short": "cdx", "provider": "codex", "model": codex_model}] if codex and ("codex" | provider_enabled("hard")) else [])
@@ -131,40 +143,29 @@ input:
 -%}
 {%- set run_linker = linker or image or audio -%}
 {%- set lead_report = "<name>__final.md" if run_linker else "<name>.md" -%}
-{%- set ns = namespace(layout_lines=["<month-dir>/<name>/"]) -%}
-{%- for r in researchers -%}
-{%- set _ = ns.layout_lines.append("├── <name>__" ~ r.short ~ ".md") -%}
-{%- endfor -%}
-{%- if audio -%}
-{%- set _ = ns.layout_lines.append("├── " ~ lead_report) -%}
-{%- set _ = ns.layout_lines.append("└── <name>_narration.md") -%}
-{%- else -%}
-{%- set _ = ns.layout_lines.append("└── " ~ lead_report) -%}
-{%- endif -%}
-{%- set layout_body = ns.layout_lines | join("\n") -%}
-{%- set lns = namespace(linker_layout_lines=["<month-dir>/<name>/"]) -%}
-{%- for r in researchers -%}
-{%- set _ = lns.linker_layout_lines.append("├── <name>__" ~ r.short ~ ".md") -%}
-{%- endfor -%}
-{%- set _ = lns.linker_layout_lines.append("├── <name>__final.md") -%}
-{%- if image -%}
-{%- set _ = lns.linker_layout_lines.append("├── <name>_infographic.png") -%}
-{%- endif -%}
-{%- if audio -%}
-{%- set _ = lns.linker_layout_lines.append("├── <name>.md") -%}
-{%- set _ = lns.linker_layout_lines.append("└── <name>_narration.md") -%}
-{%- else -%}
-{%- set _ = lns.linker_layout_lines.append("└── <name>.md") -%}
-{%- endif -%}
-{%- set linker_layout_body = lns.linker_layout_lines | join("\n") -%}
-%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }}) %id(cdx, clan=research.{@1})
-%m:{{ codex_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
-{% set peers = researchers | rejectattr("short", "equalto", "cdx") | list %}
-You are researcher cdx in a {{ researchers | length }}-researcher swarm.
+{%- set drafts = [] -%}
+{%- for r in researchers %}{% set _ = drafts.append("<name>__" ~ r.short ~ ".md") %}{% endfor -%}
+{%- set narration = ["<name>_narration.md"] if audio else [] -%}
+{%- set lead_files = drafts + [lead_report] + narration -%}
+{%- set linker_files = drafts + ["<name>__final.md"] + (["<name>_infographic.png"] if image else []) + ["<name>.md"] + narration -%}
+{%- macro tree(files) -%}
+{{ "```text" }}
+<month-dir>/<name>/
+{%- for f in files %}
+{{ "└──" if loop.last else "├──" }} {{ f }}
+{%- endfor %}
+{{ "```" }}
+{%- endmacro -%}
+{%- for r in researchers %}
+{%- set peers = researchers | rejectattr("short", "equalto", r.short) | list %}
+%id({{ r.short }}, clan=research.{@1})
+%m:{{ r.model }} {% if wait %}%wait:{{ wait }} {% endif %}#_queue
+
+You are researcher {{ r.short }} in a {{ researchers | length }}-researcher swarm.
 {% if peers -%}
-The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__cdx.md`.
+The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__{{ r.short }}.md`.
 {% else -%}
-You are the only independent researcher in this swarm. Your report will end in `__cdx.md`.
+You are the only independent researcher in this swarm. Your report will end in `__{{ r.short }}.md`.
 {% endif %}
 Conduct your research independently and form your own conclusions. Do NOT attempt to
 locate, open, read, or otherwise consult the other researcher's report from this swarm,
@@ -176,104 +177,13 @@ output, but do not inspect the peer's report contents. If you encounter its file
 leave the report alone. The lead researcher will read every report and synthesize their
 findings after you have all finished.
 
-{{ prompt }} #research(suffix=cdx)
+{{ prompt }} #research(suffix={{ r.short }})
 
 ---
-
-%if(should_run={{ claude and ("claude" | provider_enabled("hard")) }}) %id(cld, clan=research.{@1})
-%m:{{ claude_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
-{% set peers = researchers | rejectattr("short", "equalto", "cld") | list %}
-You are researcher cld in a {{ researchers | length }}-researcher swarm.
-{% if peers -%}
-The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__cld.md`.
-{% else -%}
-You are the only independent researcher in this swarm. Your report will end in `__cld.md`.
-{% endif %}
-Conduct your research independently and form your own conclusions. Do NOT attempt to
-locate, open, read, or otherwise consult the other researcher's report from this swarm,
-even if it becomes available before you finish. Do not obtain that peer's findings
-indirectly through its chat transcript, summaries, or requests to the peer. You may
-independently use the same external sources, shared input material, and unrelated prior
-research. You may check filenames or file existence to avoid overwriting your own
-output, but do not inspect the peer's report contents. If you encounter its filename,
-leave the report alone. The lead researcher will read every report and synthesize their
-findings after you have all finished.
-
-{{ prompt }} #research(suffix=cld)
-
----
-
-%if(should_run={{ grok and ("grok" | provider_enabled("hard")) }}) %id(grk, clan=research.{@1})
-%m:{{ grok_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
-{% set peers = researchers | rejectattr("short", "equalto", "grk") | list %}
-You are researcher grk in a {{ researchers | length }}-researcher swarm.
-{% if peers -%}
-The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__grk.md`.
-{% else -%}
-You are the only independent researcher in this swarm. Your report will end in `__grk.md`.
-{% endif %}
-Conduct your research independently and form your own conclusions. Do NOT attempt to
-locate, open, read, or otherwise consult the other researcher's report from this swarm,
-even if it becomes available before you finish. Do not obtain that peer's findings
-indirectly through its chat transcript, summaries, or requests to the peer. You may
-independently use the same external sources, shared input material, and unrelated prior
-research. You may check filenames or file existence to avoid overwriting your own
-output, but do not inspect the peer's report contents. If you encounter its filename,
-leave the report alone. The lead researcher will read every report and synthesize their
-findings after you have all finished.
-
-{{ prompt }} #research(suffix=grk)
-
----
-
-%if(should_run={{ muse and ("muse" | provider_enabled("hard")) }}) %id(mus, clan=research.{@1})
-%m:{{ muse_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
-{% set peers = researchers | rejectattr("short", "equalto", "mus") | list %}
-You are researcher mus in a {{ researchers | length }}-researcher swarm.
-{% if peers -%}
-The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__mus.md`.
-{% else -%}
-You are the only independent researcher in this swarm. Your report will end in `__mus.md`.
-{% endif %}
-Conduct your research independently and form your own conclusions. Do NOT attempt to
-locate, open, read, or otherwise consult the other researcher's report from this swarm,
-even if it becomes available before you finish. Do not obtain that peer's findings
-indirectly through its chat transcript, summaries, or requests to the peer. You may
-independently use the same external sources, shared input material, and unrelated prior
-research. You may check filenames or file existence to avoid overwriting your own
-output, but do not inspect the peer's report contents. If you encounter its filename,
-leave the report alone. The lead researcher will read every report and synthesize their
-findings after you have all finished.
-
-{{ prompt }} #research(suffix=mus)
-
----
-
-%if(should_run={{ gemini and ("agy" | provider_enabled("hard")) }}) %id(gem, clan=research.{@1})
-%m:{{ gemini_model }} {% if wait %}%wait:{{ wait }} {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
-{% set peers = researchers | rejectattr("short", "equalto", "gem") | list %}
-You are researcher gem in a {{ researchers | length }}-researcher swarm.
-{% if peers -%}
-The other {{ "researcher" if peers | length == 1 else "researchers" }}, {% for p in peers %}`research.{@1}.{{ p.short }}`{% if not loop.last %}, {% endif %}{% endfor %}, {{ "is" if peers | length == 1 else "are" }} independently investigating the same request and will write {{ "its" if peers | length == 1 else "their" }} own self-named {{ "report" if peers | length == 1 else "reports" }} ending in {% for p in peers %}`__{{ p.short }}.md`{% if not loop.last %} and {% endif %}{% endfor %}. Your report will end in `__gem.md`.
-{% else -%}
-You are the only independent researcher in this swarm. Your report will end in `__gem.md`.
-{% endif %}
-Conduct your research independently and form your own conclusions. Do NOT attempt to
-locate, open, read, or otherwise consult the other researcher's report from this swarm,
-even if it becomes available before you finish. Do not obtain that peer's findings
-indirectly through its chat transcript, summaries, or requests to the peer. You may
-independently use the same external sources, shared input material, and unrelated prior
-research. You may check filenames or file existence to avoid overwriting your own
-output, but do not inspect the peer's report contents. If you encounter its filename,
-leave the report alone. The lead researcher will read every report and synthesize their
-findings after you have all finished.
-
-{{ prompt }} #research(suffix=gem)
-
----
+{% endfor %}
 
 %clan(research.{@1}, tribe=research, summary=[[[bold]RESEARCH PROMPT:[/bold] {{ prompt }}]]) %id:research.{@1}.final %m:{{ lead_model }}
-{% for r in researchers %}%wait:research.{@1}.{{ r.short }} {% endfor %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
+{% for r in researchers %}%wait:research.{@1}.{{ r.short }} {% endfor %}#_queue
 
 {% if researchers -%}
 You are the lead researcher: {{ researchers | length }} independent {{ "researcher has" if researchers | length == 1 else "researchers have" }} reported on the request
@@ -292,9 +202,7 @@ Research request:
 
 The researchers' registered reports:
 
-{% raw %}{% for a in wait.artifacts if a.kind == "markdown" and a.label and a.label.startswith("research:") %}
-- wait_name={{ a.wait_name }} label={{ a.label }} source_path={{ a.source_path }} path={{ a.path }} ref={{ a.ref }}
-{% endfor %}{% endraw %}
+#_report_records
 
 Month directory (create it if missing):
 
@@ -326,26 +234,7 @@ Steps:
 4. Write the consolidated report to `<name>/{{ lead_report }}`: merge the strongest findings
    from every report above and your own research, resolve conflicts, cut duplication,
    and add missing critical context without unnecessary length.
-{%- if run_linker %}
-
-   Do not create `<name>/<name>.md`, not even as a placeholder, because the linker
-   agent `research.{@1}.linker` publishes it from your report.
-
-5. After the write succeeds, register the consolidated report as a durable snapshot so
-   the linker agent, `research.{@1}.linker`, can find it:
-
-   sase artifact create -p "<absolute-report-path>" -l "research:<repo-relative-report-path>"
-
-   Use the consolidated report's actual absolute path and its path relative to the
-   research repo root, for example `research:202609/<name>/<name>__final.md`. Register
-   only the consolidated report, and do not pass `--move`. If registration fails,
-   report that failure; do not report the task as fully complete.
-{%- endif %}
-
-Final layout:
-
-{{ "```text\n" ~ layout_body ~ "\n```" }}
-{% else -%}
+{%- else -%}
 1. No independent researcher reports are expected for this dispatch; skip report
    identification and proceed as the sole researcher.
 2. Research the request yourself.
@@ -355,6 +244,7 @@ Final layout:
    report there with no researcher reports to move.
 4. Write the consolidated report to `<name>/{{ lead_report }}` based on your own research,
    adding missing critical context without unnecessary length.
+{%- endif %}
 {%- if run_linker %}
 
    Do not create `<name>/<name>.md`, not even as a placeholder, because the linker
@@ -373,19 +263,15 @@ Final layout:
 
 Final layout:
 
-```text
-<month-dir>/<name>/
-└── {{ lead_report }}
-```
-{% endif %}
+{{ tree(lead_files) }}
 ---
 
 %if(should_run={{ image }}) %id(image, clan=research.{@1}) %m:{{ image_model }}
-%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/image
+%wait:research.{@1}.final #_queue #fork:research.{@1}.final #research/image
 ---
 
 %if(should_run={{ run_linker }}) %id(linker, clan=research.{@1}) %m:{{ linker_model }}
-%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}{% if audio %}%wait:research.{@1}.audio {% endif %}%q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %})
+%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}{% if audio %}%wait:research.{@1}.audio {% endif %}#_queue
 
 You are the linker agent for a research swarm. The lead researcher,
 `research.{@1}.final`, has written a consolidated report on the request below. Your job
@@ -407,9 +293,7 @@ research query in step 3):
 
 The lead researcher's registered report:
 
-{% raw %}{% for a in wait.artifacts if a.kind == "markdown" and a.label and a.label.startswith("research:") %}
-- wait_name={{ a.wait_name }} label={{ a.label }} source_path={{ a.source_path }} path={{ a.path }} ref={{ a.ref }}
-{% endfor %}{% endraw %}
+#_report_records
 {% if image %}
 The image agent's registered images:
 
@@ -559,8 +443,8 @@ Steps:
 
 Final layout:
 
-{{ "```text\n" ~ linker_layout_body ~ "\n```" }}
+{{ tree(linker_files) }}
 ---
 
 %if(should_run={{ audio }}) %id(audio, clan=research.{@1}) %m:{{ audio_model }}
-%wait:research.{@1}.final %q({% if runners is not none %}{{ runners }}{% else %}1.5x{% endif %}, w=0.25{% if priority is not none %}, priority={{ priority }}{% endif %}) #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})
+%wait:research.{@1}.final #_queue #fork:research.{@1}.final #research/audio(edition={{ audio_edition }})

@@ -73,13 +73,6 @@ def _swarm_segments(
     return split_segments_protecting_fences(_swarm_body(args))
 
 
-def _authored_swarm_segments() -> list[str]:
-    xp = _research_macros()["research_swarm"]
-    return [
-        segment.strip() for segment in xp.content.split("\n---\n") if segment.strip()
-    ]
-
-
 # The lead's runtime `wait.artifacts` loop is deliberately raw-protected so it
 # survives swarm-level Jinja expansion unrendered; only actual agent-runtime
 # rendering evaluates it. Strip it before asserting no stray `{%` remains from
@@ -376,8 +369,21 @@ def test_research_swarm_rejects_unroutable_model_with_suggestion() -> None:
 
 
 def test_research_swarm_has_nine_top_level_segments() -> None:
-    segments = _authored_swarm_segments()
+    segments = _swarm_segments(
+        {"grok": "true", "muse": "true", "gemini": "true"},
+        image=True,
+        audio=True,
+    )
     assert len(segments) == 9
+    assert "%id(cdx, clan=research.{@1})" in segments[0]
+    assert "%id(cld, clan=research.{@1})" in segments[1]
+    assert "%id(grk, clan=research.{@1})" in segments[2]
+    assert "%id(mus, clan=research.{@1})" in segments[3]
+    assert "%id(gem, clan=research.{@1})" in segments[4]
+    assert "%id:research.{@1}.final" in segments[5]
+    assert "%id(image, clan=research.{@1})" in segments[6]
+    assert "%id(linker, clan=research.{@1})" in segments[7]
+    assert "%id(audio, clan=research.{@1})" in segments[8]
 
 
 def test_research_swarm_defaults_to_three_expanded_agents() -> None:
@@ -420,62 +426,76 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
 
 
 def test_research_swarm_dependency_graph_preserved() -> None:
-    cdx, cld, grk, mus, gem, final, image, linker, audio = _authored_swarm_segments()
+    cdx, cld, grk, mus, gem, final, image, linker, audio = _swarm_segments(
+        {"grok": "true", "muse": "true", "gemini": "true"},
+        image=True,
+        audio=True,
+    )
 
-    assert '%if(should_run={{ codex and ("codex" | provider_enabled("hard")) }})' in cdx
     assert "%id(cdx, clan=research.{@1})" in cdx
-    assert "%m:{{ codex_model }}" in cdx
+    assert "%m:codex/gpt-6.1-sol@xhigh" in cdx
+    assert "some topic #research(suffix=cdx)" in cdx
     assert "%clan(" not in cdx
 
-    assert (
-        '%if(should_run={{ claude and ("claude" | provider_enabled("hard")) }})' in cld
-    )
     assert "%id(cld, clan=research.{@1})" in cld
-    assert "%m:{{ claude_model }}" in cld
+    assert "%m:claude/opus@xhigh" in cld
+    assert "some topic #research(suffix=cld)" in cld
     assert "%clan(" not in cld
 
-    assert '%if(should_run={{ grok and ("grok" | provider_enabled("hard")) }})' in grk
     assert "%id(grk, clan=research.{@1})" in grk
-    assert "%m:{{ grok_model }}" in grk
+    assert "%m:grok/grok-4.6@xhigh" in grk
+    assert "some topic #research(suffix=grk)" in grk
+    assert "%clan(" not in grk
 
-    assert '%if(should_run={{ muse and ("muse" | provider_enabled("hard")) }})' in mus
     assert "%id(mus, clan=research.{@1})" in mus
-    assert "%m:{{ muse_model }}" in mus
+    assert "%m:muse/muse-spark-1.3-contributor@xhigh" in mus
+    assert "some topic #research(suffix=mus)" in mus
     assert "%clan(" not in mus
 
-    assert '%if(should_run={{ gemini and ("agy" | provider_enabled("hard")) }})' in gem
     assert "%id(gem, clan=research.{@1})" in gem
-    assert "%m:{{ gemini_model }}" in gem
+    assert "%m:agy/gemini-3.8-flash-high" in gem
+    assert "some topic #research(suffix=gem)" in gem
     assert "%clan(" not in gem
 
     assert "%clan(research.{@1}" in final
     assert "%id:research.{@1}.final" in final
-    assert "%m:{{ lead_model }}" in final
+    assert "%m:@xlarge" in final
     assert "research_lead" not in final
-    assert "{% for r in researchers %}%wait:research.{@1}.{{ r.short }}" in final
+    for short in ("cdx", "cld", "grk", "mus", "gem"):
+        assert f"%wait:research.{{@1}}.{short}" in final
 
     assert "%id(image, clan=research.{@1})" in image
-    assert "%if(should_run={{ image }})" in image
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
     assert "#research/image" in image
-    assert "%m:{{ image_model }}" in image
+    assert "%m:@image" in image
     assert "%model:@image" not in image
     assert "%model:codex/gpt-6.1-sol" not in image
 
-    assert "%if(should_run={{ run_linker }})" in linker
     assert "%id(linker, clan=research.{@1})" in linker
-    assert "%m:{{ linker_model }}" in linker
+    assert "%m:@xlarge" in linker
     assert "%wait:research.{@1}.final" in linker
-    assert "{% if image %}%wait:research.{@1}.image" in linker
-    assert "{% if audio %}%wait:research.{@1}.audio" in linker
+    assert "%wait:research.{@1}.image" in linker
+    assert "%wait:research.{@1}.audio" in linker
     assert "#fork:" not in linker
     assert "%clan(" not in linker
-    assert linker.count("%q(") == 1
-    assert _WEIGHTED_QUEUE_TEMPLATE in linker
-    assert "priority is not none" in linker
-    assert _WAIT_ARTIFACTS_LOOP in linker
+
+    assert "%id(audio, clan=research.{@1})" in audio
+    assert "%wait:research.{@1}.final" in audio
+    assert "%wait:research.{@1}.image" not in audio
+    assert "%wait:research.{@1}.linker" not in audio
+    assert "#fork:research.{@1}.final" in audio
+    assert "#research/audio(edition=brief)" in audio
+    assert "%m:@audio" in audio
+    assert "%model:@audio" not in audio
+    assert "%clan(" not in audio
+
+    _assert_each_segment_has_one_queue(
+        [cdx, cld, grk, mus, gem, final, image, linker, audio]
+    )
+
     assert _WAIT_ARTIFACTS_LOOP in final
+    assert _WAIT_ARTIFACTS_LOOP in linker
     assert _WAIT_IMAGE_ARTIFACTS_LOOP in linker
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in final
     assert _WAIT_AUDIO_ARTIFACTS_LOOP in linker
@@ -486,38 +506,23 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in audio
     assert _WAIT_AUDIO_ARTIFACTS_LOOP not in audio
     assert _AGENTS_AUDIO_LOOP not in audio
+    for researcher in (cdx, cld, grk, mus, gem):
+        assert _WAIT_ARTIFACTS_LOOP not in researcher
+        assert _WAIT_IMAGE_ARTIFACTS_LOOP not in researcher
+        assert _WAIT_AUDIO_ARTIFACTS_LOOP not in researcher
+        assert _AGENTS_AUDIO_LOOP not in researcher
 
-    assert "%id(audio, clan=research.{@1})" in audio
-    assert "%if(should_run={{ audio }})" in audio
-    assert "%wait:research.{@1}.final" in audio
-    assert "%wait:research.{@1}.image" not in audio
-    assert "{% if image %}%wait:research.{@1}.image" not in audio
-    assert "%wait:research.{@1}.linker" not in audio
-    assert "#fork:research.{@1}.final" in audio
-    assert "#research/audio(edition={{ audio_edition }})" in audio
-    assert "%m:{{ audio_model }}" in audio
-    assert "%model:@audio" not in audio
-    assert "%clan(" not in audio
-    assert audio.count("%q(") == 1
-    assert _WEIGHTED_QUEUE_TEMPLATE in audio
-    assert "priority is not none" in audio
-
-    assert all(
-        "priority is not none" in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image, linker, audio)
-    )
-    assert all(
-        segment.count("%q(") == 1
-        for segment in (cdx, cld, grk, mus, gem, final, image, linker, audio)
-    )
-    assert all(
-        _WEIGHTED_QUEUE_TEMPLATE in segment
-        for segment in (cdx, cld, grk, mus, gem, final, image, linker, audio)
-    )
+    xp = _research_macros()["research_swarm"]
+    assert "%if(should_run={{ image }})" in xp.content
+    assert "%if(should_run={{ run_linker }})" in xp.content
+    assert "%if(should_run={{ audio }})" in xp.content
+    assert "%q(" not in xp.content
+    assert xp.local_macros["_queue"].content == _WEIGHTED_QUEUE_TEMPLATE
+    assert _WAIT_ARTIFACTS_LOOP in xp.local_macros["_report_records"].content
 
 
 def test_research_swarm_lead_mentions_artifact_read_derivation() -> None:
-    *_researchers, final, _image, _linker, _audio = _authored_swarm_segments()
+    *_, final = _swarm_segments({})
 
     assert (
         "SASE derives your plan's links from the artifacts you read this turn; use\n"
@@ -756,7 +761,23 @@ def test_research_swarm_all_researchers_off_yields_lead_only() -> None:
     assert "%wait:research.{@1}.mus" not in final
     assert "%wait:research.{@1}.gem" not in final
     assert "solo researcher" in final
+    assert "{{ lead_report }}" not in final
+    assert final.rstrip().endswith("└── <name>.md\n```")
     _assert_each_segment_has_one_queue([final])
+
+    (audio_final, _, _) = _swarm_segments(
+        {
+            "codex": "false",
+            "claude": "false",
+            "grok": "false",
+            "muse": "false",
+            "gemini": "false",
+            "audio": "true",
+        }
+    )
+    assert "{{ lead_report }}" not in audio_final
+    assert "├── <name>__final.md" in audio_final
+    assert audio_final.rstrip().endswith("└── <name>_narration.md\n```")
 
 
 def test_research_swarm_reports_use_provider_suffixes() -> None:
@@ -918,7 +939,7 @@ def test_research_registers_report_in_every_branch() -> None:
 
 
 def test_research_swarm_lead_lists_wait_artifacts_not_transcripts() -> None:
-    *_researchers, final, _image, _linker, _audio = _authored_swarm_segments()
+    *_, final = _swarm_segments({})
 
     assert "wait_chats" not in final
     assert (
@@ -1685,12 +1706,17 @@ def test_research_macros_keep_deferred_jinja_out_of_inline_code() -> None:
     raw_region = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
     inline_span = re.compile(r"`[^`\n]*`")
     for name, xp in sorted(_research_macros().items()):
-        for region in raw_region.findall(xp.content):
-            for line in region.splitlines():
-                for span in inline_span.findall(line):
-                    assert "{{" not in span and "{%" not in span, (
-                        f"deferred Jinja inside inline code in {name!r}: "
-                        f"{span!r}; deferred loops render at launch, where "
-                        "inline code is literal and {{ ... }} is never "
-                        "substituted"
-                    )
+        bodies = [xp.content]
+        bodies.extend(
+            helper.content for helper in xp.local_macros.values()
+        )
+        for body in bodies:
+            for region in raw_region.findall(body):
+                for line in region.splitlines():
+                    for span in inline_span.findall(line):
+                        assert "{{" not in span and "{%" not in span, (
+                            f"deferred Jinja inside inline code in {name!r}: "
+                            f"{span!r}; deferred loops render at launch, where "
+                            "inline code is literal and {{ ... }} is never "
+                            "substituted"
+                        )

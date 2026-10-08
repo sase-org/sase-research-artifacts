@@ -259,7 +259,7 @@ assert research_names == {
     "research_swarm",
 }, research_names
 research_swarm = macros["research_swarm"]
-assert research_swarm.content.count("%q(1.5x, w=0.25") == 9
+assert set(research_swarm.local_macros) == {"_queue", "_report_records"}
 assert "default: 16" not in research_swarm.content
 
 def agent_payloads_for_segments(segments):
