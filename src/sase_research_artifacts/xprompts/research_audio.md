@@ -1,6 +1,6 @@
 ---
 name: research/audio
-description: Narrate a research report as a chaptered MP3 audio edition with sase-listen.
+description: Narrate a research report as a chaptered MP3 audio edition with sase listen.
 input:
   - name: edition
     type: sase-research-artifacts@audio_edition
@@ -8,7 +8,7 @@ input:
     description:
       "Narration edition: brief (about 4 minutes, the default) or full (about 16
       minutes) -- the supported guide-backed authoring choices. Passed to
-      `sase-listen guide --edition`."
+      `<listen> guide --edition`."
   - name: rewrite
     type: bool
     default: false
@@ -31,11 +31,16 @@ Narrate a research report as an audio edition MP3.
 ## 2. Choose the CLI
 
 This plugin never depends on `sase-listen`; the CLI is invoked at runtime only.
-Prefer an installed `sase-listen` only when `sase-listen render --help`
-advertises `--generated-cover`; otherwise check the `uvx sase-listen` fallback
-for the same capability before rendering. If neither supports
-`--generated-cover`, report the upgrade requirement through the normal
-`audio.ok=false` handoff and complete so the linker can publish. Do not silently drop the option. Capability probing requires no live TTS.
+Choose one `<listen>` CLI and use it for every `guide`, `lint`, and `render`
+call below:
+
+1. use `sase listen` when `sase listen render --help` advertises
+   `--generated-cover`;
+2. else use `sase-listen` when `sase-listen render --help` advertises the same
+   capability;
+3. else use `uvx sase-listen`.
+
+If none supports `--generated-cover`, report the upgrade requirement through the normal `audio.ok=false` handoff and complete so the linker can publish. Do not silently drop the option. Capability probing requires no live TTS.
 
 ## 3. Write or reuse the script
 
@@ -46,23 +51,23 @@ the stem, following the `research_image.md` stem rule (so `topic__final.md` beco
 - If it exists and `rewrite` is false, reuse it: an existing script is reused
   unless direct `#research/audio(..., rewrite=true)` is requested. These
   edition defaults govern newly authored scripts.
-- Otherwise run `sase-listen guide --edition {{ edition }}` and write the script
+- Otherwise run `<listen> guide --edition {{ edition }}` and write the script
   following it exactly, with `source`, `source_blob`, `date`, `kind: research`, and
   `edition: {{ edition }}`. Set both `source` and `source_blob` from the selected
   report above, and use that same report for `lint --source`. Omit `cover` in
   newly authored scripts; the render uses a generated title card.
 - Reused scripts retain their narration and metadata; the
-  `sase-listen render --generated-cover` option overrides any existing artwork,
+  `<listen> render --generated-cover` option overrides any existing artwork,
   including `cover` frontmatter or a sibling `<stem>_infographic.png`. This
   generated-title-card policy applies to direct `#research/audio` invocations
   too. Never poll or wait for the image in this prompt. Do not rerender
   automatically when an image later arrives.
-- Run `sase-listen lint <script> --source <report>` (the `lint --source`
+- Run `<listen> lint <script> --source <report>` (the `lint --source`
   number-fidelity check) until it is clean.
 
 ## 4. Render
 
-Render with `sase tool run -- sase-listen render <script> --generated-cover --json`
+Render with `sase tool run -- <listen> render <script> --generated-cover --json`
 (the `render --json` single-object stdout contract). If the render approaches
 the inline ceiling, hand it to `/sase_monitor` with the same `--generated-cover`
 option, and carry that option into any `/sase_monitor` follow-up.
@@ -75,7 +80,7 @@ Whichever turn finishes the render, including a `/sase_monitor` follow-up:
    `sase artifact create -p <audio_path> -k file -l "audio:<episode_id>"`.
    The structured label lets consumers filter exactly; Telegram still
    `sendAudio`s it from ID3 tags, which it reads independently of the label.
-2. Publish the handoff variable from `sase-listen render --json`
+2. Publish the handoff variable from `<listen> render --json`
    (`chapter_count` is `len(chapters)`):
 
    ```

@@ -29,10 +29,12 @@ file's stem with any trailing `__final` removed (so `topic__final.md` becomes
 ## `#research/audio` -- Narrate an Audio Edition
 
 Narrates a research report as a chaptered MP3 audio edition with a generated
-podcast title card. Requires `uv tool install sase-listen`: the macro drives
-the installed CLI (`guide` to author the script, `lint --source` to check it,
+podcast title card. Requires `sase plugin install listen` (preferred) or
+`uv tool install sase-listen` as the alternative: the macro drives
+the chosen `<listen>` CLI (`guide` to author the script, `lint --source` to check it,
 `render --generated-cover --json` to synthesize it) and never depends on it as
-a package.
+a package. The audio agent prefers `sase listen`, then `sase-listen`, then
+`uvx sase-listen`, probing each `render --help` for `--generated-cover`.
 
 ### Input
 
@@ -54,7 +56,7 @@ narration script is `<stem>_narration.md` next to the report (with `__final`
 stripped from the stem, following the `#research/image` stem rule) and carries
 `source`, `source_blob`, `date`, `kind: research`, and `edition`. Newly authored
 scripts omit `cover`; reused scripts retain their narration and metadata, with
-`sase-listen render --generated-cover` overriding any existing artwork. An
+`<listen> render --generated-cover` overriding any existing artwork. An
 existing script is reused unless direct `#research/audio(..., rewrite=true)` is
 requested. The finished MP3 is registered
 with `sase artifact create -p <audio_path> -k file -l "audio:<episode_id>"` and
@@ -191,7 +193,7 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    `brief` or `full` are the supported guide-backed authoring choices) with a
    generated podcast title card. `audio=true` implies the linker, which joins
    all enabled outputs and publishes a listen card. Requires
-   `uv tool install sase-listen`.
+   `sase plugin install listen` (preferred) or `uv tool install sase-listen`.
 
 The handoff contract: the lead writes `<name>__final.md` (instead of `<name>.md`) and
 registers it only when the linker runs, and the linker derives its output directory
@@ -267,7 +269,8 @@ through the clan/session container). The follow-up's `sase var set audio`
 writes the same artifacts dir the linker later reads via
 `resolve_resume_agent_name`. If the variable is missing, the linker falls
 back to a `wait.artifacts` entry labeled `audio:<episode_id>` and
-`sase-listen ls <episode_id> --json`.
+`sase listen ls <episode_id> --json` (or `sase-listen ls <episode_id> --json`,
+or `uvx sase-listen ls <episode_id> --json`).
 
 Setting `image_model` to a single model gives up the `@image` alias's fallback chain
 across providers.

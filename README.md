@@ -100,7 +100,7 @@ diagnostic rather than running someone else's command on your machine.
 
 - `#research` -- write research to a new dated file in the `research` artifact repo.
 - `#research/audio` -- narrate a research report as a chaptered MP3 audio edition
-  (requires `uv tool install sase-listen`).
+  (requires `sase plugin install listen`, or `uv tool install sase-listen`).
 - `#research/image` -- generate an infographic from a research file's main points.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
@@ -123,7 +123,7 @@ diagnostic rather than running someone else's command on your machine.
   failed TTS render. The linker joins all enabled outputs and publishes `<name>.md`
   with a listen card plus `audio:` frontmatter when the render succeeded. The audio
   agent forks the lead to run `#research/audio(edition=<audio_edition>)` (requires
-  `uv tool install sase-listen`).
+  `sase plugin install listen`, or `uv tool install sase-listen`).
   Newly authored narration defaults to `brief`; edition selection never enables audio
   by itself. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse

@@ -232,16 +232,27 @@ def _expand_audio(named_args: dict[str, str]) -> str:
 
 def test_research_audio_omitted_edition_uses_brief_guide() -> None:
     expansion = _expand_audio({})
-    assert "sase-listen guide --edition brief" in expansion
+    assert "<listen> guide --edition brief" in expansion
     assert "edition: brief" in expansion
-    assert "sase-listen guide --edition full" not in expansion
+    assert "<listen> guide --edition full" not in expansion
 
 
 def test_research_audio_explicit_full_uses_full_guide() -> None:
     expansion = _expand_audio({"edition": "full"})
-    assert "sase-listen guide --edition full" in expansion
+    assert "<listen> guide --edition full" in expansion
     assert "edition: full" in expansion
-    assert "sase-listen guide --edition brief" not in expansion
+    assert "<listen> guide --edition brief" not in expansion
+
+
+def test_research_audio_prefers_sase_listen_then_standalone_then_uvx() -> None:
+    xp = _research_macros()["research/audio"]
+    assert "sase listen render --help" in xp.content
+    assert "sase-listen render --help" in xp.content
+    assert "uvx sase-listen" in xp.content
+    sase_listen_pos = xp.content.index("sase listen render --help")
+    standalone_pos = xp.content.index("sase-listen render --help")
+    uvx_pos = xp.content.index("uvx sase-listen")
+    assert sase_listen_pos < standalone_pos < uvx_pos
 
 
 def test_research_audio_rejects_misspelled_edition_with_brief_suggestion() -> None:
@@ -266,11 +277,12 @@ def test_research_audio_colon_shorthand_rejects_breif() -> None:
 
 def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
     xp = _research_macros()["research/audio"]
-    assert "sase-listen guide" in xp.content
+    assert "<listen> guide" in xp.content
     assert "lint --source" in xp.content
     assert "render --json" in xp.content
     assert "--generated-cover" in xp.content
-    assert "sase-listen render <script> --generated-cover --json" in xp.content
+    assert "<listen> render <script> --generated-cover --json" in xp.content
+    assert "sase tool run -- <listen> render" in xp.content
     assert "sase artifact create" in xp.content
     assert '-l "audio:<episode_id>"' in xp.content
     assert "sase var set audio" in xp.content
@@ -1241,7 +1253,7 @@ def test_research_swarm_audio_planner_edges_and_lead_source(
     assert "Never poll or wait for the image in this prompt" in normalized_audio
     assert "Do not wait for the image or linker" not in normalized_audio
     assert "--generated-cover" in normalized_audio
-    assert "sase-listen render <script> --generated-cover --json" in normalized_audio
+    assert "<listen> render <script> --generated-cover --json" in normalized_audio
     assert "render --help" in normalized_audio
     assert "audio.ok=false" in normalized_audio
     assert "Do not silently drop the option" in normalized_audio
@@ -1269,8 +1281,8 @@ def test_research_swarm_audio_expanded_uses_generated_cover_across_editions() ->
                 raise_on_error=True,
             )
             normalized = re.sub(r"\s+", " ", expanded)
-            assert "sase-listen render <script> --generated-cover --json" in normalized
-            assert f"sase-listen guide --edition {edition}" in normalized
+            assert "<listen> render <script> --generated-cover --json" in normalized
+            assert f"<listen> guide --edition {edition}" in normalized
             assert f"edition: {edition}" in normalized
             assert "render --help" in normalized
             assert "audio.ok=false" in normalized
@@ -1347,7 +1359,7 @@ def test_research_swarm_audio_edition_reaches_guide_command() -> None:
         expanded = process_macro_references_with_catalog(
             audio, catalog, raise_on_error=True
         )
-        assert f"sase-listen guide --edition {edition}" in expanded
+        assert f"<listen> guide --edition {edition}" in expanded
         assert f"edition: {edition}" in expanded
 
 
@@ -1397,7 +1409,9 @@ def test_research_swarm_linker_listen_card_only_when_audio() -> None:
         audio_linker
     )
     assert 'never write "audio pending"' in audio_linker
+    assert "sase listen ls <episode_id> --json" in audio_linker
     assert "sase-listen ls <episode_id> --json" in audio_linker
+    assert "uvx sase-listen ls <episode_id> --json" in audio_linker
     assert "%wait:research.{@1}.audio" in audio_linker
     _assert_each_segment_has_one_queue(_swarm_segments({}, audio=True))
 

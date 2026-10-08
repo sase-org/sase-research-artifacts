@@ -342,8 +342,9 @@ Steps:
    {%- if audio %}
    - **Listen card.** Facts come from the `audio` variable of `research.{@1}.audio`
      when `ok` is true. If the variable is missing but an `audio:<episode_id>`
-     artifact is listed, recover the facts with `sase-listen ls <episode_id> --json`
-     (or `uvx sase-listen …`): `audio.duration_s`, chapter count, `script.edition`.
+     artifact is listed, recover the facts with `sase listen ls <episode_id> --json`
+     (or `sase-listen ls <episode_id> --json`, or `uvx sase-listen ls <episode_id> --json`):
+     `audio.duration_s`, chapter count, `script.edition`.
      If `ok` is false or nothing is listed, publish with no card and no `audio:`
      frontmatter, and say so in the final response (never write "audio pending").
      Add this frontmatter mapping (create a frontmatter block if the lead's report
