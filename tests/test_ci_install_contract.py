@@ -50,7 +50,7 @@ def test_ci_builds_coordinated_sase_sources() -> None:
     assert "uses: dtolnay/rust-toolchain@stable" in workflow
     assert 'python-version: ["3.12", "3.13"]' in workflow
     assert "uv venv --python ${{ matrix.python-version }} .venv" in workflow
-    assert "run: just install" in workflow
+    assert "run: just install-venv" in workflow
 
 
 def test_justfile_requires_both_source_overrides_together() -> None:
@@ -64,6 +64,9 @@ def test_justfile_requires_both_source_overrides_together() -> None:
     assert "PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1" in justfile
     assert "--overrides" in justfile
     assert "install-source-sase" in justfile
+    assert "install-venv:" in justfile
+    assert "[group('install')]" in justfile
+    assert "`just install` is now `just install-venv`" in justfile
 
 
 def test_pyproject_floor_matches_expected_first_supporting_release() -> None:

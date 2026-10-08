@@ -171,7 +171,7 @@ each researcher role model per invocation.
 ## Development
 
 ```bash
-just install    # Install in editable mode with dev deps
+just install-venv    # Install in editable mode with dev deps
 just lint       # ruff check + mypy
 just fmt        # Auto-format
 just test       # pytest (excludes the slow wheel contract test)
@@ -179,7 +179,7 @@ just test-wheel # Build a real wheel, install it fresh, verify entry points/reso
 just check      # lint + test
 ```
 
-`just install` and CI both build against coordinated sibling `sase` and `sase-core`
+`just install-venv` and CI both build against coordinated sibling `sase` and `sase-core`
 source checkouts so prompt-template changes can exercise the matching host runtime. The
 publish workflow also runs a clean wheel-only smoke against exact published SASE and
 core floors before uploading this plugin.

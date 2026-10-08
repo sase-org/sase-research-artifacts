@@ -10,7 +10,7 @@ aliases, and `#research*` macros.
 ## Build & Run
 
 ```bash
-just install    # Install in editable mode with dev deps
+just install-venv    # Install in editable mode with dev deps
 just lint       # ruff check + mypy
 just fmt        # Auto-format
 just test       # pytest (excludes the slow wheel contract test)
