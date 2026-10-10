@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.1](https://github.com/sase-org/sase-research-artifacts/compare/v0.3.0...v0.3.1) (2026-10-10)
+
+
+### Features
+
+* **install:** rename venv recipe to install-venv with private install alias ([555a0ad](https://github.com/sase-org/sase-research-artifacts/commit/555a0add8d10c1919ff468c2b70c2e6136321b7e))
+* **macros:** register sase_macros entry points and cut tests to new-first macro imports ([1ade90f](https://github.com/sase-org/sase-research-artifacts/commit/1ade90f31a3fe43f82f6d97aef4039d8f1ecdd90))
+* **macros:** ship audio_edition type and type research model inputs ([bea92af](https://github.com/sase-org/sase-research-artifacts/commit/bea92afb713db71c666a4f62ea53c4652460e2c4))
+* **research-artifacts:** prefer sase listen CLI in audio and swarm prompts ([91e353c](https://github.com/sase-org/sase-research-artifacts/commit/91e353c8d898b235f665382e5262f5d6cdba50df))
+* **swarm:** run research audio alongside image with generated title cards ([312dd2b](https://github.com/sase-org/sase-research-artifacts/commit/312dd2bb6ca5b0d794e91e44026c27328180bfe6))
+* **xprompts:** default research audio to brief with swarm audio_edition ([912d2de](https://github.com/sase-org/sase-research-artifacts/commit/912d2de4758840c006bd9031db00b7413dba6c61))
+* **xprompts:** wire audio into swarm topology and linker listen card ([867222d](https://github.com/sase-org/sase-research-artifacts/commit/867222d4fb2c9825958a5a08187af0db2d7d452b))
+
+
+### Bug Fixes
+
+* **research-audio:** start narration after lead completion ([e26ee6a](https://github.com/sase-org/sase-research-artifacts/commit/e26ee6afda1c6c0dc09944e6fd6d46d1b5b9978e))
+* **research:** respect disabled suffixes in filename example ([9aa837f](https://github.com/sase-org/sase-research-artifacts/commit/9aa837f4832aceaaaf790874a1a6224c9c44fa0e))
+* **xprompts:** defer wait.artifacts loops outside inline code ([7ef4562](https://github.com/sase-org/sase-research-artifacts/commit/7ef45627ad548aae1861cea1dd731976d9c9a122))
+
 ## [0.3.0](https://github.com/sase-org/sase-research-artifacts/compare/v0.2.0...v0.3.0) (2026-10-01)
 
 
