@@ -1565,6 +1565,25 @@ def test_research_swarm_linker_opens_with_research_query_then_infographic() -> N
         assert not any(line and not line.strip() for line in step3.splitlines())
 
 
+def test_research_swarm_linker_converts_tables_to_lists() -> None:
+    linker = _swarm_segments({}, linker=True)[-1]
+    assert "table (record its cells; step 3 converts each one into a list)" in linker
+
+    step3 = linker.split("3. **Restructure**", 1)[1].split(
+        "4. **Validate every link carried over.**", 1
+    )[0]
+    assert "- **No tables.**" in step3
+    assert "`- *<Column header>:* <cell>`" in step3
+    assert "3 spaces under `1. `" in step3
+    assert "Never turn a row into a `####` heading." in step3
+
+    step6 = linker.split("6. **Re-check against the step-2 inventory**", 1)[1].split(
+        "7. **Write**", 1
+    )[0]
+    assert "Confirm every cell of every table" in step6
+    assert '"t":"Table"' in step6
+
+
 def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -1721,9 +1740,7 @@ def test_research_macros_keep_deferred_jinja_out_of_inline_code() -> None:
     inline_span = re.compile(r"`[^`\n]*`")
     for name, xp in sorted(_research_macros().items()):
         bodies = [xp.content]
-        bodies.extend(
-            helper.content for helper in xp.local_macros.values()
-        )
+        bodies.extend(helper.content for helper in xp.local_macros.values())
         for body in bodies:
             for region in raw_region.findall(body):
                 for line in region.splitlines():

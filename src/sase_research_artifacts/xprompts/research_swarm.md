@@ -325,7 +325,8 @@ Steps:
 
 2. **Inventory what must survive.** Before writing, list every finding, recommendation,
    caveat, open question, confidence statement, number, date, version, code block,
-   table, and link in the lead's report.
+   table (record its cells; step 3 converts each one into a list), and link in the
+   lead's report.
 3. **Restructure** the lead's report into a well-thought-out organization:
    - Keep the frontmatter, updating `updated_time` if present.
    - **Open the file in this exact order**, with nothing else between these parts: the frontmatter (if any), one `#` title, the research query,{%- if audio %} the listen card,{%- endif %}{%- if image %} the infographic,{%- endif %} and then the bottom-line section.
@@ -398,6 +399,34 @@ Steps:
    - **Never number headings.** The PDF renderer runs pandoc with `--number-sections`,
      so hand-numbered headings render doubly numbered.
    - **No table of contents and no block of jump links.** The PDF already gets a TOC.
+   - **No tables.** The PDF renderer (pandoc → XeLaTeX) prints tables with equal-width
+     columns, cramped wrapped cells, and rows that jump pages. Convert every table in the
+     lead's report (pipe, grid, simple, multiline, or HTML) into a list with one item per
+     row, keeping every cell's content:
+     - Two columns: `- **<first cell>:** <second cell>`.
+     - Three or more columns: a bullet whose first line is the row's identifying cell in
+       bold (merge an ID column into it, e.g. `- **A1. Restart exactly once**`), then one
+       nested bullet per remaining non-empty cell, `- *<Column header>:* <cell>`, in column
+       order. Labels go in italics so bold inside a value stays distinct.
+     - Ordered rows (phases, steps, ranks, tiers): the same shapes as a numbered list,
+       keeping the original numbers.
+     - Grouped rows (a blank first cell continues the group above): nest them under one
+       bullet for the group.
+     - Rows whose cells are all a few words: one line,
+       `- **<row>:** <header> <value> · <header> <value> · …`.
+     - Numbers: keep units, periods, denominators, and the difference between zero,
+       unknown, and not applicable.
+     - Long code in a cell: a fenced code block inside the list item.
+     - Only when the rows are about six or fewer major named options the report discusses
+       at length: one `###` section per option holding the same italic-labelled bullets.
+       Never turn a row into a `####` heading. Turn a table caption into a one-line lead-in
+       sentence. Put a blank line before every list (pandoc otherwise merges it into the
+       paragraph above). Indent nested bullets 2 spaces under `- ` and
+       3 spaces under `1. `. Write URLs as `[text](url)` or `<url>`, never bare. Do not
+       substitute a definition list (`Term` then `: definition`), an HTML table, a grid
+       or simple table, a table in a code block, a callout or `:::` div, raw LaTeX, or
+       an image. Never drop a cell, merge two rows, or add totals, rankings, or
+       conclusions the table did not state.
    - Keep the lead's wording where it works. Never drop a claim, caveat, or source to
      save space. If the lead's report restates the question or lists its inputs, keep
      those details in a later section; the research query summarizes the request but
@@ -430,6 +459,10 @@ Steps:
 6. **Re-check against the step-2 inventory** and restore anything missing or changed.
    Every URL in `<name>__final.md` must appear in the new file unless it was listed as
    unrepairable. Then confirm the file opens in the step-3 order: title, research query,{%- if audio %} listen card,{%- endif %}{%- if image %} infographic,{%- endif %} bottom-line section.
+   Confirm every cell of every table in the lead's report appears in the new file. When
+   `pandoc` is available, confirm no table survives:
+   `pandoc <file> -f markdown -t json | grep -o -i -E '"t":"Table"|"t":"RawBlock","c":\["html","<table' | wc -l`
+   prints `0`.
 
 7. **Write** `<YYYYMM>/<name>/<name>.md` without overwrite. On a collision, stop and
    report it.
