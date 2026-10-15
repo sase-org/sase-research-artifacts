@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/sase-org/sase-research-artifacts/compare/v0.3.1...v0.3.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* **release:** retarget published-minimum smoke to sase 0.18.0 ([1762395](https://github.com/sase-org/sase-research-artifacts/commit/17623956c379f580ad1931c927df0093d51feb91))
+
 ## [0.3.1](https://github.com/sase-org/sase-research-artifacts/compare/v0.3.0...v0.3.1) (2026-10-14)
 
 
