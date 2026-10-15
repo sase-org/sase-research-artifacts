@@ -11,13 +11,15 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    # SASE 0.17.2 is the release-please-generated host release that carries
-    # unconditional weighted queue support. The direct core requirement is a
-    # floor only. The floor is the published-minimum core with the
-    # runner-capacity APIs, aligned with sase's current core floor. The plugin
-    # never imports `sase_core_rs`, so sase owns the ceiling, and a plugin
-    # ceiling only breaks CI whenever sase moves its core window.
-    "sase>=0.17.2",
+    # SASE 0.18.0 is the first published release with weighted queue support,
+    # the `sase.macro` APIs, and the mode-aware provider filters. sase's
+    # release-please config (`bump-minor-pre-major`) made the pending release
+    # 0.18.0, not 0.17.2. The direct core requirement is a floor only. The
+    # floor is the published-minimum core with the runner-capacity APIs,
+    # aligned with sase's current core floor. The plugin never imports
+    # `sase_core_rs`, so sase owns the ceiling, and a plugin ceiling only
+    # breaks CI whenever sase moves its core window.
+    "sase>=0.18.0",
     "sase-core-rs>=0.35.0",
 ]
 

@@ -18,8 +18,7 @@ from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_CORE_REQUIREMENT = "sase-core-rs>=0.35.0"
-PUBLISHED_MINIMUM_SASE = "sase==0.17.2"
-PUBLISHED_MINIMUM_CORE = "sase-core-rs==0.35.0"
+PUBLISHED_MINIMUM_SASE = "sase==0.18.0"
 INCOMPATIBLE_SASE = "sase==0.17.1"
 INCOMPATIBLE_CORE = "sase-core-rs==0.34.73"
 
@@ -73,7 +72,7 @@ def test_pyproject_floor_matches_expected_first_supporting_release() -> None:
     pyproject = _read("pyproject.toml")
 
     assert "dependencies = [" in pyproject
-    assert '"sase>=0.17.2"' in pyproject
+    assert '"sase>=0.18.0"' in pyproject
     assert f'"{PLUGIN_CORE_REQUIREMENT}"' in pyproject
 
 
@@ -97,23 +96,36 @@ def test_release_smoke_requires_clean_published_minimum_wheels() -> None:
         "  install-smoke-published-minimum:\n", maxsplit=1
     )[1].split("  publish:\n", maxsplit=1)[0]
     publish_job = workflow.split("  publish:\n", maxsplit=1)[1]
+    smoke = _read("tests/wheel_smoke.py")
 
     assert "install-smoke-published-minimum" in publish_job
-    assert f'"{PUBLISHED_MINIMUM_SASE}"' in published_smoke
-    assert f'"{PUBLISHED_MINIMUM_CORE}"' in published_smoke
+    assert (
+        "uv pip install --python /tmp/smoke-minimum-venv/bin/python "
+        "--resolution lowest-direct "
+        f'"{PUBLISHED_MINIMUM_SASE}" '
+        f'"{PLUGIN_CORE_REQUIREMENT}" dist/*.whl'
+    ) in published_smoke
+    assert 'requires("sase")' in published_smoke
+    assert "installed_core == min(floors)" in published_smoke
+    assert "uses: actions/checkout@v4" in published_smoke
+    assert "python -I tests/wheel_smoke.py" in published_smoke
+    assert "SASE_HOME=" in published_smoke
+    assert "repository: sase-org/sase" not in published_smoke
     assert "--overrides" not in published_smoke
     assert "install-source-sase" not in published_smoke
     assert "maturin" not in published_smoke
-    assert "load_xprompts_from_plugins" in published_smoke
-    assert "expand_single_xprompt" in published_smoke
-    assert "plan_typed_launch_units" in published_smoke
-    assert 'selected_project="sase"' in published_smoke
-    assert "directives.queue_capacity" in published_smoke
-    assert "capacity=" in published_smoke
-    assert "at least 1" in published_smoke
-    assert '{"runners": "0"}' in published_smoke
-    assert '{"runners": "1"}' in published_smoke
-    assert "runner_capacity_policy_schema_version" in published_smoke
+    assert "load_macros_from_plugins" in smoke
+    assert "expand_single_macro" in smoke
+    assert "plan_typed_launch_units" in smoke
+    assert 'selected_project="sase"' in smoke
+    assert "directives.queue_capacity" in smoke
+    assert "capacity=" in smoke
+    assert "at least 1" in smoke
+    assert '{"runners": "0"}' in smoke
+    assert '{"runners": "1"}' in smoke
+    assert "runner_capacity_policy_schema_version" in smoke
+    assert "sase.xprompt" not in smoke
+    assert "sase==" not in smoke
     assert INCOMPATIBLE_SASE in published_smoke
     assert "Refuse older published SASE" in published_smoke
     assert f'"{INCOMPATIBLE_CORE}"' in published_smoke
@@ -123,21 +135,32 @@ def test_release_smoke_requires_clean_published_minimum_wheels() -> None:
 def test_wheel_contract_is_source_coordination_not_published_minimum() -> None:
     wheel_test = _read("tests/test_wheel_contract.py")
     justfile = _read("Justfile")
+    smoke = _read("tests/wheel_smoke.py")
 
     assert "SASE_RESEARCH_ARTIFACTS_RESOLVED_SASE_SOURCE" in wheel_test
     assert "maturin" in wheel_test
+    assert "wheel_smoke.py" in wheel_test
+    assert 'smoke_script = """' not in wheel_test
     assert (
         'tuple(int(p) for p in version("sase-core-rs").split(".")[:2]) >= (0, 35)'
-        in wheel_test
+        in smoke
     )
     assert 'startswith("0.3' not in wheel_test
-    assert "plan_typed_launch_units" in wheel_test
-    assert 'selected_project="sase"' in wheel_test
-    assert "at least 1" in wheel_test
     assert PUBLISHED_MINIMUM_SASE not in wheel_test
-    assert PUBLISHED_MINIMUM_CORE not in wheel_test
+    assert PUBLISHED_MINIMUM_SASE not in smoke
     assert "source-coordination" in justfile.lower()
     assert "published-minimum" in justfile.lower()
+
+
+def test_shared_wheel_smoke_is_referenced_by_both_lanes() -> None:
+    workflow = _read(".github/workflows/publish.yml")
+    published_smoke = workflow.split(
+        "  install-smoke-published-minimum:\n", maxsplit=1
+    )[1].split("  publish:\n", maxsplit=1)[0]
+    wheel_test = _read("tests/test_wheel_contract.py")
+
+    assert "tests/wheel_smoke.py" in published_smoke
+    assert "wheel_smoke.py" in wheel_test
 
 
 def test_plugin_core_window_accepts_installed_sase_floor() -> None:

@@ -108,8 +108,9 @@ test *args: _setup
 
 # Source-coordination wheel lane: builds a real sdist/wheel and installs it
 # plus a fresh maturin build of coordinated sase-core-rs into a throwaway
-# venv. This is not published-minimum acceptance; that wheel-only exact-pin
-# lane lives in publish.yml's install-smoke-published-minimum job. Excluded
+# venv. This is not published-minimum acceptance; that wheel-only
+# published-minimum lane lives in publish.yml's
+# install-smoke-published-minimum job. Excluded
 # from the default `test`/`check` lane by pyproject's `-m "not wheel"` addopt
 # because it takes minutes, not seconds. The resolved source paths are
 # exported so the test doesn't have to re-derive the Justfile's own fallback

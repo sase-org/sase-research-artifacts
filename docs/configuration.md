@@ -3,14 +3,16 @@
 ## Requirements
 
 - Python 3.12+
-- `sase>=0.17.2`
+- `sase>=0.18.0`
 - `sase-core-rs>=0.35.0`
 
 Local development and CI route `sase` and `sase-core` to coordinated source checkouts
 so this plugin can be tested with matching in-flight host changes (see
 [README Development](../README.md#development)). The publish workflow separately
-installs the built plugin wheel with exact published minimum SASE and core wheels and
-without editable checkouts or dependency overrides.
+installs the built plugin wheel with the exact published-minimum SASE wheel paired
+with that release's own published core floor, without editable checkouts or
+dependency overrides. Both the source-coordination lane and the published-minimum
+lane run the same `tests/wheel_smoke.py`.
 
 ## Enabling the `research` ref provider
 

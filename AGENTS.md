@@ -33,11 +33,11 @@ just check      # lint + test
   through the `sase_config` entry point. The research-swarm researchers default to
   concrete per-provider models and the lead defaults to SASE's built-in `@xlarge`
   alias; the optional linker agent, like the lead, defaults to SASE's built-in
-  `@xlarge` alias. Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
-  `provider_disabled` prompt filters; revisit the `sase` floor in `pyproject.toml`
-  when a release actually carries them.
-- Depends on `sase>=0.17.2` and `sase-core-rs>=0.35.0`; the `sase` floor is
-  the first release line expected to carry unconditional weighted queue support.
+  `@xlarge` alias. Provider gating uses the mode-aware `provider_enabled("hard")` /
+  `provider_disabled` prompt filters shipped in sase 0.18.0.
+- Depends on `sase>=0.18.0` and `sase-core-rs>=0.35.0`; the `sase` floor is
+  the first published release with weighted queue support, the `sase.macro`
+  APIs, and those mode-aware provider filters.
   The core requirement is floor-only: sase owns the core ceiling, and this
   plugin only raises the floor when it needs newer core capabilities.
 
