@@ -63,8 +63,8 @@ with list-valued fields replacing rather than concatenating.
 Schema version 1, kind `research`. Inventory starts with `20*/**/*.md` (every dated
 report, including `__cdx`/`__cld`/`__grk`/`__mus`/`__gem` swarm drafts) and excludes generated infographic
 companion Markdown such as `*_infographic.md`, narration scripts such as
-`*_narration.md`, and disambiguated binary pages such as
-`*.png.md`. Declared frontmatter properties: `create_time` and `updated_time`
+`*_narration.md`, diagram manifests such as `*.diagrams.md`, and disambiguated binary
+pages such as `*.png.md`. Declared frontmatter properties: `create_time` and `updated_time`
 (datetime), `status` (enum: `draft`, `review`, `final`, `archived`), `tags` (string
 list). The provider also declares its Artifacts pane label, row fields, updated-time
 descending sort, status/tags facets, status grouping, and Research-specific empty copy.
@@ -102,6 +102,9 @@ diagnostic rather than running someone else's command on your machine.
 - `#research/audio` -- narrate a research report as a chaptered MP3 audio edition
   (requires `sase plugin install listen`, or `uv tool install sase-listen`).
 - `#research/image` -- generate an infographic from a research file's main points.
+- `#research/diagrams` -- propose validated Mermaid diagrams for a swarm lead's report in
+  a `<stem>.diagrams.md` manifest for the swarm linker to place (meant for the swarm's
+  image segment).
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.

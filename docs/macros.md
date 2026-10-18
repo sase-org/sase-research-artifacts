@@ -24,7 +24,109 @@ the runtime `wait.artifacts` namespace instead of reading transcripts.
 Generates an infographic illustrating a research markdown file's main points, writing
 `<stem>_infographic.png` alongside the source file, where `<stem>` is the source
 file's stem with any trailing `__final` removed (so `topic__final.md` becomes
-`topic_infographic.png`).
+`topic_infographic.png`). Standalone `#research/image` stays PNG-only and never
+produces diagrams.
+
+## `#research/diagrams` -- Propose Mermaid Diagrams
+
+Decides whether Mermaid diagrams would help a reader understand a swarm lead's research
+report and, if so, draws and validates them and writes them to one companion manifest
+for the swarm linker to place. It takes no inputs and is meant for the swarm's image
+segment, where it runs after `#research/image` and reads the lead's report from the
+registered lead entry. The agent never edits the report and never publishes; the linker
+is the only publisher.
+
+Zero diagrams is the normal outcome (surveys and recommendation lists rarely have a flow
+to draw), and at most three are proposed. A diagram is proposed only when the report
+describes three or more connected parts, the picture reads faster than the prose, every
+box, arrow, and label restates the report, and it does not repeat the infographic, a
+diagram the report already contains, a table, or a short list.
+
+### Manifest
+
+The manifest is `<YYYYMM>/<name>/<stem>.diagrams.md` in the research checkout, beside
+the lead's report, where `<stem>` follows the `#research/image` stem rule (`topic__final.md`
+becomes `topic.diagrams.md`). It is written only when at least one diagram passed
+validation, and without overwrite: on a collision the agent stops diagram work and
+reports it. It is not a report. Metadata lives in the body, never in frontmatter (because
+`sase artifact read` strips frontmatter), and it carries no local paths or `file:` refs
+because the research repo is public. The `.diagrams.md` suffix keeps it out of the
+`@research` inventory and the Highlights hook.
+
+````markdown
+# Diagram proposals: <report title>
+
+Proposals for the swarm linker, not a report. Each diagram restates only what the source
+report says.
+
+```yaml
+source: research:<YYYYMM>/<name>/<name>__final.md
+producer: research.<N>.image
+check: "diagrams: rendered 1 of 1 Mermaid diagrams"
+```
+
+## publication-order
+
+```yaml
+anchor: |-
+  <5-20 words copied verbatim from one line of a body paragraph or list item>
+illustrates: |-
+  <one sentence stating the point the diagram makes, in the report's terms>
+caption: <at most about 15 words>
+```
+
+```mermaid
+flowchart TD
+  L["Lead report"] --> I["Image agent"]
+```
+````
+
+Each `## <id>` is a unique lowercase slug. `anchor` occurs exactly once in the report
+and is never a heading, table row, code block, or existing Mermaid fence;
+`illustrates` is the linker's fidelity check and semantic fallback locator; `caption`
+becomes one italic line under the figure. The `mermaid` fence is byte-identical to the
+source that passed validation.
+
+### Validation
+
+Every diagram must pass a mandatory render check before it is kept:
+
+```sh
+bob ref create <scratch>/check.md -o <scratch>/check_render.pdf -n -P <parent>
+```
+
+The scratch Markdown has a short paragraph before each diagram. `-n` is `--no-audio`
+(not a dry run), `-o` outside the library leaves no vault state, and `-P` names an
+existing Bob area or project note (the SASE project display name, falling back to any
+note from `bob capture-targets`). The output must report
+`diagrams: rendered N of N Mermaid diagrams` with no `warning:` lines. Diagrams are
+sized for a PDF column about 650 px wide and at most about half a page tall (`flowchart`
+`TD`, at most four boxes side by side and about five ranks, quoted labels of about four
+words, no `style`/`classDef`/`click`/HTML). If bob is missing or the check cannot run,
+nothing is proposed.
+
+### Status variable and artifact label
+
+When a manifest exists it is registered with
+`sase artifact create -p "<abs-path>" -l "diagrams:<YYYYMM>/<name>/<stem>.diagrams.md"`
+(no `--move`). The `diagrams:` label keeps it out of every `research:`-filtered listing
+while letting the linker filter for it exactly.
+
+The agent always sets the `diagrams` variable, including when it proposes nothing; a
+missing variable means unknown or failed, never "considered and declined". It carries no
+Mermaid bodies:
+
+```json
+{"status": "ready", "count": 2, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}
+{"status": "none", "count": 0, "reason": "Survey of options; no flow to draw."}
+{"status": "failed", "count": 0, "reason": "bob render check unavailable on this host"}
+```
+
+### Fail-open
+
+A diagram failure never fails the agent and never blocks the linker: the agent finishes
+normally so the linker can publish, and the infographic and the diagrams fail
+independently.
 
 ## `#research/audio` -- Narrate an Audio Edition
 

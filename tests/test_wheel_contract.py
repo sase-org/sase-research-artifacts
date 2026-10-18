@@ -86,7 +86,7 @@ def test_distribution_artifacts_use_renamed_identity(
     assert all("sase_research/" not in name for name in names)
 
 
-def test_wheel_contains_provider_defaults_and_all_six_macros(
+def test_wheel_contains_provider_defaults_and_all_seven_macros(
     built_distributions: Path,
 ) -> None:
     wheel = _single_artifact(built_distributions, "*.whl")
@@ -101,6 +101,7 @@ def test_wheel_contains_provider_defaults_and_all_six_macros(
     for macro in (
         "research.md",
         "research_audio.md",
+        "research_diagrams.md",
         "research_image.md",
         "research_more.md",
         "research_prompt.md",
@@ -109,7 +110,7 @@ def test_wheel_contains_provider_defaults_and_all_six_macros(
         assert f"{PACKAGE_NAME}/xprompts/{macro}" in names
 
 
-def test_sdist_contains_provider_defaults_and_all_six_macros(
+def test_sdist_contains_provider_defaults_and_all_seven_macros(
     built_distributions: Path,
 ) -> None:
     sdist = _single_artifact(built_distributions, "*.tar.gz")
@@ -127,6 +128,7 @@ def test_sdist_contains_provider_defaults_and_all_six_macros(
     for macro in (
         "research.md",
         "research_audio.md",
+        "research_diagrams.md",
         "research_image.md",
         "research_more.md",
         "research_prompt.md",

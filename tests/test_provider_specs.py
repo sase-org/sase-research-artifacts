@@ -17,7 +17,8 @@ from sase.artifact_providers.registry import (
     ARTIFACT_REF_ENTRY_POINT_GROUP,
     FILE_HOOK_ENTRY_POINT_GROUP,
 )
-from sase.config.file_hooks import _load_file_hooks
+from sase.artifact_ref_operations import filter_artifact_ref_paths
+from sase.config.file_hooks import FileHookEvent, _load_file_hooks, hook_matches_event
 from sase.config.layers import ConfigLayer
 from sase.sidecar_ref_config import _sidecar_ref_policy_report
 
@@ -242,6 +243,7 @@ def test_research_highlights_use_resolves_with_local_command(
         "!20*/*/*__*.md",
         "!20*/**/*_infographic.md",
         "!20*/**/*_narration.md",
+        "!20*/**/*.diagrams.md",
         "!20*/**/*.png.md",
         "!20*/**/*.jpg.md",
         "!20*/**/*.jpeg.md",
@@ -323,3 +325,54 @@ def test_research_ref_expansion_format_is_a_pointer_not_path_bound() -> None:
     )
     placeholders = set(artifact_ref_expansion_validate(expansion_format))
     assert "checkout_path" not in placeholders
+
+
+def test_diagram_manifests_are_excluded_from_inventory_and_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = "202610/x/x.diagrams.md"
+    reports = (
+        "202610/x_diagrams/x_diagrams.md",
+        "202610/x/x_diagrams.md",
+        "202610/x/x.md",
+    )
+
+    inventory_globs = RESEARCH_REF_PROVIDER_SPEC["ref"]["inventory"]["globs"]
+    inventory = filter_artifact_ref_paths(
+        "research", (manifest, *reports), path_globs=inventory_globs
+    )
+    assert manifest in inventory.filtered
+    assert set(reports) <= set(inventory.allowed)
+
+    layers = [
+        _config_layer(
+            [
+                {
+                    "use": "sase-research-artifacts@research-highlights",
+                    "command": "bob highlights create --include-id",
+                }
+            ]
+        )
+    ]
+    monkeypatch.setattr(
+        "sase.config.file_hooks.current_config_token", lambda: ("token-diagrams",)
+    )
+    monkeypatch.setattr("sase.config.file_hooks.load_config_layers", lambda: layers)
+    (hook,) = _load_file_hooks()
+
+    def _fires(rel_path: str) -> bool:
+        event = FileHookEvent(
+            project="p",
+            repo_kind="sidecar",
+            sidecar_role="research",
+            rel_path=rel_path,
+            op="ADD",
+        )
+        return hook_matches_event(hook, event, producer="commit")
+
+    assert not _fires(manifest)
+    # Drafts and the lead's `__final.md` are already excluded from the hook; the
+    # dotted suffix must not widen that exclusion to ordinary reports.
+    assert _fires("202610/x_diagrams/x_diagrams.md")
+    assert _fires("202610/x/x_diagrams.md")
+    assert _fires("202610/x/x.md")

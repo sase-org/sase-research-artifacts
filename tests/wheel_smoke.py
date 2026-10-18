@@ -65,6 +65,7 @@ research_names = {n for n in macros if n.startswith("research")}
 assert research_names == {
     "research",
     "research/audio",
+    "research/diagrams",
     "research/image",
     "research/more",
     "research/prompt",

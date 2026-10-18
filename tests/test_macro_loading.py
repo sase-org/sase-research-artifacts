@@ -189,10 +189,11 @@ def _assert_each_segment_has_one_queue(
     assert all("capacity=" not in segment for segment in segments)
 
 
-def test_all_six_research_macros_load() -> None:
+def test_all_seven_research_macros_load() -> None:
     assert set(_research_macros()) == {
         "research",
         "research/audio",
+        "research/diagrams",
         "research/image",
         "research/more",
         "research/prompt",
@@ -294,6 +295,59 @@ def test_research_audio_covers_guide_lint_render_and_delivery() -> None:
     assert "Do not silently drop the option" in xp.content
     assert "Omit `cover`" in xp.content
     assert "as `cover` when it exists" not in xp.content
+
+
+def test_research_diagrams_takes_no_inputs() -> None:
+    xp = _research_macros()["research/diagrams"]
+    assert not xp.inputs
+    assert "Propose validated Mermaid diagrams" in xp.description
+
+
+def test_research_diagrams_manifest_stem_and_label_contract() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "`<stem>.diagrams.md`" in content
+    assert "`topic__final.md` becomes `topic.diagrams.md`" in content
+    assert "#research/image" in content
+    assert "without overwrite" in content
+    assert "sase artifact create" in content
+    assert '-l "diagrams:<YYYYMM>/<name>/<stem>.diagrams.md"' in content
+    assert "without `--move`" in content
+    assert "never in frontmatter" in content
+    assert "no `file:` refs" in content
+    assert "Never edit the report" in content
+
+
+def test_research_diagrams_always_sets_the_status_variable() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "always set the `diagrams` variable" in content
+    for status in ("ready", "none", "failed"):
+        assert f"sase var set diagrams --json --value '{{\"status\": \"{status}\"" in (
+            content
+        )
+    assert "never carries" in content
+
+
+def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "Propose at most three" in content
+    assert "Zero is a normal outcome" in content
+    assert "bob ref create <scratch>/check.md -o <scratch>/check_render.pdf" in content
+    assert "-n -P <parent>" in content
+    assert "diagrams: rendered N of N Mermaid diagrams" in content
+    assert "grep -cF -- '<anchor>'" in content
+    assert "byte-identical" in content
+
+
+def test_research_diagrams_fails_open() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "A diagram failure never fails this agent" in content
+    assert "Finish normally so the linker can publish" in content
+
+
+def test_standalone_research_image_never_mentions_diagrams() -> None:
+    content = _research_macros()["research/image"].content.lower()
+    assert "diagram" not in content
+    assert "mermaid" not in content
 
 
 def test_research_prompt_declares_typed_input() -> None:

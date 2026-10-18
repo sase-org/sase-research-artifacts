@@ -48,9 +48,12 @@ effective specs and provider digests; pane-only edits are preserved for Python
 presentation and intentionally stay out of the Rust provider digest.
 
 The base inventory deliberately excludes generated infographic companion Markdown pages,
-including `*_infographic.md`, narration scripts such as `*_narration.md`, and disambiguated
-binary pages such as `*.png.md`, so link
-companions and audio scripts do not appear as research reports.
+including `*_infographic.md`, narration scripts such as `*_narration.md`, diagram
+manifests such as `*.diagrams.md`, and disambiguated binary pages such as `*.png.md`, so
+link companions, audio scripts, and diagram proposals do not appear as research reports.
+The `research-highlights` hook path globs share the same exclusions. The dotted
+`.diagrams.md` suffix is deliberate: report stems never contain dots, so it cannot
+collide with a published report such as `x_diagrams/x_diagrams.md`.
 
 An unresolvable `use:` (the plugin is not installed) fails soft: the role is dropped
 with a `missing_ref_provider` diagnostic rather than raising on the launch path. A
