@@ -112,10 +112,12 @@ diagnostic rather than running someone else's command on your machine.
   always-run lead who consolidates their reports; codex + claude researchers plus the
   lead by default (three agents), grok, muse, and gemini opt-in via `grok=true` /
   `muse=true` / `gemini=true`,
-  or five agents with the default set when `image=true` opts into the
-  infographic segment (`image=true` implies the linker, which opens the report with
-  a research-query summary and embeds the infographic directly above the published
-  report's bottom line), plus an optional linker agent via `linker=true`
+  or five agents with the default set when `image=true` or `diagrams=true` opts into
+  the image segment (`image=true` implies diagrams and the linker, which opens the
+  report with a research-query summary and embeds the infographic directly above the
+  published report's bottom line; `diagrams=true` alone runs `#research/diagrams`
+  without the infographic; `image=true diagrams=false` keeps the infographic only),
+  plus an optional linker agent via `linker=true`
   (`linker_model`, default `@xlarge`), for example
   `#research_swarm(prompt="A research topic", linker=true)`, plus an optional audio
   edition agent via `audio=true` (`audio_model`, default `@audio`; `audio_edition`,
@@ -123,10 +125,11 @@ diagnostic rather than running someone else's command on your machine.
   independent lead-dependent media agents that run in parallel: each waits only on
   the lead, and the audio agent narrates the lead's `<name>__final.md` with a
   generated podcast title card, completing with `sase var set audio` even on a
-  failed TTS render. The linker joins all enabled outputs and publishes `<name>.md`
-  with a listen card plus `audio:` frontmatter when the render succeeded. The audio
-  agent forks the lead to run `#research/audio(edition=<audio_edition>)` (requires
-  `sase plugin install listen`, or `uv tool install sase-listen`).
+  failed TTS render. The linker joins all enabled outputs, places any accepted
+  Mermaid diagrams from the image agent's companion manifest, and publishes
+  `<name>.md` with a listen card plus `audio:` frontmatter when the render succeeded.
+  The audio agent forks the lead to run `#research/audio(edition=<audio_edition>)`
+  (requires `sase plugin install listen`, or `uv tool install sase-listen`).
   Newly authored narration defaults to `brief`; edition selection never enables audio
   by itself. A provider that is hard-disabled drops its researcher even when requested; a
   soft-disabled provider still runs its researcher (soft disables never refuse
@@ -152,6 +155,8 @@ diagnostic rather than running someone else's command on your machine.
   lead_model=@xlarge): compare approaches`.
   Image example:
   `#research_swarm(prompt="A research topic", image=true)`.
+  Diagrams-only example:
+  `#research_swarm(prompt="A research topic", diagrams=true)`.
   Audio examples (brief by default):
   `#research_swarm(prompt="A research topic", audio=true)`.
   `#research_swarm(prompt="A research topic", audio=true, audio_edition=full)`.

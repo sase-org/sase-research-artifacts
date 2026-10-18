@@ -62,6 +62,7 @@ def _swarm_segments(
     image: bool = False,
     linker: bool = False,
     audio: bool = False,
+    diagrams: bool | None = None,
 ) -> list[str]:
     args = dict(named_args)
     if image:
@@ -70,6 +71,10 @@ def _swarm_segments(
         args["linker"] = "true"
     if audio:
         args["audio"] = "true"
+    if diagrams is True:
+        args["diagrams"] = "true"
+    elif diagrams is False:
+        args["diagrams"] = "false"
     return split_segments_protecting_fences(_swarm_body(args))
 
 
@@ -103,6 +108,19 @@ _AGENTS_AUDIO_LOOP = (
     "- agent={{ key }} audio={{ outputs.audio }}\n"
     "{% endfor %}{% endif %}"
 )
+_WAIT_DIAGRAMS_ARTIFACTS_LOOP = (
+    "{% for a in wait.artifacts if a.label "
+    'and a.label.startswith("diagrams:") %}\n'
+    "- wait_name={{ a.wait_name }} label={{ a.label }} "
+    "path={{ a.path }} ref={{ a.ref }}\n"
+    "{% endfor %}"
+)
+_AGENTS_DIAGRAMS_LOOP = (
+    "{% if agents is defined %}{% for key, outputs in agents.items() "
+    "if outputs.diagrams is defined %}\n"
+    "- agent={{ key }} diagrams={{ outputs.diagrams }}\n"
+    "{% endfor %}{% endif %}"
+)
 
 
 def _render_at_launch(segment: str) -> str:
@@ -128,6 +146,8 @@ def _without_wait_artifacts_loop(segment: str) -> str:
         .replace(_WAIT_IMAGE_ARTIFACTS_LOOP, "")
         .replace(_WAIT_AUDIO_ARTIFACTS_LOOP, "")
         .replace(_AGENTS_AUDIO_LOOP, "")
+        .replace(_WAIT_DIAGRAMS_ARTIFACTS_LOOP, "")
+        .replace(_AGENTS_DIAGRAMS_LOOP, "")
     )
 
 
@@ -321,7 +341,7 @@ def test_research_diagrams_always_sets_the_status_variable() -> None:
     content = _research_macros()["research/diagrams"].content
     assert "always set the `diagrams` variable" in content
     for status in ("ready", "none", "failed"):
-        assert f"sase var set diagrams --json --value '{{\"status\": \"{status}\"" in (
+        assert f'sase var set diagrams --json --value \'{{"status": "{status}"' in (
             content
         )
     assert "never carries" in content
@@ -385,6 +405,7 @@ def test_research_swarm_declares_typed_input() -> None:
         ("lead_model", "model"),
         ("image", "bool"),
         ("image_model", "model"),
+        ("diagrams", "bool"),
         ("linker", "bool"),
         ("linker_model", "model"),
         ("audio", "bool"),
@@ -411,11 +432,12 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[14].default == "@xlarge"
     assert xp.inputs[15].default is False
     assert xp.inputs[16].default == "@image"
-    assert xp.inputs[17].default is False
-    assert xp.inputs[18].default == "@xlarge"
-    assert xp.inputs[19].default is False
-    assert xp.inputs[20].default == "@audio"
-    assert xp.inputs[21].default == "brief"
+    assert xp.inputs[17].default is None
+    assert xp.inputs[18].default is False
+    assert xp.inputs[19].default == "@xlarge"
+    assert xp.inputs[20].default is False
+    assert xp.inputs[21].default == "@audio"
+    assert xp.inputs[22].default == "brief"
 
 
 def test_research_swarm_rejects_unroutable_model_with_suggestion() -> None:
@@ -481,6 +503,10 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
     assert "%wait:research.{@1}.final" in image
     assert "#fork:research.{@1}.final" in image
     assert "#research/image" in image
+    assert "#research/diagrams" in image
+    assert image.index("#research/image") < image.index("#research/diagrams")
+    assert _WAIT_ARTIFACTS_LOOP in image
+    assert "The lead researcher's registered report:" in image
     assert "%m:@image" in image
     assert "%model:@image" not in image
     assert "%if(" not in image
@@ -488,6 +514,7 @@ def test_research_swarm_can_opt_into_image_agent() -> None:
     assert "%wait:research.{@1}.final" in linker
     assert "%wait:research.{@1}.image" in linker
     assert "<name>_infographic.png" in linker
+    assert "<name>.diagrams.md" in linker
     assert "<name>__final.md" in final
 
 
@@ -562,24 +589,35 @@ def test_research_swarm_dependency_graph_preserved() -> None:
 
     assert _WAIT_ARTIFACTS_LOOP in final
     assert _WAIT_ARTIFACTS_LOOP in linker
+    assert _WAIT_ARTIFACTS_LOOP in image
     assert _WAIT_IMAGE_ARTIFACTS_LOOP in linker
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in final
     assert _WAIT_AUDIO_ARTIFACTS_LOOP in linker
     assert _AGENTS_AUDIO_LOOP in linker
     assert _WAIT_AUDIO_ARTIFACTS_LOOP not in final
     assert _AGENTS_AUDIO_LOOP not in final
+    assert _AGENTS_DIAGRAMS_LOOP in linker
+    assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP in linker
+    assert _AGENTS_DIAGRAMS_LOOP not in final
+    assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in final
+    assert _AGENTS_DIAGRAMS_LOOP not in image
+    assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in image
     assert _WAIT_ARTIFACTS_LOOP not in audio
     assert _WAIT_IMAGE_ARTIFACTS_LOOP not in audio
     assert _WAIT_AUDIO_ARTIFACTS_LOOP not in audio
     assert _AGENTS_AUDIO_LOOP not in audio
+    assert _AGENTS_DIAGRAMS_LOOP not in audio
+    assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in audio
     for researcher in (cdx, cld, grk, mus, gem):
         assert _WAIT_ARTIFACTS_LOOP not in researcher
         assert _WAIT_IMAGE_ARTIFACTS_LOOP not in researcher
         assert _WAIT_AUDIO_ARTIFACTS_LOOP not in researcher
         assert _AGENTS_AUDIO_LOOP not in researcher
+        assert _AGENTS_DIAGRAMS_LOOP not in researcher
+        assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in researcher
 
     xp = _research_macros()["research_swarm"]
-    assert "%if(should_run={{ image }})" in xp.content
+    assert "%if(should_run={{ run_visual }})" in xp.content
     assert "%if(should_run={{ run_linker }})" in xp.content
     assert "%if(should_run={{ audio }})" in xp.content
     assert "%q(" not in xp.content
@@ -1180,6 +1218,89 @@ def test_research_swarm_image_implies_linker_without_duplicates() -> None:
     _assert_each_segment_has_one_queue(both)
 
 
+@pytest.mark.parametrize(
+    ("image", "diagrams"),
+    [
+        (False, None),
+        (True, None),
+        (False, True),
+        (True, True),
+        (False, False),
+        (True, False),
+    ],
+)
+def test_research_swarm_diagrams_image_matrix(
+    image: bool, diagrams: bool | None
+) -> None:
+    run_diagrams = image if diagrams is None else diagrams
+    run_visual = image or run_diagrams
+    segments = _swarm_segments({}, image=image, diagrams=diagrams)
+    assert len(segments) == (5 if run_visual else 3)
+    _assert_each_segment_has_one_queue(segments)
+
+    plan = plan_typed_launch_units("\n---\n".join(segments), selected_project="sase")
+    assert plan.diagnostics == []
+
+    image_segments = [
+        segment for segment in segments if "%id(image, clan=research.{@1})" in segment
+    ]
+    linker_segments = [
+        segment for segment in segments if "%id(linker, clan=research.{@1})" in segment
+    ]
+    joined = "\n".join(segments)
+    opening_lines = [
+        line
+        for line in joined.splitlines()
+        if "Open the file in this exact order" in line
+    ]
+    assert all("diagram" not in line.lower() for line in opening_lines)
+
+    if not run_visual:
+        assert image_segments == []
+        assert linker_segments == []
+        assert "#research/diagrams" not in joined
+        assert "#research/image" not in joined
+        assert "<name>.diagrams.md" not in joined
+        assert _AGENTS_DIAGRAMS_LOOP not in joined
+        assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in joined
+        assert "%wait:research.{@1}.image" not in joined
+        return
+
+    assert len(image_segments) == 1
+    assert len(linker_segments) == 1
+    image_seg = image_segments[0]
+    linker_seg = linker_segments[0]
+    assert "%wait:research.{@1}.image" in linker_seg
+    assert "or a diagram" in linker_seg
+    assert "Every Mermaid diagram from the lead's report is still present" in linker_seg
+    if image:
+        assert "#research/image" in image_seg
+    else:
+        assert "#research/image" not in image_seg
+    if run_diagrams:
+        assert "#research/diagrams" in image_seg
+        assert _WAIT_ARTIFACTS_LOOP in image_seg
+        assert "The lead researcher's registered report:" in image_seg
+        if image:
+            assert image_seg.index("#research/image") < image_seg.index(
+                "#research/diagrams"
+            )
+        assert _AGENTS_DIAGRAMS_LOOP in linker_seg
+        assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP in linker_seg
+        assert "**Place proposed diagrams.**" in linker_seg
+        assert "diagrams pending" in linker_seg
+        assert "<name>.diagrams.md" in linker_seg
+        assert "copied verbatim" in linker_seg
+    else:
+        assert "#research/diagrams" not in image_seg
+        assert _WAIT_ARTIFACTS_LOOP not in image_seg
+        assert _AGENTS_DIAGRAMS_LOOP not in linker_seg
+        assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in linker_seg
+        assert "**Place proposed diagrams.**" not in linker_seg
+        assert "diagrams pending" not in linker_seg
+        assert "<name>.diagrams.md" not in linker_seg
+
+
 def test_research_swarm_audio_false_adds_nothing() -> None:
     segments = _swarm_segments({})
     assert len(segments) == 3
@@ -1527,6 +1648,65 @@ def test_research_swarm_linker_renders_audio_handoff_at_launch() -> None:
     assert "{%" not in rendered
 
 
+def test_research_swarm_linker_renders_diagram_handoff_at_launch() -> None:
+    """The deferred agents/diagrams: loops render at launch from wait context."""
+
+    class _JsonMap(dict):
+        def __str__(self) -> str:
+            return json.dumps(self, separators=(",", ":"), sort_keys=True)
+
+    diagrams_facts = _JsonMap(
+        {
+            "status": "ready",
+            "count": 1,
+            "manifest": "202610/topic/topic.diagrams.md",
+            "source_ref": "research:202610/topic/topic__final.md",
+        }
+    )
+    linker = _swarm_segments({}, diagrams=True)[-1]
+    with bind_runtime_template_vars(
+        {
+            "agents": {"research.m.image": {"diagrams": diagrams_facts}},
+            "wait": SimpleNamespace(
+                chats=[],
+                artifacts=[
+                    {
+                        "kind": "markdown",
+                        "wait_name": "research.m.image",
+                        "label": "diagrams:202610/topic/topic.diagrams.md",
+                        "path": "/tmp/topic.diagrams.md",
+                        "ref": "file:diagrams-id",
+                    }
+                ],
+            ),
+        }
+    ):
+        rendered = _render_at_launch(linker)
+
+    assert "agent=research.m.image diagrams=" in rendered
+    assert '"status":"ready"' in rendered
+    assert (
+        "wait_name=research.m.image label=diagrams:202610/topic/topic.diagrams.md"
+        in (rendered)
+    )
+    assert "path=/tmp/topic.diagrams.md" in rendered
+    assert "ref=file:diagrams-id" in rendered
+    assert "{{" not in rendered
+    assert "{%" not in rendered
+
+
+def test_research_swarm_linker_diagram_rules_present_when_diagrams_off() -> None:
+    linker = _swarm_segments({}, linker=True)[-1]
+    assert "or a diagram" in linker
+    assert "Every Mermaid diagram from the lead's report is still present" in linker
+    assert _AGENTS_DIAGRAMS_LOOP not in linker
+    assert _WAIT_DIAGRAMS_ARTIFACTS_LOOP not in linker
+    assert "**Place proposed diagrams.**" not in linker
+    assert "diagrams pending" not in linker
+    assert "<name>.diagrams.md" not in linker
+    assert "%wait:research.{@1}.image" not in linker
+
+
 def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:
     segments = _swarm_segments({"wait": "research.0f.final"}, linker=True)
     linker = segments[-1]
@@ -1553,11 +1733,23 @@ def test_research_swarm_linker_final_layout_publishes_report() -> None:
     assert "├── <name>__cld.md" in linker
     assert "├── <name>__final.md" in linker
     assert "<name>_infographic.png" not in linker
+    assert "<name>.diagrams.md" not in linker
     assert linker.rstrip().endswith("└── <name>.md\n```")
 
     image_linker = _swarm_segments({}, image=True)[-1]
     assert "├── <name>_infographic.png" in image_linker
+    assert "├── <name>.diagrams.md (optional)" in image_linker
     assert image_linker.rstrip().endswith("└── <name>.md\n```")
+
+    diagrams_linker = _swarm_segments({}, diagrams=True)[-1]
+    assert "<name>_infographic.png" not in diagrams_linker
+    assert "├── <name>.diagrams.md (optional)" in diagrams_linker
+    assert diagrams_linker.rstrip().endswith("└── <name>.md\n```")
+
+    image_only_linker = _swarm_segments({}, image=True, diagrams=False)[-1]
+    assert "├── <name>_infographic.png" in image_only_linker
+    assert "<name>.diagrams.md" not in image_only_linker
+    assert image_only_linker.rstrip().endswith("└── <name>.md\n```")
 
     grok_linker = _swarm_segments({"grok": "true"}, linker=True)[-1]
     assert "<name>__grk.md" in grok_linker
@@ -1630,6 +1822,7 @@ def test_research_swarm_linker_converts_tables_to_lists() -> None:
     assert "`- *<Column header>:* <cell>`" in step3
     assert "3 spaces under `1. `" in step3
     assert "Never turn a row into a `####` heading." in step3
+    assert "or a diagram" in step3
 
     step6 = linker.split("6. **Re-check against the step-2 inventory**", 1)[1].split(
         "7. **Write**", 1

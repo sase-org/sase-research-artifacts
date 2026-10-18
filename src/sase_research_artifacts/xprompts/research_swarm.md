@@ -1,9 +1,10 @@
 ---
 description:
   Launch independent per-provider research agents, then have a lead researcher extend
-  and consolidate their findings. Optionally generate an infographic and/or a narrated
-  audio edition; `image=true` or `audio=true` implies a linker agent that publishes
-  the canonical report (with a listen card when audio succeeds).
+  and consolidate their findings. Optionally generate an infographic, Mermaid diagrams,
+  and/or a narrated audio edition; `image=true`, `diagrams=true`, or `audio=true`
+  implies a linker agent that publishes the canonical report (with a listen card when
+  audio succeeds).
 input:
   - name: prompt
     type: text
@@ -89,14 +90,21 @@ input:
     type: model
     default: "@image"
     description: Model alias or provider model for the `<clan>.image` agent.
+  - name: diagrams
+    type: bool
+    default: null
+    description:
+      Propose validated Mermaid diagrams after the lead researcher finishes. When
+      null, follows `image`. `diagrams=true` implies the image segment and the
+      linker. `image=true diagrams=false` keeps the infographic without diagrams.
   - name: linker
     type: bool
     default: false
     description:
       Run a linker agent after the lead researcher (and after the image agent when
-      `image=true`, and after the audio agent when `audio=true`). The lead then
-      writes `<name>__final.md` while the linker publishes `<name>.md`. The linker
-      always runs when `image=true` or `audio=true`.
+      the image segment runs, and after the audio agent when `audio=true`). The lead
+      then writes `<name>__final.md` while the linker publishes `<name>.md`. The
+      linker always runs when `image=true`, `diagrams=true`, or `audio=true`.
   - name: linker_model
     type: model
     default: "@xlarge"
@@ -141,13 +149,15 @@ macros:
 + ([{"short": "mus", "provider": "muse", "model": muse_model}] if muse and ("muse" | provider_enabled("hard")) else [])
 + ([{"short": "gem", "provider": "agy", "model": gemini_model}] if gemini and ("agy" | provider_enabled("hard")) else [])
 -%}
-{%- set run_linker = linker or image or audio -%}
+{%- set run_diagrams = image if diagrams is none else diagrams -%}
+{%- set run_visual = image or run_diagrams -%}
+{%- set run_linker = linker or run_visual or audio -%}
 {%- set lead_report = "<name>__final.md" if run_linker else "<name>.md" -%}
 {%- set drafts = [] -%}
 {%- for r in researchers %}{% set _ = drafts.append("<name>__" ~ r.short ~ ".md") %}{% endfor -%}
 {%- set narration = ["<name>_narration.md"] if audio else [] -%}
 {%- set lead_files = drafts + [lead_report] + narration -%}
-{%- set linker_files = drafts + ["<name>__final.md"] + (["<name>_infographic.png"] if image else []) + ["<name>.md"] + narration -%}
+{%- set linker_files = drafts + ["<name>__final.md"] + (["<name>_infographic.png"] if image else []) + (["<name>.diagrams.md (optional)"] if run_diagrams else []) + ["<name>.md"] + narration -%}
 {%- macro tree(files) -%}
 {{ "```text" }}
 <month-dir>/<name>/
@@ -266,12 +276,20 @@ Final layout:
 {{ tree(lead_files) }}
 ---
 
-%if(should_run={{ image }}) %id(image, clan=research.{@1}) %m:{{ image_model }}
-%wait:research.{@1}.final #_queue #fork:research.{@1}.final #research/image
+%if(should_run={{ run_visual }}) %id(image, clan=research.{@1}) %m:{{ image_model }}
+%wait:research.{@1}.final #_queue #fork:research.{@1}.final{% if image %} #research/image{% endif %}
+{%- if run_diagrams %}
+
+The lead researcher's registered report:
+
+#_report_records
+
+#research/diagrams
+{%- endif %}
 ---
 
 %if(should_run={{ run_linker }}) %id(linker, clan=research.{@1}) %m:{{ linker_model }}
-%wait:research.{@1}.final {% if image %}%wait:research.{@1}.image {% endif %}{% if audio %}%wait:research.{@1}.audio {% endif %}#_queue
+%wait:research.{@1}.final {% if run_visual %}%wait:research.{@1}.image {% endif %}{% if audio %}%wait:research.{@1}.audio {% endif %}#_queue
 
 You are the linker agent for a research swarm. The lead researcher,
 `research.{@1}.final`, has written a consolidated report on the request below. Your job
@@ -281,7 +299,8 @@ file must carry exactly the lead's meaning and intent. Do not do research of you
 add no new claims or sources, settle no open questions, and neither soften nor
 strengthen the conclusions or the recommendation. If the lead seems wrong, leave it as
 written. The only prose you write yourself is the short research-query summary of the
-request that opens the file (step 3).
+request that opens the file (step 3).{%- if run_diagrams %} The only other content you
+add is the image agent's diagrams and captions, copied verbatim.{%- endif %}
 
 SASE derives your plan's links from the artifacts you read this turn; use
 `sase artifact read` for context you actually used.
@@ -299,6 +318,16 @@ The image agent's registered images:
 
 {% raw %}{% for a in wait.artifacts if a.kind == "image" %}
 - wait_name={{ a.wait_name }} label={{ a.label }} vcs_relpath={{ a.vcs_relpath }} path={{ a.path }} ref={{ a.ref }}
+{% endfor %}{% endraw %}
+{% endif %}
+{% if run_diagrams %}
+The image agent's diagram proposals:
+
+{% raw %}{% if agents is defined %}{% for key, outputs in agents.items() if outputs.diagrams is defined %}
+- agent={{ key }} diagrams={{ outputs.diagrams }}
+{% endfor %}{% endif %}
+{% for a in wait.artifacts if a.label and a.label.startswith("diagrams:") %}
+- wait_name={{ a.wait_name }} label={{ a.label }} path={{ a.path }} ref={{ a.ref }}
 {% endfor %}{% endraw %}
 {% endif %}
 {% if audio %}
@@ -321,12 +350,25 @@ Steps:
    (or the `ref` field's `file:<id>` reference if the original has moved) using
    `sase artifact read`. Take `<YYYYMM>/<name>/` from the label, never from the current
    date. Do not read predecessor chat transcripts. Never modify, move, or delete
-   `<name>__final.md` or the drafts.
+   `<name>__final.md` or the drafts{%- if run_diagrams %} or `<name>.diagrams.md`{%- endif %}.
+   {%- if run_diagrams %}
+   Read the `diagrams` variable of `research.{@1}.image`. Only when its `status` is
+   `ready`, take exactly one listed `diagrams:` entry from `wait_name`
+   `research.{@1}.image` whose label is
+   `diagrams:<YYYYMM>/<name>/<name>.diagrams.md` for the lead's own
+   `<YYYYMM>/<name>/`. Read it with `sase artifact read`, and confirm its `source`
+   equals the lead's label. Publish with no proposed diagrams, and say why in the
+   final response, if the status is `none` or `failed`, the variable is missing, the
+   manifest entry is missing or ambiguous, or the source does not match. Diagram
+   problems never stop publication.
+   {%- endif %}
 
 2. **Inventory what must survive.** Before writing, list every finding, recommendation,
    caveat, open question, confidence statement, number, date, version, code block,
    table (record its cells; step 3 converts each one into a list), and link in the
-   lead's report.
+   lead's report.{%- if run_diagrams %} For each manifest diagram, record its ID against
+   the one lead block (paragraph or list item) that contains its `anchor`. Mark a
+   diagram whose anchor matches zero or several blocks as omitted.{%- endif %}
 3. **Restructure** the lead's report into a well-thought-out organization:
    - Keep the frontmatter, updating `updated_time` if present.
    - **Open the file in this exact order**, with nothing else between these parts: the frontmatter (if any), one `#` title, the research query,{%- if audio %} the listen card,{%- endif %}{%- if image %} the infographic,{%- endif %} and then the bottom-line section.
@@ -425,12 +467,26 @@ Steps:
        3 spaces under `1. `. Write URLs as `[text](url)` or `<url>`, never bare. Do not
        substitute a definition list (`Term` then `: definition`), an HTML table, a grid
        or simple table, a table in a code block, a callout or `:::` div, raw LaTeX, or
-       an image. Never drop a cell, merge two rows, or add totals, rankings, or
+       an image, or a diagram. Never drop a cell, merge two rows, or add totals, rankings, or
        conclusions the table did not state.
    - Keep the lead's wording where it works. Never drop a claim, caveat, or source to
      save space. If the lead's report restates the question or lists its inputs, keep
      those details in a later section; the research query summarizes the request but
      does not replace them.
+   {%- if run_diagrams %}
+   - **Place proposed diagrams.** After restructuring, insert each fence byte-for-byte
+     directly after the block that now carries the tagged content, even if that content
+     was reordered, merged, or converted from a table into a list. Follow it with the
+     caption as one italic line, with blank lines around both. Then check that the
+     surrounding final text still states the `illustrates` point and that no box or
+     edge contradicts it. Omit the diagram otherwise. Never place a diagram in the
+     fixed opening sequence, directly under a heading, inside a list or blockquote
+     (put it after the whole list), or in an appendix; bottom-line content goes at the
+     end of that section; two diagrams on one block go in manifest order. Never edit,
+     redraw, merge, or invent a diagram. A private scratch marker such as
+     `<!-- D:<id> -->` may be used in the working draft but must be gone before
+     writing.
+   {%- endif %}
 4. **Validate every link carried over.**
    - Relative links resolve from `<YYYYMM>/<name>/`, and in-document anchors resolve
      against the final headings. Both are hard requirements.
@@ -462,7 +518,12 @@ Steps:
    Confirm every cell of every table in the lead's report appears in the new file. When
    `pandoc` is available, confirm no table survives:
    `pandoc <file> -f markdown -t json | grep -o -i -E '"t":"Table"|"t":"RawBlock","c":\["html","<table' | wc -l`
-   prints `0`.
+   prints `0`. Every Mermaid diagram from the lead's report is still present.
+   {%- if run_diagrams %} Every manifest diagram appears exactly once, byte-identical,
+   or is named as omitted.{%- endif %} The published mermaid fence count equals the
+   lead's count plus the number of accepted proposed diagrams.
+   {%- if run_diagrams %} In the final response, list accepted and omitted diagram IDs
+   with reasons. Never write "diagrams pending".{%- endif %}
 
 7. **Write** `<YYYYMM>/<name>/<name>.md` without overwrite. On a collision, stop and
    report it.

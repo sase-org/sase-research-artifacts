@@ -202,9 +202,10 @@ recommendation, then hands off to `#research` to write it up.
 | `muse_model`            | model | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
 | `gemini_model`          | model | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | model | `@xlarge`                               | Model for `<clan>.final`                                 |
-| `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker)             |
+| `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker; also diagrams unless `diagrams=false`) |
 | `image_model`           | model | `@image`                                | Model for `<clan>.image`                                 |
-| `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true` or `audio=true`) |
+| `diagrams`              | bool | `null`                                  | Follows `image` when null; `diagrams=true` implies the image segment and the linker |
+| `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true`, `diagrams=true`, or `audio=true`) |
 | `linker_model`          | model | `@xlarge`                               | Model for `<clan>.linker`                                |
 | `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (implies the linker)             |
 | `audio_model`           | model | `@audio`                                | Model for `<clan>.audio`                                 |
@@ -221,8 +222,10 @@ researcher template. `grok=true` /
 `false`) drops one; turning all five off leaves exactly the lead running solo. A
 provider that is hard-disabled drops its researcher even when its boolean input
 is true; a soft-disabled provider still runs its researcher (soft disables never
-refuse explicit model launches). When `image=true` or `audio=true` opts into those segments, the default set
-runs five agents, because each implies the linker; both together run six.
+refuse explicit model launches). When `image=true`, `diagrams=true`, or `audio=true`
+opts into those segments, the default set runs five agents, because each implies the
+linker; image or diagrams together with audio run six. `diagrams` does not add a
+tenth agent: it runs inside the image segment.
 Optional `wait` gates only the researchers. Optional `priority`
 applies to every launched agent when supplied (lower values start first); omission uses
 SASE's implicit queue priority. Every launched segment authors `%q(1.5x, w=0.25)`,
@@ -240,6 +243,11 @@ The nine model inputs can be supplied independently, for example
 Omitting them preserves the defaults below. The opt-in image segment uses
 `image_model` (default `@image`), for example
 `#research_swarm(prompt="A research topic", image=true)`.
+`diagrams` is a nullable bool that follows `image` when omitted, for example
+`#research_swarm(prompt="A research topic", diagrams=true)` (image segment with only
+`#research/diagrams`) or
+`#research_swarm(prompt="A research topic", image=true, diagrams=false)` (infographic
+without diagrams).
 The opt-in linker segment uses `linker_model` (default `@xlarge`), for example
 `#research_swarm(prompt="A research topic", linker=true)`.
 The opt-in audio segment uses `audio_model` (default `@audio`), for example
@@ -276,17 +284,20 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    perspective. Individual researcher reports move to `<name>__<short>.md` under
    `<name>/`, preserving each report's existing suffix; the consolidated report is
    `<name>/<name>.md`. Carries the clan's tribe/summary declaration.
-7. **`<clan>.image`** -- optional; when `image=true`, waits on and forks
-   from the lead's segment, then runs `#research/image` against the lead's
-   `<name>__final.md` using `image_model` (default `@image`).
+7. **`<clan>.image`** -- optional; runs when `image=true` or `diagrams=true`.
+   Waits on and forks from the lead's segment. Runs `#research/image` when
+   `image=true` and/or `#research/diagrams` when diagrams are enabled (after the
+   infographic brief, with the lead's registered report listed above it), using
+   `image_model` (default `@image`).
 8. **`<clan>.linker`** -- optional; runs when `linker=true`, and always when
-   `image=true` or `audio=true`. Waits on the lead (and on the image agent when
-   `image=true`, and on the audio agent when `audio=true`) without forking, finds
-   the lead's `<name>__final.md` through `wait.artifacts`, and writes and
-   registers the canonical, well-structured `<name>.md`. The file opens with the
-   title, then a short research-query summary of the swarm's `prompt`, then the
-   listen card when audio succeeded, then the infographic when one was generated,
-   then the `## Bottom line` / `## Overview` section. Restructured sections with
+   `image=true`, `diagrams=true`, or `audio=true`. Waits on the lead (and on the
+   image agent whenever that segment runs, and on the audio agent when
+   `audio=true`) without forking, finds the lead's `<name>__final.md` through
+   `wait.artifacts`, and writes and registers the canonical, well-structured
+   `<name>.md`. The file opens with the title, then a short research-query summary
+   of the swarm's `prompt`, then the listen card when audio succeeded, then the
+   infographic when one was generated, then the `## Bottom line` / `## Overview`
+   section. Diagrams never enter that opening sequence. Restructured sections with
    checked links and in-document jump links follow.
 9. **`<clan>.audio`** -- optional; when `audio=true`, waits only on the lead and
    never on the linker, running alongside the optional image agent, forks from
@@ -303,20 +314,37 @@ from that registered label rather than the current date. The linker is an editor
 a researcher: it must not add claims or sources, and it leaves the lead's report as
 written when it disagrees with it.
 
-Execution matrix (default researchers cdx + cld):
+Execution matrix (default researchers cdx + cld). `diagrams` follows `image` when
+omitted:
 
-| `audio` | `image` | `linker` arg | Agents | Lead writes  | Hook-eligible file                 |
-| ------- | ------- | ------------ | ------ | ------------ | ---------------------------------- |
-| false   | false   | false        | 3      | `<name>.md`  | lead's `<name>.md`                 |
-| false   | false   | true         | 4      | `__final.md` | linker's `<name>.md`               |
-| false   | true    | (implied)    | 5      | `__final.md` | linker's `<name>.md` + infographic |
-| true    | false   | (implied)    | 5      | `__final.md` | linker's `<name>.md` + listen card |
-| true    | true    | (implied)    | 6      | `__final.md` | both companions                    |
+| `audio` | `image` | `diagrams` | `linker` arg | Agents | Lead writes  | Hook-eligible file                 |
+| ------- | ------- | ---------- | ------------ | ------ | ------------ | ---------------------------------- |
+| false   | false   | (follows)  | false        | 3      | `<name>.md`  | lead's `<name>.md`                 |
+| false   | false   | (follows)  | true         | 4      | `__final.md` | linker's `<name>.md`               |
+| false   | false   | true       | (implied)    | 5      | `__final.md` | linker's `<name>.md` + diagrams    |
+| false   | true    | (follows)  | (implied)    | 5      | `__final.md` | linker's `<name>.md` + infographic |
+| false   | true    | false      | (implied)    | 5      | `__final.md` | linker's `<name>.md` + infographic |
+| true    | false   | (follows)  | (implied)    | 5      | `__final.md` | linker's `<name>.md` + listen card |
+| true    | true    | (follows)  | (implied)    | 6      | `__final.md` | both companions                    |
 
-`image=true` or `audio=true` implies the linker: only the linker's `<name>.md` is
-hook-eligible. The narration script is excluded from both the `@research`
-inventory and the Highlights hook, like the infographic companion pages. No MP3
-enters the public research repo.
+`image=true`, `diagrams=true`, or `audio=true` implies the linker: only the
+linker's `<name>.md` is hook-eligible. Proposed diagrams are placed inside that
+file; `<name>.diagrams.md` is a companion manifest, not a hook-eligible report.
+The narration script and `<name>.diagrams.md` are excluded from both the
+`@research` inventory and the Highlights hook, like the infographic companion
+pages. No MP3 enters the public research repo.
+
+### Diagram handoff
+
+When diagrams run, the image agent proposes zero to three validated Mermaid
+diagrams in `<name>.diagrams.md` and always sets the `diagrams` variable. The
+linker reads that variable and the matching `diagrams:` wait artifact, binds each
+proposal to the one lead block that contains its `anchor` *before* restructuring,
+then inserts accepted fences verbatim after that block (plus the caption as one
+italic line). It omits a diagram whose anchor is missing or ambiguous, whose
+`illustrates` point no longer holds, or that would contradict the surrounding
+text. A diagram failure never blocks publication. The linker lists accepted and
+omitted IDs in its final response and never writes "diagrams pending".
 
 ### Listen card
 

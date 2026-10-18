@@ -96,7 +96,8 @@ def assert_segments(named_args, *, runners=None, priority=None, image=False):
         preserve_segment_separators=True,
     )
     segments = split_segments_protecting_fences(body)
-    assert len(segments) == (5 if image else 3), segments
+    run_visual = image or named_args.get("diagrams") == "true"
+    assert len(segments) == (5 if run_visual else 3), segments
     for segment in segments:
         assert segment.count("%q(") == 1
         assert "runners=" not in segment
@@ -131,6 +132,7 @@ def assert_segments(named_args, *, runners=None, priority=None, image=False):
 
 assert_segments({})
 assert_segments({}, image=True)
+assert_segments({"diagrams": "true"})
 assert_segments({"runners": "0"}, runners=0)
 assert_segments({"runners": "1"}, runners=1)
 assert_segments({"priority": "0"}, priority=0)
