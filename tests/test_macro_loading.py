@@ -337,6 +337,13 @@ def test_research_diagrams_manifest_stem_and_label_contract() -> None:
     assert "Never edit the report" in content
 
 
+def test_research_diagrams_manifest_id_defines_figure_anchor() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "unique slug of lowercase letters, digits, and hyphens" in content
+    assert "publishes the diagram under the anchor `figure-<id>`" in content
+    assert "builds the figure's in-text reference sentence from it" in content
+
+
 def test_research_diagrams_always_sets_the_status_variable() -> None:
     content = _research_macros()["research/diagrams"].content
     assert "always set the `diagrams` variable" in content
@@ -1301,6 +1308,15 @@ def test_research_swarm_diagrams_image_matrix(
         if "Open the file in this exact order" in line
     ]
     assert all("diagram" not in line.lower() for line in opening_lines)
+    if run_diagrams:
+        assert '<div id="figure-<id>">' in segments[-1]
+        place_pos = segments[-1].index("**Place proposed diagrams.**")
+        anchor_pos = segments[-1].index("**Anchor every placed figure.**")
+        reference_pos = segments[-1].index("**Reference every placed figure.**")
+        assert place_pos < anchor_pos < reference_pos
+        assert "[<link text>](#figure-<id>)" in segments[-1]
+    else:
+        assert all("figure-<id>" not in segment for segment in segments)
 
     if not run_visual:
         assert image_segments == []
@@ -1758,6 +1774,51 @@ def test_research_swarm_linker_diagram_rules_present_when_diagrams_off() -> None
     assert "<name>.diagrams.md" not in linker
     assert "%wait:research.{@1}.image" not in linker
     assert "after the fifth in manifest order" not in linker
+
+
+def test_research_swarm_figure_anchor_text_is_gated() -> None:
+    no_diagrams_linker = _swarm_segments({}, linker=True)[-1]
+    image_only_linker = _swarm_segments({}, image=True, diagrams=False)[-1]
+    assert "figure-" not in no_diagrams_linker
+    assert "figure-" not in image_only_linker
+
+
+def test_research_swarm_figure_reference_sentence_rules() -> None:
+    linker = _swarm_segments({}, diagrams=True)[-1]
+    step3 = linker.split("3. **Restructure**", 1)[1].split(
+        "4. **Validate every link carried over.**", 1
+    )[0]
+    assert '"See the diagram below."' in step3
+    assert '"here", "this", or a figure number' in step3
+    assert "delete its sentence too" in step3
+    assert "end that paragraph" in step3
+
+    step6 = linker.split("6. **Re-check against the step-2 inventory**", 1)[1].split(
+        "7. **Write**", 1
+    )[0]
+    assert (
+        "grep -c '^<div id=\"figure-' <file>` equals the number of accepted diagrams"
+        in step6
+    )
+    assert "accepted diagram IDs with their" in step6
+    assert "`figure-<id>` anchors" in step6
+
+
+def test_research_swarm_figure_links_do_not_look_like_macro_syntax() -> None:
+    variants = (
+        _swarm_segments({}, linker=True),
+        _swarm_segments({}, image=True),
+        _swarm_segments({}, diagrams=True),
+        _swarm_segments({}, image=True, diagrams=False),
+        _swarm_segments({}, audio=True),
+        _swarm_segments({}, image=True, audio=True),
+    )
+    fenced = re.compile(r"```.*?```", re.DOTALL)
+    inline = re.compile(r"`[^`\n]*`")
+    for segments in variants:
+        for segment in segments:
+            visible = inline.sub("", fenced.sub("", segment))
+            assert "#figure" not in visible
 
 
 def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:

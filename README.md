@@ -131,8 +131,9 @@ diagnostic rather than running someone else's command on your machine.
   the lead, and the audio agent narrates the lead's `<name>__final.md` with a
   generated podcast title card, completing with `sase var set audio` even on a
   failed TTS render. The linker joins all enabled outputs, places any accepted
-  Mermaid diagrams from the image agent's companion manifest, and publishes
-  `<name>.md` with a listen card plus `audio:` frontmatter when the render succeeded.
+  Mermaid diagrams from the image agent's companion manifest, anchors each placed
+  diagram, and references it with one in-text local link. It publishes `<name>.md`
+  with a listen card plus `audio:` frontmatter when the render succeeded.
   The audio agent forks the lead to run `#research/audio(edition=<audio_edition>)`
   (requires `sase plugin install listen`, or `uv tool install sase-listen`).
   Newly authored narration defaults to `brief`; edition selection never enables audio

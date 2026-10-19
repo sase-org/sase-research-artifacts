@@ -92,11 +92,12 @@ flowchart TD
 ```
 ````
 
-Each `## <id>` is a unique lowercase slug. `anchor` occurs exactly once in the report
-and is never a heading, table row, code block, or existing Mermaid fence;
-`illustrates` is the linker's fidelity check and semantic fallback locator; `caption`
-becomes one italic line under the figure. The `mermaid` fence is byte-identical to the
-source that passed validation.
+Each `## <id>` is a unique slug of lowercase letters, digits, and hyphens; the linker
+publishes the diagram under the anchor `figure-<id>`. `anchor` occurs exactly once in
+the report and is never a heading, table row, code block, or existing Mermaid fence;
+`illustrates` is the linker's fidelity check and semantic fallback locator, and also
+seeds the in-text reference sentence; `caption` becomes one italic line under the
+figure. The `mermaid` fence is byte-identical to the source that passed validation.
 
 ### Validation
 
@@ -316,7 +317,8 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    of the swarm's `prompt`, then the listen card when audio succeeded, then the
    infographic when one was generated, then the `## Bottom line` / `## Overview`
    section. Diagrams never enter that opening sequence. Restructured sections with
-   checked links and in-document jump links follow.
+   checked links and in-document jump links follow; every placed diagram is an anchored
+   figure introduced by one linking sentence.
 9. **`<clan>.audio`** -- optional; when `audio=true`, waits only on the lead and
    never on the linker, running alongside the optional image agent, forks from
    the lead's segment, then runs `#research/audio(edition=<audio_edition>)`
@@ -364,7 +366,12 @@ missing or ambiguous, whose `illustrates` point no longer holds, or that would
 contradict the surrounding text. The linker places at most five diagrams and omits
 any later manifest entry as over the cap. A diagram failure never blocks publication.
 The linker lists accepted and omitted IDs in its final response and never writes
-"diagrams pending".
+"diagrams pending". Each placed diagram is published as a figure: its fence and caption
+are wrapped in `<div id="figure-<id>">` with blank lines inside, like the listen card,
+which GitHub and the Highlights PDF both treat as the link target. One linker-written
+sentence links to it with `[the <topic> diagram](#figure-<id>)`, tells the reader what to
+look for, and restates only the manifest's `illustrates` point. An omitted diagram takes
+its reference sentence with it.
 
 ### Listen card
 

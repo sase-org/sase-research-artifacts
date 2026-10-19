@@ -178,10 +178,12 @@ flowchart TD
 
 - `source` is the report's `research:` label, `producer` is your agent name, and `check`
   records the CLI version and chart count from the passing run.
-- Each `## <id>` is a unique lowercase slug. `anchor` is a YAML literal block, so
-  backticks and quotes copy exactly. `illustrates` is one sentence in the report's own
-  terms stating the point the diagram makes. `caption` is at most about 15 words and has
-  no figure number.
+- Each `## <id>` is a unique slug of lowercase letters, digits, and hyphens; the linker
+  publishes the diagram under the anchor `figure-<id>`. `anchor` is a YAML literal block,
+  so backticks and quotes copy exactly. `illustrates` is one sentence in the report's
+  own terms stating the point the diagram makes and what the figure lets a reader see;
+  the linker also builds the figure's in-text reference sentence from it. `caption` is
+  at most about 15 words and has no figure number.
 - Each `mermaid` fence is byte-identical to the source that passed the check; rerun the
   check after any edit.
 
