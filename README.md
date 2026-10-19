@@ -51,8 +51,11 @@ leaves unset -- the actual command is local to your machine:
 ```yaml
 file_hooks:
   - use: sase-research-artifacts@research-highlights
-    command: bob highlights create --include-id
+    command: render-research-pdf
 ```
+
+SASE appends the report’s absolute path as the command’s final argument and exports
+the project display name in `SASE_FILE_HOOK_PROJECT`, so any local renderer works.
 
 Both `use:` and a fully inline spec normalize to the same effective policy; overriding
 individual fields (e.g. `inventory.globs`) deep-merges over the provider's base spec,
@@ -85,8 +88,8 @@ consolidated report, not each researcher's draft.
 `<name>.md` gets a PDF. The agent veto intentionally never lists `final`: the lead
 agent publishes `<name>.md` itself on swarms without the linker.
 Artifact-copy events are deliberately excluded because detached artifact execution uses
-durable content-addressed paths whose basenames may include digest suffixes; Bob derives
-its PDF basename and marker id from the input Markdown basename.
+durable content-addressed paths whose basenames may include digest suffixes. A renderer
+that names output after the input basename would otherwise see those suffixes.
 
 **The two glob sets differ on purpose.** The ref provider's inventory keeps swarm drafts
 because citing a specific researcher's draft with `@research:...` is legitimate; the file
@@ -104,7 +107,8 @@ diagnostic rather than running someone else's command on your machine.
 - `#research/image` -- generate an infographic from a research file's main points.
 - `#research/diagrams` -- propose validated Mermaid diagrams for a swarm lead's report in
   a `<stem>.diagrams.md` manifest for the swarm linker to place (meant for the swarm's
-  image segment).
+  image segment); render-checks with Mermaid CLI (`mmdc`, falling back to `npx`) and
+  proposes nothing if neither is usable.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.

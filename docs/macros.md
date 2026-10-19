@@ -62,7 +62,7 @@ report says.
 ```yaml
 source: research:<YYYYMM>/<name>/<name>__final.md
 producer: research.<N>.image
-check: "diagrams: rendered 1 of 1 Mermaid diagrams"
+check: "mmdc 12.0.0 rendered 1 of 1 Mermaid diagrams"
 ```
 
 ## publication-order
@@ -89,21 +89,23 @@ source that passed validation.
 
 ### Validation
 
-Every diagram must pass a mandatory render check before it is kept:
+Put every diagram in scratch Markdown with a short paragraph before each one. Probe
+`mmdc` first, then `npx -y -p @mermaid-js/mermaid-cli mmdc`; use a form only when a
+smoke render exits 0 and writes `probe.svg`. If Chrome cannot start its sandbox, retry
+once with Puppeteer's `{"args": ["--no-sandbox"]}` config and keep that flag for the
+check. Record the CLI version.
 
 ```sh
-bob ref create <scratch>/check.md -o <scratch>/check_render.pdf -n -P <parent>
+<mmdc> -i <scratch>/check.md -o <scratch>/check_render.md
 ```
 
-The scratch Markdown has a short paragraph before each diagram. `-n` is `--no-audio`
-(not a dry run), `-o` outside the library leaves no vault state, and `-P` names an
-existing Bob area or project note (the SASE project display name, falling back to any
-note from `bob capture-targets`). The output must report
-`diagrams: rendered N of N Mermaid diagrams` with no `warning:` lines. Diagrams are
-sized for a PDF column about 650 px wide and at most about half a page tall (`flowchart`
-`TD`, at most four boxes side by side and about five ranks, quoted labels of about four
-words, no `style`/`classDef`/`click`/HTML). If bob is missing or the check cannot run,
-nothing is proposed.
+The check passes only on exit 0, `Found N mermaid charts in Markdown input`, and N
+rendered SVGs. `mmdc` reports the first parse error; fix, simplify, or drop it and rerun,
+with a three-round cap. Read each SVG's natural width from its `max-width` style; above
+about 1300 px fails the ~650 px PDF column's half-size limit. Keep diagrams sized for a
+650 px column and at most half a page (`flowchart TD`, at most four boxes side by side
+and about five ranks, quoted labels of about four words, no
+`style`/`classDef`/`click`/HTML). With no usable Mermaid CLI, propose nothing.
 
 ### Status variable and artifact label
 
@@ -119,7 +121,7 @@ Mermaid bodies:
 ```json
 {"status": "ready", "count": 2, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}
 {"status": "none", "count": 0, "reason": "Survey of options; no flow to draw."}
-{"status": "failed", "count": 0, "reason": "bob render check unavailable on this host"}
+{"status": "failed", "count": 0, "reason": "Mermaid CLI (mmdc) unavailable on this host"}
 ```
 
 ### Fail-open

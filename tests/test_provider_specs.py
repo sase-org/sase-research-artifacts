@@ -218,7 +218,7 @@ def test_research_highlights_use_resolves_with_local_command(
             [
                 {
                     "use": "sase-research-artifacts@research-highlights",
-                    "command": "bob highlights create --include-id",
+                    "command": "render-research-pdf",
                 }
             ]
         )
@@ -233,7 +233,7 @@ def test_research_highlights_use_resolves_with_local_command(
     assert len(hooks) == 1
     hook = hooks[0]
     assert hook.name == "research-highlights"
-    assert hook.command == "bob highlights create --include-id"
+    assert hook.command == "render-research-pdf"
     assert hook.timeout_seconds == 120
     assert hook.filters.sidecars == ("research",)
     assert hook.filters.producers == ("commit", "sdd", "finalizer")
@@ -289,7 +289,7 @@ def test_research_highlights_local_filters_replace_not_concatenate(
             [
                 {
                     "use": "sase-research-artifacts@research-highlights",
-                    "command": "bob highlights create --include-id",
+                    "command": "render-research-pdf",
                     "filters": {"path_globs": ["final/**/*.md"]},
                 }
             ]
@@ -349,7 +349,7 @@ def test_diagram_manifests_are_excluded_from_inventory_and_hook(
             [
                 {
                     "use": "sase-research-artifacts@research-highlights",
-                    "command": "bob highlights create --include-id",
+                    "command": "render-research-pdf",
                 }
             ]
         )

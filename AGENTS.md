@@ -26,8 +26,10 @@ just check      # lint + test
   `sase_artifact_refs` / `sase_file_hooks` entry point.
 - `src/sase_research_artifacts/xprompts/` — the `#research`, `#research/image`,
   `#research/diagrams`, `#research/more`, `#research/prompt`, and `#research_swarm`
-  macros, discovered through the `sase_macros` entry point (`sase_xprompts` stays
-  registered as a legacy alias; the packaged directory keeps its `xprompts/` name).
+  macros; `#research/diagrams` render-checks Mermaid with the Mermaid CLI (`mmdc`, or
+  `npx`) and fails open without it. They are discovered through the `sase_macros`
+  entry point (`sase_xprompts` stays registered as a legacy alias; the packaged
+  directory keeps its `xprompts/` name).
 - `src/sase_research_artifacts/default_config.yml` — the `image` default model alias,
   the `researchers` bucket, and the `research` tribe display config, discovered
   through the `sase_config` entry point. The research-swarm researchers default to

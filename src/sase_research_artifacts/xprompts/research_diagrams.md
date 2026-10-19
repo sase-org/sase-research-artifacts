@@ -53,23 +53,38 @@ Size each diagram for a PDF column about 650 px wide and at most about half a pa
 
 ## 4. Validate
 
-Put every diagram in a scratch Markdown file with a short paragraph before each one,
-then render it:
+Put every diagram in a scratch Markdown file with a short paragraph before each one.
+Pick the CLI once: probe `mmdc` first, then `npx -y -p @mermaid-js/mermaid-cli mmdc`.
+A form is usable only if this smoke render exits 0 and writes `probe.svg`:
 
 ```sh
-bob ref create <scratch>/check.md -o <scratch>/check_render.pdf -n -P <parent>
+printf 'flowchart TD\n  A["ok"]\n' > <scratch>/probe.mmd
+<mmdc> -i <scratch>/probe.mmd -o <scratch>/probe.svg
 ```
 
-- `-n` is `--no-audio`, not a dry run. Writing `-o` outside the library leaves no vault
-  state, and the output PDF stem must differ from the Markdown stem.
-- `-P` is required and must name an existing Bob area or project note. Use the SASE
-  project's display name, the value the Highlights hook passes (`display_name` in
-  `sase project current --json`). If bob rejects it, rerun with any note listed by
-  `bob capture-targets`; the parent does not affect the check.
-- Every diagram must render (`diagrams: rendered N of N Mermaid diagrams`) with no
-  `warning:` lines. Fix, simplify, or drop failing diagrams, and stop after three rounds.
-- If bob is missing or the check cannot run, propose nothing and set `status: failed`
-  with the reason (step 7).
+A failed probe means that checker form is unavailable, not that a diagram is bad. If a
+probe fails only because Chrome cannot start its sandbox (common as root or in
+containers), retry once with `-p <scratch>/puppeteer.json` holding
+`{"args": ["--no-sandbox"]}`, and keep that flag for the real check. Record
+`<mmdc> --version`.
+
+Run the selected CLI against the scratch Markdown:
+
+```sh
+<mmdc> -i <scratch>/check.md -o <scratch>/check_render.md
+```
+
+The check passes only when the command exits 0, its output says
+`Found N mermaid charts in Markdown input` for your N, and
+`<scratch>/check_render-1.svg` through `-N.svg` all exist. `mmdc` stops at the first
+failing diagram and prints `Parse error on line …` with an excerpt. Fix, simplify, or
+drop that diagram and rerun; stop after three rounds.
+
+Read each SVG's natural width with
+`grep -o 'max-width: [0-9.]*px' <svg> | head -1`. Above about 1300 px, the diagram would
+print below half size in the ~650 px column. Treat it like a failure: simplify it (fewer
+side-by-side boxes, or `TD` instead of `LR`) or drop it. If no form is usable, propose
+nothing and set `status: failed` with the reason (step 7).
 
 ## 5. Anchor
 
@@ -98,7 +113,7 @@ report says.
 ```yaml
 source: research:<YYYYMM>/<name>/<name>__final.md
 producer: <this agent's name>
-check: "diagrams: rendered 1 of 1 Mermaid diagrams"
+check: "mmdc 12.0.0 rendered 1 of 1 Mermaid diagrams"
 ```
 
 ## publication-order
@@ -123,7 +138,7 @@ flowchart TD
 ````
 
 - `source` is the report's `research:` label, `producer` is your agent name, and `check`
-  is bob's `diagrams:` line.
+  records the CLI version and chart count from the passing run.
 - Each `## <id>` is a unique lowercase slug. `anchor` is a YAML literal block, so
   backticks and quotes copy exactly. `illustrates` is one sentence in the report's own
   terms stating the point the diagram makes. `caption` is at most about 15 words and has
@@ -143,7 +158,7 @@ flowchart TD
   ```sh
   sase var set diagrams --json --value '{"status": "ready", "count": 2, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}'
   sase var set diagrams --json --value '{"status": "none", "count": 0, "reason": "Survey of options; no flow to draw."}'
-  sase var set diagrams --json --value '{"status": "failed", "count": 0, "reason": "bob render check unavailable on this host"}'
+  sase var set diagrams --json --value '{"status": "failed", "count": 0, "reason": "Mermaid CLI (mmdc) unavailable on this host"}'
   ```
 
 - A diagram failure never fails this agent. Finish normally so the linker can publish,

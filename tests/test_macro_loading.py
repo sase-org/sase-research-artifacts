@@ -351,9 +351,11 @@ def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
     content = _research_macros()["research/diagrams"].content
     assert "Propose at most three" in content
     assert "Zero is a normal outcome" in content
-    assert "bob ref create <scratch>/check.md -o <scratch>/check_render.pdf" in content
-    assert "-n -P <parent>" in content
-    assert "diagrams: rendered N of N Mermaid diagrams" in content
+    assert "<mmdc> -i <scratch>/check.md -o <scratch>/check_render.md" in content
+    assert "npx -y -p @mermaid-js/mermaid-cli mmdc" in content
+    assert "Found N mermaid charts" in content
+    assert "<mmdc> -i <scratch>/probe.mmd -o <scratch>/probe.svg" in content
+    assert "max-width: [0-9.]*px" in content
     assert "grep -cF -- '<anchor>'" in content
     assert "byte-identical" in content
 

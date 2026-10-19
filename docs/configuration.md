@@ -65,8 +65,11 @@ entry points -- install the package itself.
 ```yaml
 file_hooks:
   - use: sase-research-artifacts@research-highlights
-    command: bob highlights create --include-id
+    command: render-research-pdf
 ```
+
+SASE appends the report’s absolute path as the command’s final argument and exports
+the project display name in `SASE_FILE_HOOK_PROJECT`, so any local renderer works.
 
 The provider template supplies `description`, `filters` (`sidecars: [research]`,
 `producers: [commit, sdd, finalizer]`, `path_globs: ["20*/**/*.md", "!20*/*__*.md",
@@ -80,8 +83,8 @@ than running an unset command.
 
 The producer restriction keeps committed-file routes and finalizer repair while
 skipping artifact-copy dispatch. Artifact dispatch executes against durable
-content-addressed copies whose basenames can carry digest suffixes, which would leak
-into Bob's derived PDF basename and marker id.
+content-addressed copies whose basenames can carry digest suffixes. A renderer that
+names output after the input would include those suffixes.
 
 `name` is not part of the template either -- it defaults to the provider id
 (`research-highlights`) unless you override it locally.
