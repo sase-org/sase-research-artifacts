@@ -350,7 +350,11 @@ def test_research_diagrams_always_sets_the_status_variable() -> None:
 def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
     content = _research_macros()["research/diagrams"].content
     assert "Propose at most three" in content
-    assert "Zero is a normal outcome" in content
+    assert "drill-downs" in content
+    assert "not a repeat of the infographic" in content
+    assert "Never reach zero just because the infographic" in content
+    assert "adds detail its panel lacks" in content
+    assert "Never turn a table into a diagram" in content
     assert "<mmdc> -i <scratch>/check.md -o <scratch>/check_render.md" in content
     assert "npx -y -p @mermaid-js/mermaid-cli mmdc" in content
     assert "Found N mermaid charts" in content
@@ -358,6 +362,31 @@ def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
     assert "max-width: [0-9.]*px" in content
     assert "grep -cF -- '<anchor>'" in content
     assert "byte-identical" in content
+
+
+def test_research_diagrams_candidate_list_precedes_decision() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert content.index("write a candidate list") < content.index(
+        "Judge every candidate"
+    )
+    assert "each report section that describes a mechanism" in content
+
+
+def test_research_diagrams_records_considered_count() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert (
+        'sase var set diagrams --json --value \'{"status": "ready", "count": 2, '
+        '"considered":'
+    ) in content
+    assert (
+        'sase var set diagrams --json --value \'{"status": "none", "count": 0, '
+        '"considered":'
+    ) in content
+
+
+def test_research_diagrams_final_response_lists_every_candidate() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "list every candidate with its verdict" in content
 
 
 def test_research_diagrams_fails_open() -> None:

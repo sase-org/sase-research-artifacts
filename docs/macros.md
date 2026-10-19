@@ -29,18 +29,25 @@ produces diagrams.
 
 ## `#research/diagrams` -- Propose Mermaid Diagrams
 
-Decides whether Mermaid diagrams would help a reader understand a swarm lead's research
-report and, if so, draws and validates them and writes them to one companion manifest
-for the swarm linker to place. It takes no inputs and is meant for the swarm's image
-segment, where it runs after `#research/image` and reads the lead's report from the
-registered lead entry. The agent never edits the report and never publishes; the linker
-is the only publisher.
+Lists drill-down candidates from the infographic's panels, then proposes the ones that
+help a reader understand a swarm lead's research report, drawing and validating them
+into one companion manifest for the swarm linker to place. It takes no inputs and is
+meant for the swarm's image segment, where it runs after `#research/image` and reads the
+lead's report from the registered lead entry. The agent never edits the report and never
+publishes; the linker is the only publisher.
 
-Zero diagrams is the normal outcome (surveys and recommendation lists rarely have a flow
-to draw), and at most three are proposed. A diagram is proposed only when the report
-describes three or more connected parts, the picture reads faster than the prose, every
-box, arrow, and label restates the report, and it does not repeat the infographic, a
-diagram the report already contains, a table, or a short list.
+The infographic is the overview; each diagram drills into one panel and draws report
+detail the panel had no room for. The agent writes a candidate list first (one entry
+per panel, plus any long mechanism the infographic omitted; with no infographic, one
+entry per report section that describes a mechanism), then proposes every candidate
+that passes, at most three, best first. A candidate passes when it draws three or more
+connected parts, it adds detail its panel lacks (at least two steps, branches,
+conditions, actors, or states the panel does not show), the picture reads faster than
+the prose, every box, arrow, and label restates the report, and it does not repeat a
+diagram already in the report, a table, or a short list that already shows every step.
+Zero is right only when no candidate passes, which is common for surveys and
+recommendation lists. Never reach zero just because the infographic already covers a
+topic.
 
 ### Manifest
 
@@ -119,10 +126,14 @@ missing variable means unknown or failed, never "considered and declined". It ca
 Mermaid bodies:
 
 ```json
-{"status": "ready", "count": 2, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}
-{"status": "none", "count": 0, "reason": "Survey of options; no flow to draw."}
+{"status": "ready", "count": 2, "considered": 4, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}
+{"status": "none", "count": 0, "considered": 3, "reason": "Survey of five naming options; the three panels compare options and hide no flow."}
 {"status": "failed", "count": 0, "reason": "Mermaid CLI (mmdc) unavailable on this host"}
 ```
+
+On `ready` and `none`, `considered` is how many drill-down candidates the agent judged.
+`failed` may omit it. A `none` reason names the candidates and why each one failed. The
+final response lists every candidate with its verdict.
 
 ### Fail-open
 

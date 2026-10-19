@@ -1,12 +1,13 @@
 ---
 name: research/diagrams
 description:
-  Propose validated Mermaid diagrams for a swarm lead's research report in a companion
-  manifest that the swarm linker places.
+  Propose validated Mermaid diagrams that drill into the infographic's panels for a
+  swarm lead's research report, in a companion manifest that the swarm linker places.
 ---
 
-Decide whether Mermaid diagrams would help a reader understand the lead's research
-report and, if so, write them to a companion manifest for the swarm linker to place.
+List drill-down candidates from the infographic's panels, then propose the ones that
+help a reader understand the lead's research report, writing them to a companion
+manifest for the swarm linker to place.
 The linker is the only publisher: you propose, it places or omits.
 
 ## 1. Scope and source
@@ -18,27 +19,56 @@ The linker is the only publisher: you propose, it places or omits.
   above (its `ref`, or its `research:` label), redirecting the output to a scratch copy.
   Never work from memory or the forked conversation alone.
 - If no registered lead report is listed, propose nothing and set `status: failed` with
-  that reason (step 7).
-- If this prompt also asked for an infographic, finish it first and do not repeat what
-  it shows.
+  that reason (step 8).
+- If this prompt also asked for an infographic, finish it first. It is the overview, and
+  your diagrams are its drill-downs (step 2).
 
-## 2. Decide
+## 2. Find candidates
 
-Zero is a normal outcome, and the usual one for surveys and recommendation lists.
-Propose a diagram only when all of these hold:
+The infographic is the overview, and your diagrams are its drill-downs. Each one opens
+a single panel and draws the detail the report gives for it but the panel had no room
+for: the steps, branches, conditions, actors, states, failure or fallback paths, and
+gates behind it. Expanding a panel this way is the purpose of this step, not a repeat of the infographic.
 
-- the report describes three or more connected parts: a flow, a state lifecycle, an
-  exchange between actors over time, a dependency structure, or a phased plan;
-- a reader would grasp it faster from the picture than from the prose;
+Before deciding anything, write a candidate list in your scratch directory:
+
+- For each infographic panel, taken from your generation prompt and the image you
+  checked, name the report passages that hold its detail and what the panel left out.
+  With no infographic in this prompt, use each report section that describes a mechanism
+  instead.
+- Add any mechanism the report explains at length that the infographic left out
+  entirely.
+- Note the diagram type that would fit each candidate (step 4).
+
+## 3. Decide
+
+Judge every candidate, then propose each one that passes, best first. Propose at most three.
+Zero is right only when no candidate passes. That is common for surveys and
+recommendation lists, where no panel hides a mechanism. Never reach zero just because the infographic
+already covers a topic.
+
+A candidate passes when all of these hold:
+
+- it draws three or more connected parts: a flow, a state lifecycle, an exchange
+  between actors over time, a dependency structure, or a phased plan;
+- it adds detail its panel lacks: at least two steps, branches, conditions, actors, or
+  states the panel does not show. Redrawing a panel at the same level of detail is a
+  repeat;
+- a reader would grasp that detail faster from the picture than from the prose;
 - every box, arrow, and label restates something the report says;
-- it does not repeat the infographic, a Mermaid diagram already in the report, a table,
-  or a short list. Never turn a table into a diagram.
+- it does not repeat a Mermaid diagram already in the report, a table, or a short list
+  that already shows every step, branch, and condition the diagram would draw. Never turn a table into a diagram.
 
-Propose at most three. Add no actors, steps, numbers, orderings, or causal arrows the
-report does not state. Conditional wording stays conditional, and a proposed design
-stays distinct from an implemented one.
+Rank passing candidates by how much report detail they reveal. Prefer candidates from
+different panels over two from one panel. When a panel's detail is too big for one
+diagram (step 4), draw its most decision-relevant part, such as the go/no-go rule or
+the failure path, and scope the caption to that part. Do not drop the candidate.
 
-## 3. Draw
+Add no actors, steps, numbers, orderings, or causal arrows the report does not state.
+Conditional wording stays conditional, and a proposed design stays distinct from an
+implemented one.
+
+## 4. Draw
 
 Size each diagram for a PDF column about 650 px wide and at most about half a page tall.
 
@@ -51,7 +81,7 @@ Size each diagram for a PDF column about 650 px wide and at most about half a pa
 - Labels of about four words or fewer, in the report's terms. Quote every label
   (`A["Lead report"]`, `-->|"on failure"|`). Never use `end` as a node id.
 
-## 4. Validate
+## 5. Validate
 
 Put every diagram in a scratch Markdown file with a short paragraph before each one.
 Pick the CLI once: probe `mmdc` first, then `npx -y -p @mermaid-js/mermaid-cli mmdc`.
@@ -84,21 +114,23 @@ Read each SVG's natural width with
 `grep -o 'max-width: [0-9.]*px' <svg> | head -1`. Above about 1300 px, the diagram would
 print below half size in the ~650 px column. Treat it like a failure: simplify it (fewer
 side-by-side boxes, or `TD` instead of `LR`) or drop it. If no form is usable, propose
-nothing and set `status: failed` with the reason (step 7).
+nothing and set `status: failed` with the reason (step 8).
 
-## 5. Anchor
+## 6. Anchor
 
 For each kept diagram, choose an `anchor`: 5-20 words copied verbatim from _one line_ of
 a body paragraph or list item in the report. Headings, table rows, code blocks, and
 existing Mermaid fences never qualify. Confirm `grep -cF -- '<anchor>' <scratch-copy>`
 prints `1`; if no unique anchor exists, drop the diagram.
+Anchor a drill-down in the passage that holds its detail, not in the bottom line or
+summary the panel condenses.
 
-## 6. Write the manifest
+## 7. Write the manifest
 
 Write `<stem>.diagrams.md` beside the report, without overwrite, where `<stem>` is the
 report's stem with any trailing `__final` removed, following the `#research/image` stem
 rule (so `topic__final.md` becomes `topic.diagrams.md`). If it already exists, stop
-diagram work, register nothing, and set `status: failed` naming the collision (step 7).
+diagram work, register nothing, and set `status: failed` naming the collision (step 8).
 Write no file when no diagram survived.
 
 Keep all metadata in the body, never in frontmatter: `sase artifact read` strips YAML
@@ -146,20 +178,23 @@ flowchart TD
 - Each `mermaid` fence is byte-identical to the source that passed the check; rerun the
   check after any edit.
 
-## 7. Register and report
+## 8. Register and report
 
 - When a manifest exists, register it without `--move`:
   `sase artifact create -p "<abs-path>" -l "diagrams:<YYYYMM>/<name>/<stem>.diagrams.md"`.
   The `diagrams:` label keeps it out of every `research:` listing.
 - Then always set the `diagrams` variable, including when you proposed nothing. A missing
   variable means unknown or failed, never "considered and declined". It never carries
-  Mermaid bodies:
+  Mermaid bodies. On `ready` and `none`, `considered` is how many drill-down candidates
+  you judged. `failed` may omit it:
 
   ```sh
-  sase var set diagrams --json --value '{"status": "ready", "count": 2, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}'
-  sase var set diagrams --json --value '{"status": "none", "count": 0, "reason": "Survey of options; no flow to draw."}'
+  sase var set diagrams --json --value '{"status": "ready", "count": 2, "considered": 4, "manifest": "<YYYYMM>/<name>/<stem>.diagrams.md", "source_ref": "<lead ref>"}'
+  sase var set diagrams --json --value '{"status": "none", "count": 0, "considered": 3, "reason": "Survey of five naming options; the three panels compare options and hide no flow."}'
   sase var set diagrams --json --value '{"status": "failed", "count": 0, "reason": "Mermaid CLI (mmdc) unavailable on this host"}'
   ```
 
-- A diagram failure never fails this agent. Finish normally so the linker can publish,
-  and mention the outcome in your final response.
+- A diagram failure never fails this agent. Finish normally so the linker can publish.
+  In the final response, list every candidate with its verdict: proposed, or rejected
+  with a reason. A `none` reason names the candidates considered and why each one
+  failed.
