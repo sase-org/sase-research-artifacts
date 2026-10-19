@@ -349,7 +349,6 @@ def test_research_diagrams_always_sets_the_status_variable() -> None:
 
 def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
     content = _research_macros()["research/diagrams"].content
-    assert "Propose at most three" in content
     assert "drill-downs" in content
     assert "not a repeat of the infographic" in content
     assert "Never reach zero just because the infographic" in content
@@ -362,6 +361,23 @@ def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
     assert "max-width: [0-9.]*px" in content
     assert "grep -cF -- '<anchor>'" in content
     assert "byte-identical" in content
+
+
+def test_research_diagrams_cap_scales_to_five_for_complex_reports() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "Propose at most three diagrams for most reports" in content
+    assert "may warrant up to five" in content
+    assert "four or more distinct mechanisms" in content
+    assert "no higher-ranked proposal covers" in content
+    assert "shares a `##` section with another proposal's anchor" in content
+    assert "Five is a ceiling, not a target" in content
+    assert "over the cap" in content
+    assert "stop after five rounds" in content
+    assert "stop after three rounds" not in content
+    assert "rejected with a reason, or over the cap" in content
+    assert content.index("Judge every candidate") < content.index(
+        "Propose at most three diagrams for most reports"
+    )
 
 
 def test_research_diagrams_candidate_list_precedes_decision() -> None:
@@ -1322,6 +1338,10 @@ def test_research_swarm_diagrams_image_matrix(
         assert "diagrams pending" in linker_seg
         assert "<name>.diagrams.md" in linker_seg
         assert "copied verbatim" in linker_seg
+        assert (
+            "Mark every diagram after the fifth in manifest order as omitted "
+            "(over the cap)." in linker_seg
+        )
     else:
         assert "#research/diagrams" not in image_seg
         assert _WAIT_ARTIFACTS_LOOP not in image_seg
@@ -1330,6 +1350,7 @@ def test_research_swarm_diagrams_image_matrix(
         assert "**Place proposed diagrams.**" not in linker_seg
         assert "diagrams pending" not in linker_seg
         assert "<name>.diagrams.md" not in linker_seg
+        assert "after the fifth in manifest order" not in linker_seg
 
 
 def test_research_swarm_audio_false_adds_nothing() -> None:
@@ -1736,6 +1757,7 @@ def test_research_swarm_linker_diagram_rules_present_when_diagrams_off() -> None
     assert "diagrams pending" not in linker
     assert "<name>.diagrams.md" not in linker
     assert "%wait:research.{@1}.image" not in linker
+    assert "after the fifth in manifest order" not in linker
 
 
 def test_research_swarm_linker_ignores_swarm_wait_argument() -> None:

@@ -42,7 +42,7 @@ Before deciding anything, write a candidate list in your scratch directory:
 
 ## 3. Decide
 
-Judge every candidate, then propose each one that passes, best first. Propose at most three.
+Judge every candidate, then propose each one that passes, best first, within the cap below.
 Zero is right only when no candidate passes. That is common for surveys and
 recommendation lists, where no panel hides a mechanism. Never reach zero just because the infographic
 already covers a topic.
@@ -63,6 +63,12 @@ Rank passing candidates by how much report detail they reveal. Prefer candidates
 different panels over two from one panel. When a panel's detail is too big for one
 diagram (step 4), draw its most decision-relevant part, such as the go/no-go rule or
 the failure path, and scope the caption to that part. Do not drop the candidate.
+
+Propose at most three diagrams for most reports. A complex report may warrant up to five:
+one that explains four or more distinct mechanisms in separate `##` sections, such as an architecture, a protocol, a migration, or a multi-phase plan.
+Propose a fourth or fifth diagram only when it passes every test above, drills into a panel or mechanism that no higher-ranked proposal covers, and anchors in a `##` section that holds no other proposal (step 6).
+Five is a ceiling, not a target: never lower the bar, split one diagram into two, or add one to reach a count.
+A passing candidate the cap leaves out is reported as over the cap (step 8).
 
 Add no actors, steps, numbers, orderings, or causal arrows the report does not state.
 Conditional wording stays conditional, and a proposed design stays distinct from an
@@ -108,7 +114,7 @@ The check passes only when the command exits 0, its output says
 `Found N mermaid charts in Markdown input` for your N, and
 `<scratch>/check_render-1.svg` through `-N.svg` all exist. `mmdc` stops at the first
 failing diagram and prints `Parse error on line …` with an excerpt. Fix, simplify, or
-drop that diagram and rerun; stop after three rounds.
+drop that diagram and rerun; stop after five rounds.
 
 Read each SVG's natural width with
 `grep -o 'max-width: [0-9.]*px' <svg> | head -1`. Above about 1300 px, the diagram would
@@ -124,6 +130,7 @@ existing Mermaid fences never qualify. Confirm `grep -cF -- '<anchor>' <scratch-
 prints `1`; if no unique anchor exists, drop the diagram.
 Anchor a drill-down in the passage that holds its detail, not in the bottom line or
 summary the panel condenses.
+If a fourth or fifth diagram's anchor shares a `##` section with another proposal's anchor, drop that diagram (step 3).
 
 ## 7. Write the manifest
 
@@ -195,6 +202,5 @@ flowchart TD
   ```
 
 - A diagram failure never fails this agent. Finish normally so the linker can publish.
-  In the final response, list every candidate with its verdict: proposed, or rejected
-  with a reason. A `none` reason names the candidates considered and why each one
+  In the final response, list every candidate with its verdict: proposed, rejected with a reason, or over the cap. A `none` reason names the candidates considered and why each one
   failed.

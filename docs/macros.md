@@ -39,9 +39,13 @@ publishes; the linker is the only publisher.
 The infographic is the overview; each diagram drills into one panel and draws report
 detail the panel had no room for. The agent writes a candidate list first (one entry
 per panel, plus any long mechanism the infographic omitted; with no infographic, one
-entry per report section that describes a mechanism), then proposes every candidate
-that passes, at most three, best first. A candidate passes when it draws three or more
-connected parts, it adds detail its panel lacks (at least two steps, branches,
+entry per report section that describes a mechanism), then proposes every passing
+candidate, best first: at most three diagrams for most reports, and up to five for a
+complex report that explains four or more distinct mechanisms in separate `##`
+sections. Each fourth or fifth diagram must drill into a panel or mechanism that no
+higher-ranked proposal covers and must anchor in a `##` section that holds no other
+proposal. Five is a ceiling, not a target. A candidate passes when it draws three or
+more connected parts, it adds detail its panel lacks (at least two steps, branches,
 conditions, actors, or states the panel does not show), the picture reads faster than
 the prose, every box, arrow, and label restates the report, and it does not repeat a
 diagram already in the report, a table, or a short list that already shows every step.
@@ -108,7 +112,7 @@ check. Record the CLI version.
 
 The check passes only on exit 0, `Found N mermaid charts in Markdown input`, and N
 rendered SVGs. `mmdc` reports the first parse error; fix, simplify, or drop it and rerun,
-with a three-round cap. Read each SVG's natural width from its `max-width` style; above
+with a five-round cap. Read each SVG's natural width from its `max-width` style; above
 about 1300 px fails the ~650 px PDF column's half-size limit. Keep diagrams sized for a
 650 px column and at most half a page (`flowchart TD`, at most four boxes side by side
 and about five ranks, quoted labels of about four words, no
@@ -133,7 +137,8 @@ Mermaid bodies:
 
 On `ready` and `none`, `considered` is how many drill-down candidates the agent judged.
 `failed` may omit it. A `none` reason names the candidates and why each one failed. The
-final response lists every candidate with its verdict.
+final response lists every candidate with its verdict: proposed, rejected with a
+reason, or over the cap.
 
 ### Fail-open
 
@@ -349,15 +354,17 @@ pages. No MP3 enters the public research repo.
 
 ### Diagram handoff
 
-When diagrams run, the image agent proposes zero to three validated Mermaid
-diagrams in `<name>.diagrams.md` and always sets the `diagrams` variable. The
-linker reads that variable and the matching `diagrams:` wait artifact, binds each
-proposal to the one lead block that contains its `anchor` *before* restructuring,
-then inserts accepted fences verbatim after that block (plus the caption as one
-italic line). It omits a diagram whose anchor is missing or ambiguous, whose
-`illustrates` point no longer holds, or that would contradict the surrounding
-text. A diagram failure never blocks publication. The linker lists accepted and
-omitted IDs in its final response and never writes "diagrams pending".
+When diagrams run, the image agent proposes zero to five validated Mermaid
+diagrams in `<name>.diagrams.md` (more than three only for a complex report) and
+always sets the `diagrams` variable. The linker reads that variable and the matching
+`diagrams:` wait artifact, binds each proposal to the one lead block that contains
+its `anchor` *before* restructuring, then inserts accepted fences verbatim after that
+block (plus the caption as one italic line). It omits a diagram whose anchor is
+missing or ambiguous, whose `illustrates` point no longer holds, or that would
+contradict the surrounding text. The linker places at most five diagrams and omits
+any later manifest entry as over the cap. A diagram failure never blocks publication.
+The linker lists accepted and omitted IDs in its final response and never writes
+"diagrams pending".
 
 ### Listen card
 

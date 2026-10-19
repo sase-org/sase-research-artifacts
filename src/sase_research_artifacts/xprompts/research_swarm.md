@@ -368,7 +368,7 @@ Steps:
    table (record its cells; step 3 converts each one into a list), and link in the
    lead's report.{%- if run_diagrams %} For each manifest diagram, record its ID against
    the one lead block (paragraph or list item) that contains its `anchor`. Mark a
-   diagram whose anchor matches zero or several blocks as omitted.{%- endif %}
+   diagram whose anchor matches zero or several blocks as omitted. Mark every diagram after the fifth in manifest order as omitted (over the cap).{%- endif %}
 3. **Restructure** the lead's report into a well-thought-out organization:
    - Keep the frontmatter, updating `updated_time` if present.
    - **Open the file in this exact order**, with nothing else between these parts: the frontmatter (if any), one `#` title, the research query,{%- if audio %} the listen card,{%- endif %}{%- if image %} the infographic,{%- endif %} and then the bottom-line section.
