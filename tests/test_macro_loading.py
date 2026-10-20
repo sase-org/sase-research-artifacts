@@ -389,20 +389,109 @@ def test_research_diagrams_always_sets_the_status_variable() -> None:
     assert "never carries" in content
 
 
-def test_research_diagrams_restraint_check_and_anchor_rules() -> None:
+def test_research_diagrams_answers_reader_questions() -> None:
     content = _research_macros()["research/diagrams"].content
-    assert "drill-downs" in content
-    assert "not a repeat of the infographic" in content
+    assert "Answer named reader questions" in content
+    assert "the reader question a picture answers faster than prose" in content
+    assert "what the bottom line depends on first" in content
+    assert "today versus proposed" in content
+    assert "failure and fallback paths" in content
+    assert "one sentence already explains" in content
+    assert "short linear chains" in content
+    assert "recompute fan-ins" in content
+    assert "repeats of an existing diagram, table, or list" in content
+    assert "zero figures for a survey is a success" in content
     assert "Never reach zero just because the infographic" in content
-    assert "adds detail its panel lacks" in content
     assert "Never turn a table into a diagram" in content
-    assert "<mmdc> -i <scratch>/check.md -o <scratch>/check_render.md" in content
-    assert "npx -y -p @mermaid-js/mermaid-cli mmdc" in content
+
+
+def test_research_diagrams_draws_and_validates_by_the_guide() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert content.count("#skill/mermaid_diagrams") == 1
+    assert "The Mermaid diagram guide below governs steps" in content
+    assert "Draw every diagram by the Mermaid diagram guide below" in content
+    assert "trace every box and edge to a sentence" in content
+    assert "No init directives" not in content
+    assert (
+        "<mmdc> -c <scratch>/pdf.json -i <scratch>/check.md "
+        "-o <scratch>/check_render.md" in content
+    )
+    assert "npx -y -p @mermaid-js/mermaid-cli@12.0.0 mmdc" in content
+    assert "npx -y -p @mermaid-js/mermaid-cli mmdc" not in content
     assert "Found N mermaid charts" in content
     assert "<mmdc> -i <scratch>/probe.mmd -o <scratch>/probe.svg" in content
-    assert "max-width: [0-9.]*px" in content
+    assert "stop after five rounds" in content
+    assert "distinct from the guide's two look rounds" in content
+    assert "0.75 fit scale" in content
+    assert "max-width" not in content
+    assert "1300" not in content
     assert "grep -cF -- '<anchor>'" in content
     assert "byte-identical" in content
+
+
+def test_research_diagrams_manifest_gains_audit_fields() -> None:
+    content = _research_macros()["research/diagrams"].content
+    assert "## publication-order" in content
+    assert "question: |-" in content
+    assert "When does the linker publish the canonical report?" in content
+    assert "review:" in content
+    assert "fit 100%" in content
+    assert "at most about 25 words" in content
+    assert "PDF-mirroring config was used" in content
+    assert 'title: "When does the linker publish the report?"' in content
+    assert "classDef focus fill:#E8F1FB" in content
+    assert "class LEAD focus" in content
+
+
+def _rendered_image_segment(*, image: bool, diagrams: bool | None) -> str:
+    from sase.macro.processor import process_macro_references_with_catalog
+
+    catalog = dict(_research_macros())
+    catalog.update(load_skills_from_plugins())
+    image_seg = next(
+        segment
+        for segment in _swarm_segments({}, image=image, diagrams=diagrams)
+        if "%id(image, clan=research.{@1})" in segment
+    )
+    return process_macro_references_with_catalog(
+        image_seg, catalog, raise_on_error=True
+    )
+
+
+def test_rendered_image_segment_inlines_guide_only_with_diagrams() -> None:
+    rendered = _rendered_image_segment(image=False, diagrams=True)
+    assert rendered.count("## Know the one thing the figure says") == 1
+    assert "Revise at most twice and then remove a figure that still fails" in rendered
+    assert "classDef focus fill:#E8F1FB" in rendered
+    assert 'Q{{"Is the diagram valid?"}}' in rendered
+    assert "#skill/mermaid_diagrams" not in rendered
+    assert "{% raw %}" not in rendered
+    assert "{% endraw %}" not in rendered
+
+    without = _rendered_image_segment(image=True, diagrams=False)
+    assert "## Know the one thing the figure says" not in without
+    assert (
+        "Revise at most twice and then remove a figure that still fails" not in without
+    )
+    assert "classDef focus fill:#E8F1FB" not in without
+
+
+def test_linker_treats_question_and_review_as_audit_notes() -> None:
+    on = next(
+        segment
+        for segment in _swarm_segments({}, diagrams=True)
+        if "%id(linker, clan=research.{@1})" in segment
+    )
+    assert "`question` and `review` are the" in on
+    assert "never copy them into the report" in on
+
+    off = next(
+        segment
+        for segment in _swarm_segments({}, image=True, diagrams=False)
+        if "%id(linker, clan=research.{@1})" in segment
+    )
+    assert "never copy them into the report" not in off
+    assert "audit notes" not in off
 
 
 def test_research_diagrams_cap_scales_to_five_for_complex_reports() -> None:

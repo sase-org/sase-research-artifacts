@@ -106,11 +106,13 @@ diagnostic rather than running someone else's command on your machine.
 - `#research/audio` -- narrate a research report as a chaptered MP3 audio edition
   (requires `sase plugin install listen`, or `uv tool install sase-listen`).
 - `#research/image` -- generate an infographic from a research file's main points.
-- `#research/diagrams` -- propose validated Mermaid diagrams that drill into the
-  infographic's panels for a swarm lead's report in a `<stem>.diagrams.md` manifest for
+- `#research/diagrams` -- propose validated Mermaid diagrams that answer named reader
+  questions about a swarm lead's report in a `<stem>.diagrams.md` manifest for
   the swarm linker to place (at most three, or up to five for a complex report; meant
-  for the swarm's image segment); render-checks with Mermaid CLI (`mmdc`, falling back
-  to `npx`) and proposes nothing if neither is usable.
+  for the swarm's image segment); draws by the inlined `/mermaid_diagrams` skill guide
+  and render-checks under the PDF-mirroring config with the Mermaid CLI (pinned `npx`
+  first, falling back to `mmdc`), failing any figure below 0.75 fit scale, and proposes
+  nothing if neither CLI form is usable.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.

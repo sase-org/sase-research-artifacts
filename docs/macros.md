@@ -29,29 +29,28 @@ produces diagrams.
 
 ## `#research/diagrams` -- Propose Mermaid Diagrams
 
-Lists drill-down candidates from the infographic's panels, then proposes the ones that
+Names the reader question each figure answers, then proposes the figures that
 help a reader understand a swarm lead's research report, drawing and validating them
 into one companion manifest for the swarm linker to place. It takes no inputs and is
 meant for the swarm's image segment, where it runs after `#research/image` and reads the
 lead's report from the registered lead entry. The agent never edits the report and never
 publishes; the linker is the only publisher.
 
-The infographic is the overview; each diagram drills into one panel and draws report
-detail the panel had no room for. The agent writes a candidate list first (one entry
-per panel, plus any long mechanism the infographic omitted; with no infographic, one
-entry per report section that describes a mechanism), then proposes every passing
-candidate, best first: at most three diagrams for most reports, and up to five for a
-complex report that explains four or more distinct mechanisms in separate `##`
-sections. Each fourth or fifth diagram must drill into a panel or mechanism that no
-higher-ranked proposal covers and must anchor in a `##` section that holds no other
-proposal. Five is a ceiling, not a target. A candidate passes when it draws three or
-more connected parts, it adds detail its panel lacks (at least two steps, branches,
-conditions, actors, or states the panel does not show), the picture reads faster than
-the prose, every box, arrow, and label restates the report, and it does not repeat a
-diagram already in the report, a table, or a short list that already shows every step.
-Zero is right only when no candidate passes, which is common for surveys and
-recommendation lists. Never reach zero just because the infographic already covers a
-topic.
+The infographic is the overview; its panels are candidate hints, not the frame. The
+agent writes a candidate list first (one entry per report `##` section, plus each
+infographic panel when one exists; with no infographic, one entry per report section
+that describes a mechanism), recording each candidate's reader question, source
+passages, and fitting diagram type. It then proposes every passing candidate, best
+first: at most three diagrams for most reports, and up to five for a complex report
+that explains four or more distinct mechanisms in separate `##` sections. Each fourth
+or fifth diagram must answer a reader question that no higher-ranked proposal covers
+and must anchor in a `##` section that holds no other proposal. Five is a ceiling, not
+a target. A candidate passes when it answers a named reader question faster than
+prose, it shows order, branching, state, ownership, or before versus after, every box,
+arrow, and label restates the report, and it does not repeat a diagram already in the
+report, a table, or a short list that already shows every step. Zero is right when no
+reader question survives, which is a success for surveys. Never reach zero just
+because the infographic already covers a topic.
 
 ### Manifest
 
@@ -73,7 +72,7 @@ report says.
 ```yaml
 source: research:<YYYYMM>/<name>/<name>__final.md
 producer: research.<N>.image
-check: "mmdc 12.0.0 rendered 1 of 1 Mermaid diagrams"
+check: "mmdc 12.0.0 with the PDF-mirroring config rendered 1 of 1 Mermaid diagrams"
 ```
 
 ## publication-order
@@ -81,43 +80,69 @@ check: "mmdc 12.0.0 rendered 1 of 1 Mermaid diagrams"
 ```yaml
 anchor: |-
   <5-20 words copied verbatim from one line of a body paragraph or list item>
+question: |-
+  <the reader question the figure answers>
 illustrates: |-
   <one sentence stating the point the diagram makes, in the report's terms>
-caption: <at most about 15 words>
+caption: <the takeaway assertion, at most about 25 words>
+review: "<<W>x<H> px, fit <scale>%; measured with the guide command; <rounds>"
 ```
 
 ```mermaid
+---
+title: "When does the linker publish the report?"
+---
 flowchart TD
-  L["Lead report"] --> I["Image agent"]
+  LEAD["`**Lead report**<br/>Consolidated findings`"]
+  IMAGE["`**Image agent**<br/>Infographic and diagrams`"]
+  LINK["`**Linker**<br/>Publishes once`"]
+  HOOK["`**name.md ADD**<br/>Fires the PDF hook`"]
+  LEAD --> LINK
+  IMAGE --> LINK
+  LINK --> HOOK
+  classDef focus fill:#E8F1FB,stroke:#3B78C2,stroke-width:1.5px,color:#0F2E52
+  classDef outcome fill:#E8F5E9,stroke:#428A55,stroke-width:1.5px,color:#193D22
+  class LEAD focus
+  class IMAGE focus
+  class LINK outcome
+  class HOOK outcome
 ```
 ````
 
 Each `## <id>` is a unique slug of lowercase letters, digits, and hyphens; the linker
 publishes the diagram under the anchor `figure-<id>`. `anchor` occurs exactly once in
 the report and is never a heading, table row, code block, or existing Mermaid fence;
-`illustrates` is the linker's fidelity check and semantic fallback locator, and also
-seeds the in-text reference sentence; `caption` becomes one italic line under the
-figure. The `mermaid` fence is byte-identical to the source that passed validation.
+`question` is the reader question the figure answers; `illustrates` is the linker's
+fidelity check and semantic fallback locator, and also seeds the in-text reference
+sentence; `caption` is the takeaway assertion (at most about 25 words) and becomes one
+italic line under the figure; `review` is the image agent's audit note (measured size,
+fit scale, and revision rounds), which the linker never copies into the report. The
+`mermaid` fence is byte-identical to the source that passed validation.
 
 ### Validation
 
-Put every diagram in scratch Markdown with a short paragraph before each one. Probe
-`mmdc` first, then `npx -y -p @mermaid-js/mermaid-cli mmdc`; use a form only when a
-smoke render exits 0 and writes `probe.svg`. If Chrome cannot start its sandbox, retry
-once with Puppeteer's `{"args": ["--no-sandbox"]}` config and keep that flag for the
-check. Record the CLI version.
+The agent draws every figure by the inlined `/mermaid_diagrams` skill guide
+(`#skill/mermaid_diagrams`), which governs candidate typing, standalone labels, the
+tested palette, and the render, look, and revise loop (at most two look rounds, then
+the figure is dropped).
+
+Put every diagram in scratch Markdown with a short paragraph before each one. Stage the
+PDF-mirroring `pdf.json` config, then probe the pinned
+`npx -y -p @mermaid-js/mermaid-cli@12.0.0 mmdc` first and a global `mmdc` second; use a
+form only when a smoke render exits 0 and writes `probe.svg`. If Chrome cannot start
+its sandbox, retry once with Puppeteer's `{"args": ["--no-sandbox"]}` config and keep
+that flag for the check. Record the CLI version.
 
 ```sh
-<mmdc> -i <scratch>/check.md -o <scratch>/check_render.md
+<mmdc> -c <scratch>/pdf.json -i <scratch>/check.md -o <scratch>/check_render.md
 ```
 
 The check passes only on exit 0, `Found N mermaid charts in Markdown input`, and N
 rendered SVGs. `mmdc` reports the first parse error; fix, simplify, or drop it and rerun,
-with a five-round cap. Read each SVG's natural width from its `max-width` style; above
-about 1300 px fails the ~650 px PDF column's half-size limit. Keep diagrams sized for a
-650 px column and at most half a page (`flowchart TD`, at most four boxes side by side
-and about five ranks, quoted labels of about four words, no
-`style`/`classDef`/`click`/HTML). With no usable Mermaid CLI, propose nothing.
+with a five-round cap (parse-fix rounds are distinct from the guide's two look
+rounds). Measure each rendered SVG with the guide's command and fail any figure below
+0.75 fit scale: revise it within the look rounds or drop it. Keep diagrams sized for a
+650 px column and at most half a page. With no usable Mermaid CLI, propose nothing.
 
 ### Status variable and artifact label
 
@@ -136,10 +161,10 @@ Mermaid bodies:
 {"status": "failed", "count": 0, "reason": "Mermaid CLI (mmdc) unavailable on this host"}
 ```
 
-On `ready` and `none`, `considered` is how many drill-down candidates the agent judged.
+On `ready` and `none`, `considered` is how many candidates the agent judged.
 `failed` may omit it. A `none` reason names the candidates and why each one failed. The
-final response lists every candidate with its verdict: proposed, rejected with a
-reason, or over the cap.
+final response lists every candidate with its reader question and verdict: proposed,
+rejected with a reason, or over the cap.
 
 ### Fail-open
 
@@ -361,7 +386,9 @@ diagrams in `<name>.diagrams.md` (more than three only for a complex report) and
 always sets the `diagrams` variable. The linker reads that variable and the matching
 `diagrams:` wait artifact, binds each proposal to the one lead block that contains
 its `anchor` *before* restructuring, then inserts accepted fences verbatim after that
-block (plus the caption as one italic line). It omits a diagram whose anchor is
+block (plus the caption as one italic line). The manifest's `question` and `review`
+are the image agent's audit notes: the linker reads them to trust the figure and
+never copies them into the report. It omits a diagram whose anchor is
 missing or ambiguous, whose `illustrates` point no longer holds, or that would
 contradict the surrounding text. The linker places at most five diagrams and omits
 any later manifest entry as over the cap. A diagram failure never blocks publication.

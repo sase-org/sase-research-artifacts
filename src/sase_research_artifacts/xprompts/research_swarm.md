@@ -366,7 +366,8 @@ Steps:
    equals the lead's label. Publish with no proposed diagrams, and say why in the
    final response, if the status is `none` or `failed`, the variable is missing, the
    manifest entry is missing or ambiguous, or the source does not match. Diagram
-   problems never stop publication.
+   problems never stop publication. The manifest's `question` and `review` are the
+   image agent's audit notes: never copy them into the report.
    {%- endif %}
 
 2. **Inventory what must survive.** Before writing, list every finding, recommendation,
