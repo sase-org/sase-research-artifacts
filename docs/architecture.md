@@ -48,11 +48,14 @@ effective policy -- see `docs/configuration.md`.
 
 ## Macro and Default-Config Discovery
 
-`sase_macros` (plus its `sase_xprompts` legacy alias) and `sase_config` are resource entry-point groups: the entry point
-resolves to the bare `sase_research_artifacts` package (no attribute), and sase locates
-`xprompts/*.md`, `default_config.yml`, and `input_types.yml` inside it via
-`importlib.resources`. Those files ship automatically in a hatchling wheel because they
-live inside `src/sase_research_artifacts/` and are tracked in git -- no separate
-package-data declaration is needed. `input_types.yml` declares the plugin-shared
-`audio_edition` enum (`brief` / `full`); macros reference it as
-`sase-research-artifacts@audio_edition`.
+`sase_macros` (plus its `sase_xprompts` legacy alias) and `sase_config` are resource
+entry-point groups: the entry point resolves to the bare `sase_research_artifacts`
+package (no attribute), and sase locates `xprompts/*.md`, `skills/*.md`,
+`default_config.yml`, and `input_types.yml` inside it via `importlib.resources`.
+`skills/mermaid_diagrams.md` declares `skill: true`, so the plugin skill loader exposes
+it both as `/mermaid_diagrams` and as the expandable `#skill/mermaid_diagrams` reference.
+The research swarm lead loads it on demand when diagrams are enabled. These resources
+ship automatically in a hatchling wheel because they live inside
+`src/sase_research_artifacts/` and are tracked in git -- no separate package-data
+declaration is needed. `input_types.yml` declares the plugin-shared `audio_edition` enum
+(`brief` / `full`); macros reference it as `sase-research-artifacts@audio_edition`.

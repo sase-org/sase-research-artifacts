@@ -97,6 +97,9 @@ def test_wheel_contains_provider_defaults_and_all_seven_macros(
     assert f"{PACKAGE_NAME}/provider.py" in names
     assert f"{PACKAGE_NAME}/default_config.yml" in names
     assert f"{PACKAGE_NAME}/input_types.yml" in names
+    assert f"{PACKAGE_NAME}/skills/mermaid_diagrams.md" in names
+    assert f"{PACKAGE_NAME}/skills/examples/documentation-routing.svg" in names
+    assert f"{PACKAGE_NAME}/skills/examples/layout-modes.svg" in names
     # The packaged directory keeps its `xprompts/` name during the transition.
     for macro in (
         "research.md",
@@ -125,6 +128,9 @@ def test_sdist_contains_provider_defaults_and_all_seven_macros(
     assert "provider.py" in names
     assert "default_config.yml" in names
     assert "input_types.yml" in names
+    assert "mermaid_diagrams.md" in names
+    assert "documentation-routing.svg" in names
+    assert "layout-modes.svg" in names
     for macro in (
         "research.md",
         "research_audio.md",

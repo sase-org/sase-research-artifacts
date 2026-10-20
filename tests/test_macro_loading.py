@@ -21,6 +21,8 @@ from sase.core.artifact_context_query_facade import (
 )
 from sase.core.artifact_file_explicit import store_explicit_artifact_file
 from sase.llm_provider.provider_disable import disable_provider
+from sase.macro.loader_skills import load_skills_from_plugins
+from sase.macro.processor import process_macro_references_with_catalog
 
 from sase_macro_compat import (
     UNSET,
@@ -219,6 +221,39 @@ def test_all_seven_research_macros_load() -> None:
         "research/prompt",
         "research_swarm",
     }
+
+
+def test_mermaid_diagram_skill_loads_from_plugin_resources() -> None:
+    skills = load_skills_from_plugins()
+    skill = skills["skill/mermaid_diagrams"]
+
+    assert skill.skill is True
+    assert skill.skill_name == "mermaid_diagrams"
+    assert "## Know the one thing the figure says" in skill.content
+
+
+def test_mermaid_diagram_skill_expansion_preserves_mermaid_syntax() -> None:
+    skills = load_skills_from_plugins()
+    expanded = process_macro_references_with_catalog(
+        "#skill/mermaid_diagrams", skills, raise_on_error=True
+    )
+
+    assert 'Q{{"Is the diagram valid?"}}' in expanded
+    assert 'title: "Where should this documentation change live?"' in expanded
+    assert "#E8F1FB" in expanded
+    assert "{% raw %}" not in expanded
+    assert "{% endraw %}" not in expanded
+
+
+def test_research_swarm_points_only_the_lead_to_the_skill() -> None:
+    researchers_and_lead = _swarm_segments({}, diagrams=True)
+    lead = researchers_and_lead[2]
+
+    assert "/mermaid_diagrams" in lead
+    assert "/mermaid_diagrams" not in "\n".join(researchers_and_lead[:2])
+
+    default_lead = _swarm_segments({})[-1]
+    assert "/mermaid_diagrams" not in default_lead
 
 
 def test_input_types_yml_is_importable_from_the_package() -> None:

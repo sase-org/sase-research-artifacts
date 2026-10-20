@@ -210,6 +210,11 @@ Research request:
 
 {{ prompt }}
 
+{% if run_diagrams -%}
+When you prepare Mermaid diagrams, load `/mermaid_diagrams` before drafting. The skill
+has the shared figure-selection, styling, and PDF-render review rules.
+{% endif %}
+
 The researchers' registered reports:
 
 #_report_records

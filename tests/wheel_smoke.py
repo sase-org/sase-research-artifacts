@@ -17,7 +17,9 @@ from sase.artifact_providers import assemble_artifact_provider_registry
 from sase.config.loading import load_plugin_configs
 from sase.core.agent_launch_facade import plan_typed_launch_units
 from sase.macro.loader_sources import load_macros_from_plugins
+from sase.macro.loader_skills import load_skills_from_plugins
 from sase.macro.processor import expand_single_macro
+from sase.macro.processor import process_macro_references_with_catalog
 import sase_core_rs
 import sase_research_artifacts
 
@@ -71,6 +73,13 @@ assert research_names == {
     "research/prompt",
     "research_swarm",
 }, research_names
+skills = load_skills_from_plugins()
+assert "skill/mermaid_diagrams" in skills
+expanded_skill = process_macro_references_with_catalog(
+    "#skill/mermaid_diagrams", skills, raise_on_error=True
+)
+assert 'Q{{"Is the diagram valid?"}}' in expanded_skill
+assert "#E8F1FB" in expanded_skill
 research_swarm = macros["research_swarm"]
 assert set(research_swarm.local_macros) == {"_queue", "_report_records"}
 assert "default: 16" not in research_swarm.content

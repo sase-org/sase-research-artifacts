@@ -3,7 +3,8 @@
 `sase-research-artifacts` is an installable Python plugin for
 [sase](https://github.com/sase-org/sase) that ships the `research`
 artifact-reference provider, the `research-highlights` file-hook provider, the
-`#research*` macros, and default model/tribe config for research workflows.
+`#research*` macros, the on-demand `/mermaid_diagrams` skill, and default model/tribe
+config for research workflows.
 Durable research reports and generated media live in the
 [`sase-org/sase--research`](https://github.com/sase-org/sase--research) sidecar; this
 plugin supplies the SASE integrations that make those artifacts discoverable and
@@ -169,6 +170,11 @@ diagnostic rather than running someone else's command on your machine.
   Direct override: `#research/audio(edition=full)`.
   Provider gating needs a host sase that ships the mode-aware `provider_enabled("hard")` /
   `provider_disabled` prompt filters.
+
+## Skill
+
+- `/mermaid_diagrams` -- shared guidance for choosing, styling, rendering, and reviewing
+  Mermaid diagrams. The swarm lead loads it on demand when the diagram segment runs.
 
 ## Defaults
 
