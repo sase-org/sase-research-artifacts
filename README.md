@@ -110,9 +110,9 @@ diagnostic rather than running someone else's command on your machine.
   questions about a swarm lead's report in a `<stem>.diagrams.md` manifest for
   the swarm linker to place (at most three, or up to five for a complex report; meant
   for the swarm's image segment); draws by the inlined `/mermaid_diagrams` skill guide
-  and render-checks under the PDF-mirroring config with the Mermaid CLI (pinned `npx`
-  first, falling back to `mmdc`), failing any figure below 0.75 fit scale, and proposes
-  nothing if neither CLI form is usable.
+  and render-checks under its PDF-mirroring config with the pinned Mermaid CLI first,
+  falling back to global `mmdc`; looks at and measures each figure, drops any below
+  0.75 fit scale, and proposes nothing if neither CLI form is usable.
 - `#research/more` -- extend a research file with further research, filling gaps.
 - `#research/prompt` -- research prior art and alternatives for a prompt, then `#research`
   it.
@@ -175,8 +175,25 @@ diagnostic rather than running someone else's command on your machine.
 
 ## Skill
 
-- `/mermaid_diagrams` -- shared guidance for choosing, styling, rendering, and reviewing
-  Mermaid diagrams. The swarm lead loads it on demand when the diagram segment runs.
+The shared source is `src/sase_research_artifacts/skills/mermaid_diagrams.md`. SASE
+discovers it from the plugin resources as the on-demand `/mermaid_diagrams` skill and
+the inline `#skill/mermaid_diagrams` macro. The diagrams image segment inlines the guide
+once; the swarm lead gets an on-demand pointer whenever it may author or carry over
+Mermaid, even when `image=false` and `diagrams=false`. The pointer does not start a
+companion diagrams agent.
+
+If the provider skill is not deployed, the lead checks the plugin source with
+`sase macro show skill/mermaid_diagrams --format raw` (or
+`sase macro show /mermaid_diagrams --format raw`) and uses the form supported by that
+host. A same-named home source at `~/sase/skills/mermaid_diagrams.md` overrides the
+plugin default through SASE's first-source-wins skill discovery.
+
+The guide's complete render procedure uses a short `TMPDIR`, a locked neutral PDF
+config, pinned `@mermaid-js/mermaid-cli@12.0.0` before global `mmdc`, and one retained
+CLI choice. It renders SVG and PNG with the same config, measures root SVG dimensions
+or `viewBox` against the 652.8 × 892.8 px PDF box, and fails figures below 75% fit.
+Render review allows two visual revisions; batch parse repair remains capped at five
+rounds.
 
 ## Defaults
 

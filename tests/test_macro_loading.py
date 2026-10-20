@@ -30,6 +30,7 @@ from sase_macro_compat import (
     expand_macro_swarms_with_metadata,
     expand_single_macro,
     load_macros_from_plugins,
+    render_generated_skill_targets,
     render_toplevel_jinja2,
 )
 
@@ -245,15 +246,36 @@ def test_mermaid_diagram_skill_expansion_preserves_mermaid_syntax() -> None:
     assert "{% endraw %}" not in expanded
 
 
+def test_mermaid_diagram_skill_generated_round_trip() -> None:
+    skill = load_skills_from_plugins()["skill/mermaid_diagrams"]
+    targets = render_generated_skill_targets([skill])
+    if targets is None:
+        pytest.skip("this published SASE floor has no read-only skill renderer API")
+
+    assert targets
+    generated = targets[0].content
+    assert generated.startswith("---\nname: mermaid_diagrams\n")
+    assert 'title: "Where should this documentation change live?"' in generated
+    assert 'Q{{"Is the diagram valid?"}}' in generated
+    assert "#E8F1FB" in generated
+    assert "{% raw %}" not in generated
+    assert "{% endraw %}" not in generated
+
+
 def test_research_swarm_points_only_the_lead_to_the_skill() -> None:
-    researchers_and_lead = _swarm_segments({}, diagrams=True)
-    lead = researchers_and_lead[2]
-
-    assert "/mermaid_diagrams" in lead
-    assert "/mermaid_diagrams" not in "\n".join(researchers_and_lead[:2])
-
-    default_lead = _swarm_segments({})[-1]
-    assert "/mermaid_diagrams" not in default_lead
+    for options in (
+        {"diagrams": True},
+        {"image": True, "diagrams": False},
+        {},
+    ):
+        segments = _swarm_segments({}, **options)
+        lead = next(segment for segment in segments if "You are the lead researcher" in segment)
+        assert "/mermaid_diagrams" in lead
+        assert "sase macro show skill/mermaid_diagrams --format raw" in lead
+        assert "sase macro show /mermaid_diagrams --format raw" in lead
+        assert "#skill/mermaid_diagrams" not in lead
+        assert "## Mermaid diagram craft" not in lead
+        assert "/mermaid_diagrams" not in "\n".join(segments[:2])
 
 
 def test_input_types_yml_is_importable_from_the_package() -> None:
@@ -416,12 +438,12 @@ def test_research_diagrams_draws_and_validates_by_the_guide() -> None:
         "<mmdc> -c <scratch>/pdf.json -i <scratch>/check.md "
         "-o <scratch>/check_render.md" in content
     )
-    assert "npx -y -p @mermaid-js/mermaid-cli@12.0.0 mmdc" in content
-    assert "npx -y -p @mermaid-js/mermaid-cli mmdc" not in content
+    assert "npx -y -p @mermaid-js/mermaid-cli" not in content
     assert "Found N mermaid charts" in content
-    assert "<mmdc> -i <scratch>/probe.mmd -o <scratch>/probe.svg" in content
+    assert '"Render, look, and revise" recipe exactly' in content
+    assert "Keep the selected CLI and any Puppeteer" in content
     assert "stop after five rounds" in content
-    assert "distinct from the guide's two look rounds" in content
+    assert "distinct from the guide's two visual revision rounds" in content
     assert "0.75 fit scale" in content
     assert "max-width" not in content
     assert "1300" not in content
@@ -433,12 +455,12 @@ def test_research_diagrams_manifest_gains_audit_fields() -> None:
     content = _research_macros()["research/diagrams"].content
     assert "## publication-order" in content
     assert "question: |-" in content
-    assert "When does the linker publish the canonical report?" in content
+    assert "When does the linker publish?" in content
     assert "review:" in content
     assert "fit 100%" in content
     assert "at most about 25 words" in content
     assert "PDF-mirroring config was used" in content
-    assert 'title: "When does the linker publish the report?"' in content
+    assert 'title: "When does the linker publish?"' in content
     assert "classDef focus fill:#E8F1FB" in content
     assert "class LEAD focus" in content
 
@@ -461,7 +483,7 @@ def _rendered_image_segment(*, image: bool, diagrams: bool | None) -> str:
 def test_rendered_image_segment_inlines_guide_only_with_diagrams() -> None:
     rendered = _rendered_image_segment(image=False, diagrams=True)
     assert rendered.count("## Know the one thing the figure says") == 1
-    assert "Revise at most twice and then remove a figure that still fails" in rendered
+    assert "Revise at most twice and then drop a figure that still fails" in rendered
     assert "classDef focus fill:#E8F1FB" in rendered
     assert 'Q{{"Is the diagram valid?"}}' in rendered
     assert "#skill/mermaid_diagrams" not in rendered
@@ -471,7 +493,7 @@ def test_rendered_image_segment_inlines_guide_only_with_diagrams() -> None:
     without = _rendered_image_segment(image=True, diagrams=False)
     assert "## Know the one thing the figure says" not in without
     assert (
-        "Revise at most twice and then remove a figure that still fails" not in without
+        "Revise at most twice and then drop a figure that still fails" not in without
     )
     assert "classDef focus fill:#E8F1FB" not in without
 
@@ -492,6 +514,14 @@ def test_linker_treats_question_and_review_as_audit_notes() -> None:
     )
     assert "never copy them into the report" not in off
     assert "audit notes" not in off
+
+    manifest = _research_macros()["research/diagrams"].content
+    assert "question: |-" in manifest
+    assert (
+        'review: "360x438 px, fit 100%; question and visual checks passed; 0 revisions"'
+        in manifest
+    )
+    assert "never copies `question` or `review` into the report" in manifest
 
 
 def test_research_diagrams_cap_scales_to_five_for_complex_reports() -> None:

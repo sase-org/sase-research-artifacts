@@ -9,6 +9,8 @@ intentionally keep the legacy import names.
 
 from __future__ import annotations
 
+from typing import Any
+
 try:
     from sase.macro.loader_sources import load_macros_from_plugins
 except ImportError:  # older sase without the macro rename
@@ -54,6 +56,26 @@ except ImportError:  # older sase without the macro rename
         parse_yaml_front_matter,
     )
 
+
+def render_generated_skill_targets(
+    skill_macros: list[Any],
+) -> list[Any] | None:
+    """Use the host's read-only skill renderer when this SASE version exposes it."""
+    try:
+        from sase.main import init_skills_handler
+    except ImportError:
+        return None
+
+    renderer = getattr(init_skills_handler, "render_skill_targets", None)
+    if not callable(renderer):
+        return None
+    return renderer(
+        skill_macros,
+        provider_filter="codex",
+        use_chezmoi=False,
+        use_prettier=False,
+    )
+
 __all__ = [
     "UNSET",
     "bind_runtime_template_vars",
@@ -62,4 +84,5 @@ __all__ = [
     "load_macros_from_plugins",
     "parse_yaml_front_matter",
     "render_toplevel_jinja2",
+    "render_generated_skill_targets",
 ]

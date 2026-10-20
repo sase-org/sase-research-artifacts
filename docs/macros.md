@@ -79,18 +79,19 @@ check: "mmdc 12.0.0 with the PDF-mirroring config rendered 1 of 1 Mermaid diagra
 
 ```yaml
 anchor: |-
-  <5-20 words copied verbatim from one line of a body paragraph or list item>
+  the linker publishes the canonical report only after every companion finishes.
 question: |-
-  <the reader question the figure answers>
+  When does the linker publish?
 illustrates: |-
-  <one sentence stating the point the diagram makes, in the report's terms>
-caption: <the takeaway assertion, at most about 25 words>
-review: "<<W>x<H> px, fit <scale>%; measured with the guide command; <rounds>"
+  The linker waits for every companion agent because the PDF hook fires once, on the
+  ADD of name.md.
+caption: The linker publishes once, after the lead and image agents finish.
+review: "360x438 px, fit 100%; question and visual checks passed; 0 revisions"
 ```
 
 ```mermaid
 ---
-title: "When does the linker publish the report?"
+title: "When does the linker publish?"
 ---
 flowchart TD
   LEAD["`**Lead report**<br/>Consolidated findings`"]
@@ -101,7 +102,7 @@ flowchart TD
   IMAGE --> LINK
   LINK --> HOOK
   classDef focus fill:#E8F1FB,stroke:#3B78C2,stroke-width:1.5px,color:#0F2E52
-  classDef outcome fill:#E8F5E9,stroke:#428A55,stroke-width:1.5px,color:#193D22
+  classDef outcome fill:#E7F5EC,stroke:#2E7D4F,stroke-width:1.5px,color:#123D24
   class LEAD focus
   class IMAGE focus
   class LINK outcome
@@ -126,12 +127,10 @@ The agent draws every figure by the inlined `/mermaid_diagrams` skill guide
 tested palette, and the render, look, and revise loop (at most two look rounds, then
 the figure is dropped).
 
-Put every diagram in scratch Markdown with a short paragraph before each one. Stage the
-PDF-mirroring `pdf.json` config, then probe the pinned
-`npx -y -p @mermaid-js/mermaid-cli@12.0.0 mmdc` first and a global `mmdc` second; use a
-form only when a smoke render exits 0 and writes `probe.svg`. If Chrome cannot start
-its sandbox, retry once with Puppeteer's `{"args": ["--no-sandbox"]}` config and keep
-that flag for the check. Record the CLI version.
+Put every diagram in scratch Markdown with a short paragraph before each one. Follow
+the shared skill's render recipe to create the short `TMPDIR`, write the PDF-mirroring
+config, smoke-test the pinned CLI before global `mmdc`, retry a browser sandbox-start
+failure once, and retain the selected command and flags. Record the CLI version.
 
 ```sh
 <mmdc> -c <scratch>/pdf.json -i <scratch>/check.md -o <scratch>/check_render.md
@@ -139,10 +138,11 @@ that flag for the check. Record the CLI version.
 
 The check passes only on exit 0, `Found N mermaid charts in Markdown input`, and N
 rendered SVGs. `mmdc` reports the first parse error; fix, simplify, or drop it and rerun,
-with a five-round cap (parse-fix rounds are distinct from the guide's two look
-rounds). Measure each rendered SVG with the guide's command and fail any figure below
-0.75 fit scale: revise it within the look rounds or drop it. Keep diagrams sized for a
-650 px column and at most half a page. With no usable Mermaid CLI, propose nothing.
+with a five-round cap (parse-fix rounds are distinct from the guide's two visual
+revision rounds). Measure each rendered SVG with the guide's command and fail any
+figure below 0.75 fit scale: revise it within those two visual rounds or drop it. Aim
+for a soft natural-size target of 650 × 700 px and keep every figure above the 75% fit
+floor. With no usable Mermaid CLI, propose nothing.
 
 ### Status variable and artifact label
 

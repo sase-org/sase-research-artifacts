@@ -54,8 +54,24 @@ package (no attribute), and sase locates `xprompts/*.md`, `skills/*.md`,
 `default_config.yml`, and `input_types.yml` inside it via `importlib.resources`.
 `skills/mermaid_diagrams.md` declares `skill: true`, so the plugin skill loader exposes
 it both as `/mermaid_diagrams` and as the expandable `#skill/mermaid_diagrams` reference.
-The research swarm lead loads it on demand when diagrams are enabled. These resources
-ship automatically in a hatchling wheel because they live inside
+The image segment expands the reference once when diagrams run. The lead receives an
+on-demand pointer whenever it may author or carry over Mermaid, independent of the
+`image` and `diagrams` flags; that pointer does not enable the companion diagrams agent.
+When the skill is not deployed, the lead checks
+`sase macro show skill/mermaid_diagrams --format raw` (or the slash form) against the
+plugin source and uses whichever form the host supports. A same-named home source at
+`~/sase/skills/mermaid_diagrams.md` overrides the plugin default under SASE's
+first-source-wins skill discovery.
+
+The shared guide gives the complete render and fit contract: use a short `TMPDIR`, the
+locked neutral PDF config, and a smoke-tested pinned Mermaid CLI before global `mmdc`;
+keep the chosen command and browser flags; render SVG and PNG with the same config; and
+measure root SVG dimensions, falling back to `viewBox`, against the 652.8 × 892.8 px
+PDF box. Figures below 75% fit fail review. A visual review checks the PNG and source,
+allows at most two revisions, and drops a figure that still fails. The producer batch
+check keeps its separate five parse-fix rounds and fails open if no CLI is usable.
+
+These resources ship automatically in a hatchling wheel because they live inside
 `src/sase_research_artifacts/` and are tracked in git -- no separate package-data
 declaration is needed. `input_types.yml` declares the plugin-shared `audio_edition` enum
 (`brief` / `full`); macros reference it as `sase-research-artifacts@audio_edition`.

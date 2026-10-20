@@ -26,10 +26,21 @@ just check      # lint + test
   `sase_artifact_refs` / `sase_file_hooks` entry point.
 - `src/sase_research_artifacts/xprompts/` — the `#research`, `#research/image`,
   `#research/diagrams`, `#research/more`, `#research/prompt`, and `#research_swarm`
-  macros; `#research/diagrams` render-checks Mermaid with the Mermaid CLI (`mmdc`, or
-  `npx`) and fails open without it. They are discovered through the `sase_macros`
+  macros; `#research/diagrams` render-checks Mermaid by the shared skill recipe and
+  fails open when no usable CLI is available. They are discovered through the `sase_macros`
   entry point (`sase_xprompts` stays registered as a legacy alias; the packaged
   directory keeps its `xprompts/` name).
+- `src/sase_research_artifacts/skills/mermaid_diagrams.md` — the plugin skill source,
+  discovered as `/mermaid_diagrams` and inlineable as `#skill/mermaid_diagrams`. The
+  diagrams image segment expands it once; the lead gets an on-demand pointer whenever
+  it may author or carry over Mermaid, regardless of image or diagrams flags. If the
+  skill is not deployed, the lead checks `sase macro show skill/mermaid_diagrams --format raw`
+  or the slash form and uses the one this host supports. A same-named
+  `~/sase/skills/mermaid_diagrams.md` home source overrides the plugin default. Its
+  render recipe uses a short `TMPDIR`, locked neutral PDF settings, pinned CLI-first
+  selection with a retained fallback, same-config SVG/PNG output, root-dimension or
+  `viewBox` measurement against 652.8 × 892.8 px, a 75% fit floor, two visual revisions,
+  and a five-round producer parse cap.
 - `src/sase_research_artifacts/default_config.yml` — the `image` default model alias,
   the `researchers` bucket, and the `research` tribe display config, discovered
   through the `sase_config` entry point. The research-swarm researchers default to

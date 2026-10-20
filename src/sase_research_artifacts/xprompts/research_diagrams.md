@@ -89,26 +89,11 @@ Conditional wording stays conditional.
 ## 5. Validate
 
 Put every diagram in a scratch Markdown file with a short paragraph before each one.
-Select the CLI once: make a short scratch dir (`mktemp -d` outside the research
-checkout; export it as `TMPDIR` so the browser socket path stays short) and write
-`<scratch>/pdf.json` with the guide's PDF-mirroring config. Probe the pinned
-`npx -y -p @mermaid-js/mermaid-cli@12.0.0 mmdc` first, then fall back to a global
-`mmdc`.
-A form is usable only if this smoke render exits 0 and writes `probe.svg`:
-
-```sh
-printf 'flowchart TD\n  A["ok"]\n' > <scratch>/probe.mmd
-<mmdc> -i <scratch>/probe.mmd -o <scratch>/probe.svg
-```
-
-A failed probe means that checker form is unavailable, not that a diagram is bad. If a
-probe fails only because Chrome cannot start its sandbox (common as root or in
-containers), retry once with `-p <scratch>/puppeteer.json` holding
-`{"args": ["--no-sandbox"]}`, and keep that flag for the real check. Record
-`<mmdc> --version`.
-
-Render, look at, and revise each figure as the guide's "Render, look, and revise"
-section says: at most two look rounds, then drop the figure.
+Set up the short scratch `TMPDIR`, PDF config, and CLI once by following the guide's
+"Render, look, and revise" recipe exactly. Keep the selected CLI and any Puppeteer
+flags for every check, record its version, and treat an unavailable smoke render as an
+environment failure rather than a bad diagram. Render, look at, and revise each figure
+as the guide says: at most two look rounds, then drop the figure.
 
 Run the batch check with the PDF-mirroring config:
 
@@ -121,7 +106,7 @@ The check passes only when the command exits 0, its output says
 `<scratch>/check_render-1.svg` through `-N.svg` all exist. `mmdc` stops at the first
 failing diagram and prints `Parse error on line …` with an excerpt. Fix, simplify, or
 drop that diagram and rerun; stop after five rounds. These parse-fix rounds are
-distinct from the guide's two look rounds.
+distinct from the guide's two visual revision rounds.
 
 Measure each `check_render-K.svg` with the guide's measure command. Fail any figure
 below 0.75 fit scale: revise it within the look rounds or drop it. If no form is
@@ -166,17 +151,17 @@ check: "mmdc 12.0.0 with the PDF-mirroring config rendered 1 of 1 Mermaid diagra
 anchor: |-
   the linker publishes the canonical report only after every companion finishes.
 question: |-
-  When does the linker publish the canonical report?
+  When does the linker publish?
 illustrates: |-
   The linker waits for every companion agent because the PDF hook fires once, on the
   ADD of name.md.
 caption: The linker publishes once, after the lead and image agents finish.
-review: "383x438 px, fit 100%; measured with the guide command; 1 round"
+review: "360x438 px, fit 100%; question and visual checks passed; 0 revisions"
 ```
 
 ```mermaid
 ---
-title: "When does the linker publish the report?"
+title: "When does the linker publish?"
 ---
 flowchart TD
   LEAD["`**Lead report**<br/>Consolidated findings`"]
@@ -187,7 +172,7 @@ flowchart TD
   IMAGE --> LINK
   LINK --> HOOK
   classDef focus fill:#E8F1FB,stroke:#3B78C2,stroke-width:1.5px,color:#0F2E52
-  classDef outcome fill:#E8F5E9,stroke:#428A55,stroke-width:1.5px,color:#193D22
+  classDef outcome fill:#E7F5EC,stroke:#2E7D4F,stroke-width:1.5px,color:#123D24
   class LEAD focus
   class IMAGE focus
   class LINK outcome

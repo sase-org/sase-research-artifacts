@@ -210,10 +210,12 @@ Research request:
 
 {{ prompt }}
 
-{% if run_diagrams -%}
-When you prepare Mermaid diagrams, load `/mermaid_diagrams` before drafting. The skill
-has the shared figure-selection, styling, and PDF-render review rules.
-{% endif %}
+When you author or carry over Mermaid diagrams, load `/mermaid_diagrams` before
+drafting, even when no image or diagrams companion runs. The skill has the shared
+figure-selection, styling, and PDF-render review rules. If the provider skill is not
+deployed, verify the edited plugin's guide with `sase macro show skill/mermaid_diagrams --format raw` (or
+`sase macro show /mermaid_diagrams --format raw`) and use the form this host supports.
+This guidance does not enable a companion diagrams agent.
 
 The researchers' registered reports:
 
