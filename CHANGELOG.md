@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.2](https://github.com/sase-org/sase-research-artifacts/compare/v0.3.1...v0.3.2) (2026-10-24)
+
+
+### Features
+
+* **diagrams:** add #research/diagrams macro and diagram manifest exclusion ([c56e3f7](https://github.com/sase-org/sase-research-artifacts/commit/c56e3f707b04b5cf9507dabf73e4063d4a9f8439))
+* **research-diagrams:** answer reader questions via the inlined skill guide ([af3a591](https://github.com/sase-org/sase-research-artifacts/commit/af3a591c776d1d28206b55dbcb4be3c0d61aaada))
+* **research-diagrams:** drill into infographic panels with Mermaid ([9fcd3de](https://github.com/sase-org/sase-research-artifacts/commit/9fcd3dee97bcd0e4b4041eea93acc3c18d5200e7))
+* **research-diagrams:** finish Mermaid craft landing repairs ([1333261](https://github.com/sase-org/sase-research-artifacts/commit/133326168f8d5810a0b7e7f94191bf3111b3a6c1))
+* **research-diagrams:** let image agent propose up to five diagrams for complex reports ([cb95f3d](https://github.com/sase-org/sase-research-artifacts/commit/cb95f3d4135db788f7d5b9e77affb4432843f77a))
+* **research-swarm:** add diagrams flag and linker placement ([da1c380](https://github.com/sase-org/sase-research-artifacts/commit/da1c3809ca8880ae6d54c08f6bcb05a141db5f22))
+* **research-swarm:** reference placed diagrams with figure anchors ([6b56e47](https://github.com/sase-org/sase-research-artifacts/commit/6b56e4760cb83e8cd0873369752d04be2b317441))
+* **research:** add diagrams input to #research ([8b03999](https://github.com/sase-org/sase-research-artifacts/commit/8b0399926ac042a49b31cff722d9622fe05c11b6))
+* **skills:** add mermaid diagram craft guidance ([b16687b](https://github.com/sase-org/sase-research-artifacts/commit/b16687b9254d7c8257ef66b09500d163c90a7707))
+
+
+### Bug Fixes
+
+* **release:** retarget published-minimum smoke to sase 0.18.0 ([1762395](https://github.com/sase-org/sase-research-artifacts/commit/17623956c379f580ad1931c927df0093d51feb91))
+* **research-diagrams:** replace bob checks with Mermaid CLI ([cf00e1e](https://github.com/sase-org/sase-research-artifacts/commit/cf00e1efe04760bfd1981634374a96ddcd2f8522))
+
 ## [0.3.1](https://github.com/sase-org/sase-research-artifacts/compare/v0.3.0...v0.3.1) (2026-10-14)
 
 
