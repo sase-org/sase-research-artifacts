@@ -269,7 +269,9 @@ def test_research_swarm_points_only_the_lead_to_the_skill() -> None:
         {},
     ):
         segments = _swarm_segments({}, **options)
-        lead = next(segment for segment in segments if "You are the lead researcher" in segment)
+        lead = next(
+            segment for segment in segments if "You are the lead researcher" in segment
+        )
         assert "/mermaid_diagrams" in lead
         assert "sase macro show skill/mermaid_diagrams --format raw" in lead
         assert "sase macro show /mermaid_diagrams --format raw" in lead
@@ -492,9 +494,7 @@ def test_rendered_image_segment_inlines_guide_only_with_diagrams() -> None:
 
     without = _rendered_image_segment(image=True, diagrams=False)
     assert "## Know the one thing the figure says" not in without
-    assert (
-        "Revise at most twice and then drop a figure that still fails" not in without
-    )
+    assert "Revise at most twice and then drop a figure that still fails" not in without
     assert "classDef focus fill:#E8F1FB" not in without
 
 
@@ -588,9 +588,56 @@ def test_research_prompt_declares_typed_input() -> None:
     assert [(arg.name, arg.type.value) for arg in research.inputs] == [
         ("report_target", "path"),
         ("suffix", "word"),
+        ("diagrams", "bool"),
     ]
     assert research.inputs[0].default is None
     assert research.inputs[1].default is None
+    assert research.inputs[2].default is False
+
+
+def _expand_research(named_args: dict[str, str]) -> str:
+    xp = _research_macros()["research"]
+    return expand_single_macro(xp, [], named_args)
+
+
+@pytest.mark.parametrize(
+    "named_args",
+    [{}, {"suffix": "a"}, {"report_target": "x.md"}],
+)
+def test_research_diagrams_off_by_default(named_args: dict[str, str]) -> None:
+    without = _expand_research(named_args)
+    with_false = _expand_research({**named_args, "diagrams": "false"})
+    assert without == with_false
+    assert "mermaid" not in without.lower()
+    assert "diagram" not in without.lower()
+
+
+@pytest.mark.parametrize(
+    "named_args",
+    [{}, {"suffix": "a"}, {"report_target": "x.md"}],
+)
+def test_research_diagrams_true_points_to_the_skill(named_args: dict[str, str]) -> None:
+    expansion = _expand_research({**named_args, "diagrams": "true"})
+    assert "/mermaid_diagrams" in expansion
+    assert "sase macro show skill/mermaid_diagrams --format raw" in expansion
+    assert "sase macro show /mermaid_diagrams --format raw" in expansion
+    assert "#skill/mermaid_diagrams" not in expansion
+    assert "## Mermaid diagram craft" not in expansion
+    assert "{%" not in expansion
+    assert "{{ diagrams" not in expansion
+    registration = (
+        'sase artifact create -p "<absolute-report-path>"'
+        ' -l "research:<repo-relative-report-path>"'
+    )
+    assert registration in expansion
+    assert expansion.index("/mermaid_diagrams") < expansion.index(registration)
+    if "report_target" in named_args:
+        assert "x.md" in expansion
+    elif "suffix" in named_args:
+        assert "<stem>__a.md" in expansion
+    else:
+        assert "new markdown file under" in expansion
+    assert "at least one" in expansion
 
 
 def test_research_swarm_declares_typed_input() -> None:

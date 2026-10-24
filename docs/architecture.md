@@ -56,7 +56,8 @@ package (no attribute), and sase locates `xprompts/*.md`, `skills/*.md`,
 it both as `/mermaid_diagrams` and as the expandable `#skill/mermaid_diagrams` reference.
 The image segment expands the reference once when diagrams run. The lead receives an
 on-demand pointer whenever it may author or carry over Mermaid, independent of the
-`image` and `diagrams` flags; that pointer does not enable the companion diagrams agent.
+`image` and `diagrams` flags, and `#research(diagrams=true)` is another on-demand
+consumer; that pointer does not enable the companion diagrams agent.
 When the skill is not deployed, the lead checks
 `sase macro show skill/mermaid_diagrams --format raw` (or the slash form) against the
 plugin source and uses whichever form the host supports. A same-named home source at

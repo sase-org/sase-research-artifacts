@@ -102,7 +102,7 @@ diagnostic rather than running someone else's command on your machine.
 
 ## Macros
 
-- `#research` -- write research to a new dated file in the `research` artifact repo.
+- `#research` -- write research to a new dated file in the `research` artifact repo (`diagrams=true` adds render-checked Mermaid diagrams via `/mermaid_diagrams`).
 - `#research/audio` -- narrate a research report as a chaptered MP3 audio edition
   (requires `sase plugin install listen`, or `uv tool install sase-listen`).
 - `#research/image` -- generate an infographic from a research file's main points.
@@ -179,7 +179,8 @@ The shared source is `src/sase_research_artifacts/skills/mermaid_diagrams.md`. S
 discovers it from the plugin resources as the on-demand `/mermaid_diagrams` skill and
 the inline `#skill/mermaid_diagrams` macro. The diagrams image segment inlines the guide
 once; the swarm lead gets an on-demand pointer whenever it may author or carry over
-Mermaid, even when `image=false` and `diagrams=false`. The pointer does not start a
+Mermaid, even when `image=false` and `diagrams=false`, and `#research(diagrams=true)`
+is a second on-demand consumer. The pointer does not start a
 companion diagrams agent.
 
 If the provider skill is not deployed, the lead checks the plugin source with

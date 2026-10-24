@@ -33,7 +33,8 @@ just check      # lint + test
 - `src/sase_research_artifacts/skills/mermaid_diagrams.md` — the plugin skill source,
   discovered as `/mermaid_diagrams` and inlineable as `#skill/mermaid_diagrams`. The
   diagrams image segment expands it once; the lead gets an on-demand pointer whenever
-  it may author or carry over Mermaid, regardless of image or diagrams flags. If the
+  it may author or carry over Mermaid, regardless of image or diagrams flags, and
+  `#research(diagrams=true)` is another on-demand consumer. If the
   skill is not deployed, the lead checks `sase macro show skill/mermaid_diagrams --format raw`
   or the slash form and uses the one this host supports. A same-named
   `~/sase/skills/mermaid_diagrams.md` home source overrides the plugin default. Its

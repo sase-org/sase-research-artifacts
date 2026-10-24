@@ -11,6 +11,7 @@ Writes the current research to a new markdown file under
 | --------------- | ---- | --------------------------------------------------------------------------- |
 | `report_target` | path | Optional month-relative markdown path to write exactly                      |
 | `suffix`        | word | Optional filename suffix requiring `<stem>__<suffix>.md` when used by itself |
+| `diagrams`      | bool | Default `false`. When `true`, adds render-checked Mermaid diagrams to the report via the `/mermaid_diagrams` skill |
 
 When both are supplied, `report_target` wins and names the report file exactly.
 
@@ -18,6 +19,23 @@ After a successful write, `#research` registers the report as a durable snapshot
 `sase artifact create -p "<absolute-report-path>" -l "research:<repo-relative-report-path>"`
 (no `--move`). This is the producer contract `#research_swarm`'s lead consumes through
 the runtime `wait.artifacts` namespace instead of reading transcripts.
+
+### Diagrams
+
+With `#research(diagrams=true)`, the writing agent loads the on-demand
+`/mermaid_diagrams` skill before drafting any figure (falling back to
+`sase macro show skill/mermaid_diagrams --format raw`, or the `/mermaid_diagrams`
+form, when the skill is not deployed) and adds at least one useful diagram,
+usually one to three and never more than five. Each figure goes directly after
+the paragraph or list whose question it answers, followed by its one-sentence
+caption as one italic line. Render scratch files stay outside the research
+checkout; each fence in the report is byte-identical to the source that passed
+the skill's render check. Diagrams finish before registration so the snapshot
+includes them, and diagram trouble never blocks the report: with no usable
+Mermaid CLI the agent registers without figures and says so. Example:
+`#research(diagrams=true)`. Note that `#research_swarm` never forwards this
+input; the swarm's own `diagrams=true` runs `#research/diagrams` plus the
+linker instead.
 
 ## `#research/image` -- Generate an Infographic
 
