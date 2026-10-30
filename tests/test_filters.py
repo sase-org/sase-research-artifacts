@@ -48,6 +48,15 @@ _CANDIDATES = (
     "202608/widgets/widgets.png.md",
     "notes/scratch.md",
 )
+# Hook-only: asset-folder and deeper-than-topic-dir Markdown that the inventory
+# still sees (its globs stay `20*/**/*.md`) but the Highlights hook must drop.
+_HOOK_ONLY_CANDIDATES = (
+    "202608/widgets/widgets__final_assets/README.md",
+    "202608/widgets/widgets__cld_assets/test.md",
+    "202608/widgets__cld_assets/README.md",
+    "202608/solo_assets/README.md",
+    "202608/widgets/sub/notes.md",
+)
 
 
 def test_ref_inventory_globs_keep_swarm_drafts() -> None:
@@ -82,6 +91,60 @@ def test_file_hook_globs_exclude_swarm_drafts() -> None:
     assert "202608/widgets/widgets_narration.md" in result.filtered
     assert "202608/widgets/widgets.png.md" in result.filtered
     assert "notes/scratch.md" in result.filtered
+
+
+def test_file_hook_globs_exclude_asset_folders_and_deeper_notes() -> None:
+    globs = RESEARCH_HIGHLIGHTS_HOOK_SPEC["file_hook"]["filters"]["path_globs"]
+
+    result = filter_artifact_ref_paths(
+        "research-highlights",
+        (*_CANDIDATES, *_HOOK_ONLY_CANDIDATES),
+        path_globs=globs,
+    )
+
+    assert result.allowed == ("202608/widgets/widgets.md", "202608/solo_report.md")
+    for path in _HOOK_ONLY_CANDIDATES:
+        assert path in result.filtered
+
+
+def _hook_from_template() -> FileHookConfig:
+    filters = RESEARCH_HIGHLIGHTS_HOOK_SPEC["file_hook"]["filters"]
+    return FileHookConfig(
+        name="research-highlights",
+        description=None,
+        command="true",
+        timeout_seconds=0,
+        filters=FileHookFilters(
+            sidecars=tuple(filters["sidecars"]),
+            producers=tuple(filters["producers"]),
+            path_globs=tuple(filters["path_globs"]),
+            agent_name_globs=tuple(filters["agent_name_globs"]),
+            ops=tuple(filters["ops"]),
+        ),
+    )
+
+
+def test_file_hook_template_rejects_moved_asset_readme_from_lead() -> None:
+    hook = _hook_from_template()
+    junk = FileHookEvent(
+        project="sase",
+        repo_kind="sidecar",
+        sidecar_role="research",
+        rel_path="202610/topic/topic__cld_assets/README.md",
+        op="ADD",
+        agent_name="research.2u.final",
+    )
+    wanted = FileHookEvent(
+        project="sase",
+        repo_kind="sidecar",
+        sidecar_role="research",
+        rel_path="202610/topic/topic.md",
+        op="ADD",
+        agent_name="research.2u.linker",
+    )
+
+    assert hook_matches_event(hook, junk, producer="commit") is False
+    assert hook_matches_event(hook, wanted, producer="commit") is True
 
 
 def test_file_hook_filters_restrict_to_committed_routes() -> None:

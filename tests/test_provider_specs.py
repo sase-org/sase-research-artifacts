@@ -238,9 +238,11 @@ def test_research_highlights_use_resolves_with_local_command(
     assert hook.filters.sidecars == ("research",)
     assert hook.filters.producers == ("commit", "sdd", "finalizer")
     assert hook.filters.path_globs == (
-        "20*/**/*.md",
+        "20*/*.md",
+        "20*/*/*.md",
         "!20*/*__*.md",
         "!20*/*/*__*.md",
+        "!20*/**/*_assets/**",
         "!20*/**/*_infographic.md",
         "!20*/**/*_narration.md",
         "!20*/**/*.diagrams.md",

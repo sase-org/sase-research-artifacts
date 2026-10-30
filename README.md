@@ -79,7 +79,11 @@ cited reports.
 
 Renders new committed research reports into Highlights PDFs for the Obsidian reading
 queue. Restricted to the `research` sidecar, producers `commit`, `sdd`, and
-`finalizer`, `ADD` operations only, and excludes agents matching
+`finalizer`, `ADD` operations only, and path globs `20*/*.md` (month-root reports) and
+`20*/*/*.md` (one-level topic-dir Markdown), plus vetoes for `__` drafts, generated
+companions, and `!20*/**/*_assets/**` so swarm and solo `_assets` folders never fire
+the hook. Distinguishing canonical `<name>/<name>.md` from other topic-dir notes is the
+local capture command's job. Also excludes agents matching
 `research.*.{cdx,cld,grk,mus,gem}` (the swarm's own researchers) plus
 `__cdx`/`__cld`/`__grk`/`__mus`/`__gem` draft files, both where each researcher commits
 them at the month-dir root (`<YYYYMM>/<stem>__<suffix>.md`) and after the lead agent

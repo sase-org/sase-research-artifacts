@@ -17,7 +17,14 @@ citing a specific researcher's draft with ``@research:...`` is legitimate. The
 ``research-highlights`` file hook excludes drafts, because Bryan does not want a
 Highlights PDF generated per draft -- only for the consolidated report. That exclusion
 covers the lead's ``__final.md`` intermediate, which the linker republishes as
-``<name>.md``. This divergence is intentional, not a porting bug.
+``<name>.md``. The hook admits only month-root Markdown (``<YYYYMM>/<stem>.md``) and
+one-level topic-dir Markdown (``<YYYYMM>/<name>/*.md``) and vetoes ``*_assets`` folders
+at any depth under a month dir, so swarm asset READMEs and notes nested under a topic
+cannot fire it. Moved files are attributed to the mover: SASE splits a rename into
+REMOVE + ADD, so a lead that relocates a researcher's assets into the topic dir is the
+ADD's agent. Distinguishing ``<name>/<name>.md`` from other topic-dir notes is the
+command's job, because globs cannot compare a basename with its parent directory. This
+divergence from the ref inventory is intentional, not a porting bug.
 
 The ``research`` ref provider's ``expansion_format`` uses no ``{checkout_path}``
 placeholder, which makes it a *pointer* kind: ``@research:<path>`` expands to prose
@@ -111,12 +118,19 @@ RESEARCH_HIGHLIGHTS_HOOK_SPEC: Mapping[str, Any] = {
             "sidecars": ["research"],
             "producers": ["commit", "sdd", "finalizer"],
             "path_globs": [
-                "20*/**/*.md",
+                # Month-root reports: <YYYYMM>/<stem>.md
+                "20*/*.md",
+                # Topic-dir Markdown: <YYYYMM>/<name>/*.md. Canonical
+                # <name>/<name>.md vs other notes is the command's job.
+                "20*/*/*.md",
                 # Researcher drafts committed at the month-dir root.
                 "!20*/*__*.md",
                 # Researcher drafts plus the lead's `__final.md` intermediate, which
                 # the linker republishes as `<name>.md`.
                 "!20*/*/*__*.md",
+                # Asset folders at any depth, including depth-2
+                # <YYYYMM>/<stem>_assets/README.md written by a solo agent.
+                "!20*/**/*_assets/**",
                 *_COMPANION_MARKDOWN_EXCLUDE_GLOBS,
             ],
             "agent_name_globs": [

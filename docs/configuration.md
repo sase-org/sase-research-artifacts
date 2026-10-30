@@ -72,8 +72,10 @@ SASE appends the report’s absolute path as the command’s final argument and 
 the project display name in `SASE_FILE_HOOK_PROJECT`, so any local renderer works.
 
 The provider template supplies `description`, `filters` (`sidecars: [research]`,
-`producers: [commit, sdd, finalizer]`, `path_globs: ["20*/**/*.md", "!20*/*__*.md",
-"!20*/*/*__*.md"]` (plus generated-companion vetoes), `agent_name_globs:
+`producers: [commit, sdd, finalizer]`, `path_globs: ["20*/*.md", "20*/*/*.md",
+"!20*/*__*.md", "!20*/*/*__*.md", "!20*/**/*_assets/**"]` (plus generated-companion
+vetoes; the asset-folder veto drops swarm and solo `_assets` trees, and the capture
+command decides `<name>/<name>.md` vs other topic-dir notes), `agent_name_globs:
 ["!research.*.cdx", "!research.*.cld", "!research.*.grk", "!research.*.mus",
 "!research.*.gem"]`,
 `ops: [ADD]`), and `timeout: 120s`. `command` is deliberately absent from the template
