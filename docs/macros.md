@@ -269,6 +269,7 @@ recommendation, then hands off to `#research` to write it up.
 | `diagrams`              | bool | `null`                                  | Follows `image` when null; `diagrams=true` implies the image segment and the linker |
 | `linker`                | bool | `false`                                 | Opt into `<clan>.linker` (always runs with `image=true`, `diagrams=true`, or `audio=true`) |
 | `linker_model`          | model | `@xlarge`                               | Model for `<clan>.linker`                                |
+| `tables_to_lists`       | bool | `false`                                 | Linker converts every table into a list for the PDF (linker runs only) |
 | `audio`                 | bool | `false`                                 | Opt into `<clan>.audio` (implies the linker)             |
 | `audio_model`           | model | `@audio`                                | Model for `<clan>.audio`                                 |
 | `audio_edition`         | `sase-research-artifacts@audio_edition` | `brief` | Narration edition for `<clan>.audio` (`brief` or `full`) |
@@ -311,7 +312,8 @@ Omitting them preserves the defaults below. The opt-in image segment uses
 `#research_swarm(prompt="A research topic", image=true, diagrams=false)` (infographic
 without diagrams).
 The opt-in linker segment uses `linker_model` (default `@xlarge`), for example
-`#research_swarm(prompt="A research topic", linker=true)`.
+`#research_swarm(prompt="A research topic", linker=true)` and
+`#research_swarm(prompt="A research topic", image=true, tables_to_lists=true)`.
 The opt-in audio segment uses `audio_model` (default `@audio`), for example
 `#research_swarm(prompt="A research topic", audio=true)`, and `audio_edition`
 (default `brief`), for example
@@ -361,7 +363,9 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    infographic when one was generated, then the `## Bottom line` / `## Overview`
    section. Diagrams never enter that opening sequence. Restructured sections with
    checked links and in-document jump links follow; every placed diagram is an anchored
-   figure introduced by one linking sentence.
+   figure introduced by one linking sentence. By default it keeps the lead's tables as
+   tables, and with `tables_to_lists=true` it converts each table into a list with one
+   item per row.
 9. **`<clan>.audio`** -- optional; when `audio=true`, waits only on the lead and
    never on the linker, running alongside the optional image agent, forks from
    the lead's segment, then runs `#research/audio(edition=<audio_edition>)`

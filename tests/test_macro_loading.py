@@ -663,6 +663,7 @@ def test_research_swarm_declares_typed_input() -> None:
         ("diagrams", "bool"),
         ("linker", "bool"),
         ("linker_model", "model"),
+        ("tables_to_lists", "bool"),
         ("audio", "bool"),
         ("audio_model", "model"),
         ("audio_edition", "sase-research-artifacts@audio_edition"),
@@ -691,8 +692,9 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[18].default is False
     assert xp.inputs[19].default == "@xlarge"
     assert xp.inputs[20].default is False
-    assert xp.inputs[21].default == "@audio"
-    assert xp.inputs[22].default == "brief"
+    assert xp.inputs[21].default is False
+    assert xp.inputs[22].default == "@audio"
+    assert xp.inputs[23].default == "brief"
 
 
 def test_research_swarm_rejects_unroutable_model_with_suggestion() -> None:
@@ -1489,7 +1491,9 @@ def test_research_swarm_diagrams_image_matrix(
 ) -> None:
     run_diagrams = image if diagrams is None else diagrams
     run_visual = image or run_diagrams
-    segments = _swarm_segments({}, image=image, diagrams=diagrams)
+    segments = _swarm_segments(
+        {"tables_to_lists": "true"}, image=image, diagrams=diagrams
+    )
     assert len(segments) == (5 if run_visual else 3)
     _assert_each_segment_has_one_queue(segments)
 
@@ -1965,7 +1969,7 @@ def test_research_swarm_linker_renders_diagram_handoff_at_launch() -> None:
 
 
 def test_research_swarm_linker_diagram_rules_present_when_diagrams_off() -> None:
-    linker = _swarm_segments({}, linker=True)[-1]
+    linker = _swarm_segments({"tables_to_lists": "true"}, linker=True)[-1]
     assert "or a diagram" in linker
     assert "Every Mermaid diagram from the lead's report is still present" in linker
     assert _AGENTS_DIAGRAMS_LOOP not in linker
@@ -2127,7 +2131,7 @@ def test_research_swarm_linker_opens_with_research_query_then_infographic() -> N
 
 
 def test_research_swarm_linker_converts_tables_to_lists() -> None:
-    linker = _swarm_segments({}, linker=True)[-1]
+    linker = _swarm_segments({"tables_to_lists": "true"}, linker=True)[-1]
     assert "table (record its cells; step 3 converts each one into a list)" in linker
 
     step3 = linker.split("3. **Restructure**", 1)[1].split(
@@ -2138,12 +2142,81 @@ def test_research_swarm_linker_converts_tables_to_lists() -> None:
     assert "3 spaces under `1. `" in step3
     assert "Never turn a row into a `####` heading." in step3
     assert "or a diagram" in step3
+    assert "- **Keep tables as tables.**" not in step3
 
     step6 = linker.split("6. **Re-check against the step-2 inventory**", 1)[1].split(
         "7. **Write**", 1
     )[0]
     assert "Confirm every cell of every table" in step6
     assert '"t":"Table"' in step6
+
+
+def test_research_swarm_linker_keeps_tables_by_default() -> None:
+    linker = _swarm_segments({}, linker=True)[-1]
+    assert "step 3 converts each one into a list" not in linker
+    assert "- **No tables.**" not in linker
+    assert "`- *<Column header>:* <cell>`" not in linker
+    assert '"t":"Table"' not in linker
+    assert "confirm no table survives" not in linker
+    assert "- **Keep tables as tables.**" not in linker
+    assert "table, and link in the" in linker
+
+    step6 = linker.split("6. **Re-check against the step-2 inventory**", 1)[1].split(
+        "7. **Write**", 1
+    )[0]
+    assert "Confirm every cell of every table" in step6
+
+    explicit_off = _swarm_segments({"tables_to_lists": "false"}, linker=True)[-1]
+    assert explicit_off == linker
+
+
+def test_research_swarm_tables_to_lists_diagram_text_follows_flag() -> None:
+    for image in (False, True):
+        off = _swarm_segments({}, diagrams=True, image=image)[-1]
+        on = _swarm_segments(
+            {"tables_to_lists": "true"}, diagrams=True, image=image
+        )[-1]
+        assert "converted from a table into a list" not in off
+        assert "converted from a table into a list" in on
+        assert "The table rule that forbids" not in off
+        assert "The table rule that forbids" in on
+        assert "reordered or merged" in off
+        assert "reordered or merged" not in on
+        assert "was reordered, merged, or converted" not in off
+        assert "was reordered, merged, or converted" in on
+
+
+def test_research_swarm_tables_to_lists_step3_hygiene() -> None:
+    for named_args in ({}, {"tables_to_lists": "true"}):
+        for image in (False, True):
+            for audio in (False, True):
+                segments = _swarm_segments(
+                    dict(named_args), linker=True, image=image, audio=audio
+                )
+                linker = next(
+                    segment
+                    for segment in segments
+                    if "%id(linker, clan=research.{@1})" in segment
+                )
+                step3 = linker.split("3. **Restructure**", 1)[1].split(
+                    "4. **Validate every link carried over.**", 1
+                )[0]
+                assert not any(
+                    line and not line.strip() for line in step3.splitlines()
+                )
+                assert (
+                    "{%" not in _without_wait_artifacts_loop(linker)
+                )
+
+
+def test_research_swarm_tables_to_lists_alone_launches_no_linker() -> None:
+    segments = _swarm_segments({"tables_to_lists": "true"})
+    assert len(segments) == 3
+    assert all("%id(linker," not in segment for segment in segments)
+    assert all("%id(image," not in segment for segment in segments)
+    assert all("%id(audio," not in segment for segment in segments)
+    lead = segments[-1]
+    assert "Write the consolidated report to `<name>/<name>.md`:" in lead
 
 
 def test_research_swarm_linker_renders_registered_lead_via_wait_artifacts(

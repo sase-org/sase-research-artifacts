@@ -109,6 +109,14 @@ input:
     type: model
     default: "@xlarge"
     description: Model alias or provider model for the `<clan>.linker` agent.
+  - name: tables_to_lists
+    type: bool
+    default: false
+    description:
+      Have the linker convert every table in the lead's report into a list (one item per
+      row, every cell kept) and confirm with pandoc that no table survives. Off by
+      default, so published reports keep real Markdown tables. Takes effect only when the
+      linker runs; supplying it alone never launches the linker.
   - name: audio
     type: bool
     default: false
@@ -374,7 +382,7 @@ Steps:
 
 2. **Inventory what must survive.** Before writing, list every finding, recommendation,
    caveat, open question, confidence statement, number, date, version, code block,
-   table (record its cells; step 3 converts each one into a list), and link in the
+   table{%- if tables_to_lists %} (record its cells; step 3 converts each one into a list){%- endif %}, and link in the
    lead's report.{%- if run_diagrams %} For each manifest diagram, record its ID against
    the one lead block (paragraph or list item) that contains its `anchor`. Mark a
    diagram whose anchor matches zero or several blocks as omitted. Mark every diagram after the fifth in manifest order as omitted (over the cap).{%- endif %}
@@ -450,6 +458,7 @@ Steps:
    - **Never number headings.** The PDF renderer runs pandoc with `--number-sections`,
      so hand-numbered headings render doubly numbered.
    - **No table of contents and no block of jump links.** The PDF already gets a TOC.
+   {%- if tables_to_lists %}
    - **No tables.** The PDF renderer (pandoc → XeLaTeX) prints tables with equal-width
      columns, cramped wrapped cells, and rows that jump pages. Convert every table in the
      lead's report (pipe, grid, simple, multiline, or HTML) into a list with one item per
@@ -478,6 +487,7 @@ Steps:
        or simple table, a table in a code block, a callout or `:::` div, raw LaTeX, or
        an image, or a diagram. Never drop a cell, merge two rows, or add totals, rankings, or
        conclusions the table did not state.
+   {%- endif %}
    - Keep the lead's wording where it works. Never drop a claim, caveat, or source to
      save space. If the lead's report restates the question or lists its inputs, keep
      those details in a later section; the research query summarizes the request but
@@ -485,7 +495,7 @@ Steps:
    {%- if run_diagrams %}
    - **Place proposed diagrams.** After restructuring, insert each fence byte-for-byte
      directly after the block that now carries the tagged content, even if that content
-     was reordered, merged, or converted from a table into a list. Only that figure's
+     {% if tables_to_lists %}was reordered, merged, or converted from a table into a list{%- else %}was reordered or merged{%- endif %}. Only that figure's
      reference sentence may sit between the block and its fence. Follow the fence with
      the caption as one italic line, with blank lines around both, and wrap the fence
      and caption in the figure anchor described below. Then check that the surrounding
@@ -518,8 +528,8 @@ Steps:
 
      Never put an ID or attribute on the fence itself, and never substitute an `<a>`
      anchor or a heading. This wrapper and the listen card are the only HTML blocks you
-     write. The table rule that forbids `:::` divs is about table substitutes and does
-     not cover this figure wrapper.
+     write.{%- if tables_to_lists %} The table rule that forbids `:::` divs is about table substitutes and does
+     not cover this figure wrapper.{%- endif %}
    - **Reference every placed figure.** Write exactly one short sentence per placed
      figure and link it with `[<link text>](#figure-<id>)`, using the final unique ID,
      so every published figure is referenced. Tell the reader what the figure makes
@@ -575,10 +585,10 @@ Steps:
 6. **Re-check against the step-2 inventory** and restore anything missing or changed.
    Every URL in `<name>__final.md` must appear in the new file unless it was listed as
    unrepairable. Then confirm the file opens in the step-3 order: title, research query,{%- if audio %} listen card,{%- endif %}{%- if image %} infographic,{%- endif %} bottom-line section.
-   Confirm every cell of every table in the lead's report appears in the new file. When
+   Confirm every cell of every table in the lead's report appears in the new file.{%- if tables_to_lists %} When
    `pandoc` is available, confirm no table survives:
    `pandoc <file> -f markdown -t json | grep -o -i -E '"t":"Table"|"t":"RawBlock","c":\["html","<table' | wc -l`
-   prints `0`. Every Mermaid diagram from the lead's report is still present.
+   prints `0`.{%- endif %} Every Mermaid diagram from the lead's report is still present.
    {%- if run_diagrams %} Every manifest diagram appears exactly once, byte-identical,
    or is named as omitted. Every accepted diagram sits inside exactly one figure-anchor
    `<div>` holding only its fence and caption, and its reference sentence links to it:

@@ -131,7 +131,9 @@ diagnostic rather than running someone else's command on your machine.
   without the infographic; `image=true diagrams=false` keeps the infographic only),
   plus an optional linker agent via `linker=true`
   (`linker_model`, default `@xlarge`), for example
-  `#research_swarm(prompt="A research topic", linker=true)`, plus an optional audio
+  `#research_swarm(prompt="A research topic", linker=true)` (optional `tables_to_lists`,
+  default `false`, has the linker convert tables into PDF-friendly lists),
+  plus an optional audio
   edition agent via `audio=true` (`audio_model`, default `@audio`; `audio_edition`,
   default `brief`), which implies the linker. The image and audio agents are two
   independent lead-dependent media agents that run in parallel: each waits only on
