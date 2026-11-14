@@ -164,7 +164,7 @@ diagnostic rather than running someone else's command on your machine.
   default `brief`, chooses the narration edition),
   defaulting to `codex/gpt-6.1-sol@xhigh`, `claude/opus@xhigh`, `grok/grok-4.6@xhigh`,
   `muse/muse-spark-1.3-contributor@xhigh` (carries SASE's `warn` advisory),
-  `agy/gemini-3.8-flash-high` (no `@effort` suffix; `agy` rejects explicit effort),
+  `agy/gemini-4-hydrogen-xhigh` (no `@effort` suffix; SASE's `agy` adapter rejects explicit effort),
   `@xlarge`, the `image` alias, `@xlarge`, and the `audio` alias.
   Example: `#research_swarm(codex_model=@codex, claude_model=@opus,
   lead_model=@xlarge): compare approaches`.

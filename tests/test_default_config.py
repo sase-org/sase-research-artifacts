@@ -27,10 +27,10 @@ def test_default_config_loads_expected_model_aliases_and_bucket() -> None:
     assert "research_a" not in custom
     assert "research_b" not in custom
     assert custom["image"]["model"] == (
-        "codex/gpt-6.1-sol@xhigh | grok/grok-4.6@xhigh | agy/gemini-3.8-flash-high"
+        "codex/gpt-6.1-sol@xhigh | grok/grok-4.6@xhigh | agy/gemini-4-hydrogen-xhigh"
     )
     members = [m.strip() for m in custom["image"]["model"].split("|")]
-    assert "agy/gemini-3.8-flash-high" in members
+    assert "agy/gemini-4-hydrogen-xhigh" in members
     assert all("@" not in m for m in members if m.startswith("agy/"))
     assert custom["image"]["bucket"] == "researchers"
     assert custom["image"]["description"]

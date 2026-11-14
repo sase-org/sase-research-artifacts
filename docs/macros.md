@@ -262,7 +262,7 @@ recommendation, then hands off to `#research` to write it up.
 | `claude_model`          | model | `claude/opus@xhigh`                     | Model for `<clan>.cld`                                   |
 | `grok_model`            | model | `grok/grok-4.6@xhigh`                   | Model for `<clan>.grk`                                   |
 | `muse_model`            | model | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
-| `gemini_model`          | model | `agy/gemini-3.8-flash-high`             | Model for `<clan>.gem`; no `@effort` suffix              |
+| `gemini_model`          | model | `agy/gemini-4-hydrogen-xhigh`           | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | model | `@xlarge`                               | Model for `<clan>.final`                                 |
 | `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker; also diagrams unless `diagrams=false`) |
 | `image_model`           | model | `@image`                                | Model for `<clan>.image`                                 |
@@ -322,9 +322,9 @@ A fresh swarm podcast defaults to brief; supplying `audio_edition` alone never
 launches the audio agent. Edition selection affects newly authored narration,
 not whether audio is enabled.
 The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
-("trains on your data"), which is part of why `muse` defaults off. The `agy`
-provider rejects explicit `@effort` suffixes, so the `gemini_model` default carries
-no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-low`).
+("trains on your data"), which is part of why `muse` defaults off. SASE's `agy`
+adapter rejects explicit `@effort` suffixes, so the `gemini_model` default carries
+no effort suffix and effort is chosen via the model slug (`-xhigh`/`-high`/`-medium`/`-low`).
 
 1. **`<clan>.cdx`** -- the codex researcher (`codex/gpt-6.1-sol@xhigh`), writing a
    self-named descriptive report via `#research(suffix=cdx)`; when supplied, also waits
@@ -339,9 +339,9 @@ no effort suffix and effort is chosen via the model slug (`-high`/`-medium`/`-lo
    (`muse/muse-spark-1.3-contributor@xhigh`), opt-in via `muse=true`, writing via
    `#research(suffix=mus)`.
 5. **`<clan>.gem`** -- the gemini (Antigravity) researcher
-   (`agy/gemini-3.8-flash-high`), opt-in via `gemini=true`, writing via
-   `#research(suffix=gem)`. Antigravity (`agy`) rejects explicit `@effort` suffixes,
-   so effort is chosen through the model slug (`-high`/`-medium`/`-low`).
+   (`agy/gemini-4-hydrogen-xhigh`), opt-in via `gemini=true`, writing via
+   `#research(suffix=gem)`. SASE's `agy` adapter rejects explicit `@effort` suffixes,
+   so effort is chosen through the model slug (`-xhigh`/`-high`/`-medium`/`-low`).
 6. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on every surviving
    researcher (no waits when none ran, running solo instead), who reads the registered
    reports, does further research, and writes a consolidated report merging every

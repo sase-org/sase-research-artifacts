@@ -684,7 +684,7 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[10].default == "claude/opus@xhigh"
     assert xp.inputs[11].default == "grok/grok-4.6@xhigh"
     assert xp.inputs[12].default == "muse/muse-spark-1.3-contributor@xhigh"
-    assert xp.inputs[13].default == "agy/gemini-3.8-flash-high"
+    assert xp.inputs[13].default == "agy/gemini-4-hydrogen-xhigh"
     assert xp.inputs[14].default == "@xlarge"
     assert xp.inputs[15].default is False
     assert xp.inputs[16].default == "@image"
@@ -803,7 +803,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%clan(" not in mus
 
     assert "%id(gem, clan=research.{@1})" in gem
-    assert "%m:agy/gemini-3.8-flash-high" in gem
+    assert "%m:agy/gemini-4-hydrogen-xhigh" in gem
     assert "some topic #research(suffix=gem)" in gem
     assert "%clan(" not in gem
 
@@ -1041,8 +1041,8 @@ def test_research_swarm_gemini_opt_in_adds_segment() -> None:
     assert len(segments) == 4
     cdx, cld, gem, final = segments
     assert "%id(gem, clan=research.{@1})" in gem
-    assert "%m:agy/gemini-3.8-flash-high" in gem
-    assert "agy/gemini-3.8-flash-high@" not in gem
+    assert "%m:agy/gemini-4-hydrogen-xhigh" in gem
+    assert "agy/gemini-4-hydrogen-xhigh@" not in gem
     assert "some topic #research(suffix=gem)" in gem
     assert "3-researcher swarm" in gem
     assert "%wait:research.{@1}.gem" in final
