@@ -26,7 +26,8 @@ Narrate a research report as an audio edition MP3.
   otherwise use the lead's `<name>.md`. Do not poll or wait for publication. An
   explicit `@research:` input selects exactly that report, including a published
   report.
-- The research checkout is `$(sase repo path research --ensure)`.
+- First run `sase repo open research -r "Narrate this research report"`. The
+  research checkout is the path it prints.
 
 ## 2. Choose the CLI
 

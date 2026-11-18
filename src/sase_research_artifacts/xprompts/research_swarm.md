@@ -232,7 +232,9 @@ The researchers' registered reports:
 
 Month directory (create it if missing):
 
-$(sase repo path research --ensure)/$(date +%Y%m)
+First run `sase repo open research -r "Write the swarm research reports"` and use
+the path it prints as `<research checkout>`. The month directory is
+`<research checkout>/$(date +%Y%m)`; create it if missing.
 
 Steps:
 
@@ -241,8 +243,8 @@ Steps:
    in {{ researchers | map(attribute='short') | join(', ') }}, belonging to this
    dispatch's {% for r in researchers %}`research.{@1}.{{ r.short }}`{% if not loop.last %}, {% endif %}{% endfor %} {{ "dependency" if researchers | length == 1 else "dependencies" }}, matching by `wait_name` and the canonical research
    label's existing `__<suffix>.md` suffix. Never reassign suffixes from list order.
-   Open the research repo with `/sase_repo`, then read each report through its canonical
-   research reference (or the `ref` field's `file:<id>` reference if the original has
+   Read each report through its canonical research reference (or the `ref` field's
+   `file:<id>` reference if the original has
    moved) using `sase artifact read`. Do not read predecessor chat transcripts. If the
    records above do not identify exactly one report per expected suffix, stop and report
    the missing or ambiguous input instead of guessing.

@@ -12,8 +12,9 @@ The linker is the only publisher: you propose, it places or omits.
 ## 1. Scope and source
 
 - Never edit the report, never write a report of your own, and create no other file in
-  the research checkout (`$(sase repo path research --ensure)`). Keep scratch files in a
-  fresh `mktemp -d` directory outside it.
+  the research checkout. First run `sase repo open research -r "Propose diagrams for
+  this research report"` and use its printed path as the research checkout. Keep
+  scratch files in a fresh `mktemp -d` directory outside it.
 - Read the report once with `sase artifact read` on the registered lead entry listed
   above (its `ref`, or its `research:` label), redirecting the output to a scratch copy.
   Never work from memory or the forked conversation alone.

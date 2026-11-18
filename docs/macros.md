@@ -2,8 +2,9 @@
 
 ## `#research` -- Write Research to a Dated File
 
-Writes the current research to a new markdown file under
-`$(sase repo path research --ensure)/$(date +%Y%m)/`.
+Opens the research repo with `sase repo open research` at agent run time, then writes
+the current research to a new markdown file under the printed checkout's
+`$(date +%Y%m)/` directory.
 
 ### Input
 

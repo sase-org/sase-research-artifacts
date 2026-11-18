@@ -25,18 +25,18 @@ input:
 {% if report_target %}
 Write this research to exactly this report file:
 
-$(sase repo path research --ensure)/$(date +%Y%m)/{{ report_target }}
+First run `sase repo open research -r "Write this research report"` and use the path it prints as `<research checkout>`. Write the report to `<research checkout>/$(date +%Y%m)/{{ report_target }}`.
 
 Create parent directories if needed. Create the report without overwrite: if the file
 already exists, stop and report the collision visibly instead of replacing it.
 {% elif suffix and suffix != 'false' %}
-Write this research to a new markdown file under the $(sase repo path research --ensure)/$(date +%Y%m)/ directory.
+First run `sase repo open research -r "Write this research report"` and use the path it prints as `<research checkout>`. Write this research to a new markdown file under `<research checkout>/$(date +%Y%m)/`.
 Choose a descriptive filename stem yourself, but the filename MUST end with the
 `__{{ suffix }}` suffix, i.e. `<stem>__{{ suffix }}.md` (double underscore before the
 suffix). Create the report without overwrite: if the exact file already exists, pick a
 different stem instead of replacing it.
 {% else %}
-Write this research to a new markdown file under the $(sase repo path research --ensure)/$(date +%Y%m)/ directory.
+First run `sase repo open research -r "Write this research report"` and use the path it prints as `<research checkout>`. Write this research to a new markdown file under `<research checkout>/$(date +%Y%m)/`.
 {% endif %}
 {%- if diagrams %}
 
@@ -70,7 +70,7 @@ After the write succeeds, register the report as a durable snapshot:
 
 sase artifact create -p "<absolute-report-path>" -l "research:<repo-relative-report-path>"
 
-Use the report's actual absolute path and its path relative to the research repo root
+Use the report's actual absolute path under the opened research checkout and its path relative to the research repo root
 (for example
 `research:202609/topic{% if suffix and suffix != 'false' %}__a{% endif %}.md`),
 including any subdirectory the steps above put it in. Do not derive the label from
