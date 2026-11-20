@@ -1,18 +1,12 @@
 from pathlib import Path
 
 
-XPROMPT_DIR = (
-    Path(__file__).parents[1]
-    / "src"
-    / "sase_research_artifacts"
-    / "xprompts"
-)
+XPROMPT_DIR = Path(__file__).parents[1] / "src" / "sase_research_artifacts" / "xprompts"
 
 
 def test_research_xprompts_resolve_checkout_at_agent_runtime() -> None:
     sources = {
-        path.stem: path.read_text(encoding="utf-8")
-        for path in XPROMPT_DIR.glob("*.md")
+        path.stem: path.read_text(encoding="utf-8") for path in XPROMPT_DIR.glob("*.md")
     }
 
     assert sources

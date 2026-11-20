@@ -85,7 +85,9 @@ def test_shipped_measurement_command_rejects_unusable_dimensions(
 ) -> None:
     result = _measure(tmp_path, '<svg width="auto" height="0"/>')
     assert result.returncode != 0
-    assert "FAIL: SVG has no usable positive pixel dimensions or viewBox" in result.stderr
+    assert (
+        "FAIL: SVG has no usable positive pixel dimensions or viewBox" in result.stderr
+    )
 
 
 def test_skill_pins_the_renderer_and_fit_contract() -> None:
@@ -101,9 +103,7 @@ def test_skill_pins_the_renderer_and_fit_contract() -> None:
     pdf_config = json.loads(config_match.group(1))
     assert pdf_config["securityLevel"] == "strict"
     assert pdf_config["theme"] == "neutral"
-    assert {"themeCSS", "themeVariables", "fontFamily"} <= set(
-        pdf_config["secure"]
-    )
+    assert {"themeCSS", "themeVariables", "fontFamily"} <= set(pdf_config["secure"])
     assert '"flowchart": { "useMaxWidth": false }' in skill
     assert "npx -y -p @mermaid-js/mermaid-cli@12.0.0 mmdc" in skill
     assert skill.index(
@@ -111,7 +111,10 @@ def test_skill_pins_the_renderer_and_fit_contract() -> None:
     ) < skill.index("try_cli mmdc")
     assert '"args":["--no-sandbox"]' in skill
     assert '"${MMDC[@]}" --version' in skill
-    assert '"${MMDC[@]}" -c "$scratch/pdf.json" -i figure.mmd -o "$scratch/figure.svg"' in skill
+    assert (
+        '"${MMDC[@]}" -c "$scratch/pdf.json" -i figure.mmd -o "$scratch/figure.svg"'
+        in skill
+    )
     assert '-o "$scratch/figure.png" -s 1.5 -b white' in skill
     assert "timeout 90s" in skill
     assert "ConnectionClosedError" in skill

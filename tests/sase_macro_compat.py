@@ -76,6 +76,7 @@ def render_generated_skill_targets(
         use_prettier=False,
     )
 
+
 __all__ = [
     "UNSET",
     "bind_runtime_template_vars",

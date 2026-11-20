@@ -97,9 +97,12 @@ Installing this plugin also contributes, through the `sase_config` entry point:
 
 - Default model alias `image` (infographic agent) in the `researchers` bucket. The
   pool round-robins at equal weight across Codex (`codex/gpt-6.1-sol@xhigh`), Grok
-  (`grok/grok-4.6@xhigh`), and Antigravity Gemini (`agy/gemini-4-hydrogen-xhigh`); the
+  (`grok/grok-4.6@xhigh`), and Antigravity Gemini (`agy/gemini-4-neon-xhigh`); the
   `agy` member carries no `@effort` suffix because SASE's `agy` adapter rejects explicit
   effort and Antigravity puts effort in the model name. The
+  Neon member requires Google AI Pro (paid or eligible trial), Ultra, or Enterprise;
+  a round-robin `@image` launch that lands on it fails on other accounts, so override
+  the `image` alias in your own config if needed. The
   research-swarm researchers default to concrete per-provider models and the lead
   defaults to SASE's built-in `@xlarge` alias.
 - Default model alias `audio` (audio-edition narrator script writer) in the

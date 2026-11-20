@@ -263,7 +263,7 @@ recommendation, then hands off to `#research` to write it up.
 | `claude_model`          | model | `claude/opus@xhigh`                     | Model for `<clan>.cld`                                   |
 | `grok_model`            | model | `grok/grok-4.6@xhigh`                   | Model for `<clan>.grk`                                   |
 | `muse_model`            | model | `muse/muse-spark-1.3-contributor@xhigh` | Model for `<clan>.mus` (carries SASE's `warn` advisory)  |
-| `gemini_model`          | model | `agy/gemini-4-hydrogen-xhigh`           | Model for `<clan>.gem`; no `@effort` suffix              |
+| `gemini_model`          | model | `agy/gemini-4-neon-xhigh`               | Model for `<clan>.gem`; no `@effort` suffix              |
 | `lead_model`            | model | `@xlarge`                               | Model for `<clan>.final`                                 |
 | `image`                 | bool | `false`                                 | Opt into `<clan>.image` (implies the linker; also diagrams unless `diagrams=false`) |
 | `image_model`           | model | `@image`                                | Model for `<clan>.image`                                 |
@@ -326,6 +326,8 @@ The `muse-spark-1.3-contributor` default carries SASE's `warn` model advisory
 ("trains on your data"), which is part of why `muse` defaults off. SASE's `agy`
 adapter rejects explicit `@effort` suffixes, so the `gemini_model` default carries
 no effort suffix and effort is chosen via the model slug (`-xhigh`/`-high`/`-medium`/`-low`).
+The Neon default needs Google AI Pro, Google AI Ultra, or Gemini Enterprise; `agy`
+fails the `.gem` run on other accounts. Override `gemini_model` there when needed.
 
 1. **`<clan>.cdx`** -- the codex researcher (`codex/gpt-6.1-sol@xhigh`), writing a
    self-named descriptive report via `#research(suffix=cdx)`; when supplied, also waits
@@ -340,9 +342,11 @@ no effort suffix and effort is chosen via the model slug (`-xhigh`/`-high`/`-med
    (`muse/muse-spark-1.3-contributor@xhigh`), opt-in via `muse=true`, writing via
    `#research(suffix=mus)`.
 5. **`<clan>.gem`** -- the gemini (Antigravity) researcher
-   (`agy/gemini-4-hydrogen-xhigh`), opt-in via `gemini=true`, writing via
-   `#research(suffix=gem)`. SASE's `agy` adapter rejects explicit `@effort` suffixes,
-   so effort is chosen through the model slug (`-xhigh`/`-high`/`-medium`/`-low`).
+   (`agy/gemini-4-neon-xhigh`), opt-in via `gemini=true`, writing via
+   `#research(suffix=gem)`. The Neon default needs Google AI Pro, Google AI Ultra,
+   or Gemini Enterprise; `agy` fails the run on other accounts. Override
+   `gemini_model` there when needed. SASE's `agy` adapter rejects explicit `@effort`
+   suffixes, so effort is chosen through the model slug (`-xhigh`/`-high`/`-medium`/`-low`).
 6. **`<clan>.final`** -- the lead researcher (`@xlarge`), waiting on every surviving
    researcher (no waits when none ran, running solo instead), who reads the registered
    reports, does further research, and writes a consolidated report merging every

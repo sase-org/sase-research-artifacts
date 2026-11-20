@@ -684,7 +684,7 @@ def test_research_swarm_declares_typed_input() -> None:
     assert xp.inputs[10].default == "claude/opus@xhigh"
     assert xp.inputs[11].default == "grok/grok-4.6@xhigh"
     assert xp.inputs[12].default == "muse/muse-spark-1.3-contributor@xhigh"
-    assert xp.inputs[13].default == "agy/gemini-4-hydrogen-xhigh"
+    assert xp.inputs[13].default == "agy/gemini-4-neon-xhigh"
     assert xp.inputs[14].default == "@xlarge"
     assert xp.inputs[15].default is False
     assert xp.inputs[16].default == "@image"
@@ -803,7 +803,7 @@ def test_research_swarm_dependency_graph_preserved() -> None:
     assert "%clan(" not in mus
 
     assert "%id(gem, clan=research.{@1})" in gem
-    assert "%m:agy/gemini-4-hydrogen-xhigh" in gem
+    assert "%m:agy/gemini-4-neon-xhigh" in gem
     assert "some topic #research(suffix=gem)" in gem
     assert "%clan(" not in gem
 
@@ -1041,8 +1041,8 @@ def test_research_swarm_gemini_opt_in_adds_segment() -> None:
     assert len(segments) == 4
     cdx, cld, gem, final = segments
     assert "%id(gem, clan=research.{@1})" in gem
-    assert "%m:agy/gemini-4-hydrogen-xhigh" in gem
-    assert "agy/gemini-4-hydrogen-xhigh@" not in gem
+    assert "%m:agy/gemini-4-neon-xhigh" in gem
+    assert "agy/gemini-4-neon-xhigh@" not in gem
     assert "some topic #research(suffix=gem)" in gem
     assert "3-researcher swarm" in gem
     assert "%wait:research.{@1}.gem" in final
@@ -2173,9 +2173,9 @@ def test_research_swarm_linker_keeps_tables_by_default() -> None:
 def test_research_swarm_tables_to_lists_diagram_text_follows_flag() -> None:
     for image in (False, True):
         off = _swarm_segments({}, diagrams=True, image=image)[-1]
-        on = _swarm_segments(
-            {"tables_to_lists": "true"}, diagrams=True, image=image
-        )[-1]
+        on = _swarm_segments({"tables_to_lists": "true"}, diagrams=True, image=image)[
+            -1
+        ]
         assert "converted from a table into a list" not in off
         assert "converted from a table into a list" in on
         assert "The table rule that forbids" not in off
@@ -2201,12 +2201,8 @@ def test_research_swarm_tables_to_lists_step3_hygiene() -> None:
                 step3 = linker.split("3. **Restructure**", 1)[1].split(
                     "4. **Validate every link carried over.**", 1
                 )[0]
-                assert not any(
-                    line and not line.strip() for line in step3.splitlines()
-                )
-                assert (
-                    "{%" not in _without_wait_artifacts_loop(linker)
-                )
+                assert not any(line and not line.strip() for line in step3.splitlines())
+                assert "{%" not in _without_wait_artifacts_loop(linker)
 
 
 def test_research_swarm_tables_to_lists_alone_launches_no_linker() -> None:

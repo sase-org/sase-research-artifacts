@@ -21,7 +21,9 @@ def test_plugin_sources_and_docs_do_not_depend_on_bob() -> None:
     for path in paths:
         if not path.is_file():
             continue
-        for line_number, line in enumerate(path.read_text(errors="ignore").splitlines(), start=1):
+        for line_number, line in enumerate(
+            path.read_text(errors="ignore").splitlines(), start=1
+        ):
             if BOB.search(line):
                 matches.append(f"{path.relative_to(ROOT)}:{line_number}: {line}")
     assert not matches, "\n".join(matches)

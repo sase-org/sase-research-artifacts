@@ -70,11 +70,13 @@ input:
       ("trains on your data"), which is part of why `muse` defaults off.
   - name: gemini_model
     type: model
-    default: "agy/gemini-4-hydrogen-xhigh"
+    default: "agy/gemini-4-neon-xhigh"
     description:
       Model for `<clan>.gem`. SASE's `agy` adapter rejects
       explicit `@effort` suffixes; choose effort through the model slug
-      (`-xhigh`/`-high`/`-medium`/`-low`).
+      (`-xhigh`/`-high`/`-medium`/`-low`). The Neon default needs Google AI Pro
+      (paid or eligible trial), Ultra, or Enterprise; on other accounts pass
+      `gemini_model=agy/gemini-3.8-flash-high`.
   - name: lead_model
     type: model
     default: "@xlarge"
